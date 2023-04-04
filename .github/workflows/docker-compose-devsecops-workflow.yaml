@@ -37,11 +37,16 @@ on:
         required: true
         type: string
 
-      seceng_devsecops_prisma_project:
-        description: "Prisma Project to scan the docker image"
+      seceng_devsecops_prisma_domain:
+        description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
         required: false
         type: string
-       
+        default: twistlock.infosec.viasat.io
+
+      seceng_devsecops_prisma_project:
+        description: "Prisma Project to scan the docker image"
+        required: true
+        type: string
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
