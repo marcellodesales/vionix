@@ -185,7 +185,7 @@ jobs:
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
-        if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
+        if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
         id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
         with:
@@ -648,7 +648,7 @@ jobs:
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-        if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN && env.WORKFLOW_CONCLUSION == 'success' }}
+        if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' && env.WORKFLOW_CONCLUSION == 'success' }}
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
@@ -700,7 +700,7 @@ jobs:
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-        if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN && env.WORKFLOW_CONCLUSION == 'failure' }}
+        if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' && env.WORKFLOW_CONCLUSION == 'failure' }}
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
