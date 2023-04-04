@@ -122,7 +122,6 @@ jobs:
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
       - name: Set default envs from for tags and names
         run: |
-          echo "DOCKER_CONTEXT_PATH=${{env.DOCKER_CONTEXT_PATH}}" >> $GITHUB_ENV
           echo "DEFAULT_DOCKER_IMAGE_VERSION=${GITHUB_SHA}" >> $GITHUB_ENV
           # The repo name only without refs 
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
@@ -160,7 +159,7 @@ jobs:
           echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
           echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
           echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
-          echo "::set-output name=dockerContextPath::$DOCKER_CONTEXT_PATH"
+          echo "::set-output name=dockerContextPath::${{ inputs.docker_compose_context }}"
           echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
           echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
           echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
@@ -244,7 +243,7 @@ jobs:
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
       run:
-        working-directory: ${{ env.DOCKER_CONTEXT_PATH }}
+        working-directory: ${{ inputs.docker_compose_context }}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -292,7 +291,7 @@ jobs:
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
       run:
-        working-directory: ${{ env.DOCKER_CONTEXT_PATH }}
+        working-directory: ${{ inputs.docker_compose_context }}
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
@@ -326,10 +325,10 @@ jobs:
         run: |
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
-          if [ -n "${BUILDER_DOCKER_COMPOSE}" ] && [ -f "${BUILDER_DOCKER_COMPOSE}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${BUILDER_DOCKER_COMPOSE} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${DEFAULT_TARGET_SERVICE} '.services[$service].image');
+          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file }}" ]; then
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker_compose_file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${DEFAULT_TARGET_SERVICE} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
@@ -351,12 +350,12 @@ jobs:
         # https://github.community/t/sharing-a-variable-between-jobs/16967/14
         run: |
           env
-          if [ -z "${DEFAULT_TARGET_SERVICE}" ] || [ -z "${DEFAULT_DOCKER_IMAGE_REPO}" ] || [ -z "${DEFAULT_DOCKER_REGISTRY}" ]; then
-            echo "ERROR: Couldn't define either DEFAULT_TARGET_SERVICE='${DEFAULT_TARGET_SERVICE}' or DEFAULT_DOCKER_IMAGE_REPO='${DEFAULT_DOCKER_IMAGE_REPO} or DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}'. Check the logs!"
+          if [ -z "${{ inputs.docker_compose_service }}" ] || [ -z "${DEFAULT_DOCKER_IMAGE_REPO}" ] || [ -z "${DEFAULT_DOCKER_REGISTRY}" ]; then
+            echo "ERROR: Couldn't define either ${{ inputs.docker_compose_service }}='${{ inputs.docker_compose_service }}' or DEFAULT_DOCKER_IMAGE_REPO='${DEFAULT_DOCKER_IMAGE_REPO} or DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}'. Check the logs!"
             exit 1
           fi
           echo "::set-output name=defaultDockerImageRepo::$DEFAULT_DOCKER_IMAGE_REPO"
-          echo "::set-output name=defaultDockerService::$DEFAULT_TARGET_SERVICE"
+          echo "::set-output name=defaultDockerService::${{ inputs.docker_compose_service }}"
           echo "::set-output name=defaultDockerRegistry::$DEFAULT_DOCKER_REGISTRY"
           echo "::set-output name=originalDockerImageTag::$ORIGINAL_DOCKER_IMAGE_TAG"
           echo "::set-output name=githubRepoPaths::$GITHUB_REPOSITORY_PATHS"
@@ -396,20 +395,20 @@ jobs:
       - name: Set Docker Buildx properties
         run: |
           # https://github.com/opencontainers/image-spec/blob/main/annotations.md
-          export LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${DOCKER_CONTEXT_PATH}
+          export LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker_compose_context }}
           echo "Adding labels to Dockerfile"
           # https://stackoverflow.com/questions/845863/how-to-use-in-an-xargs-command/70230514#70230514
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.source" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.source ${LABEL_VALUE}" >> {}' -- {}
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.created" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.created ${{needs.code.outputs.buildDateTime}}" >> {}' -- {}
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.version" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.version ${GITHUB_SHA}" >> {}' -- {}
           # https://docs.docker.com/engine/reference/commandline/buildx_bake/#file
-          if [ -n "${BUILDER_DOCKER_COMPOSE}" ] && [ -f "${BUILDER_DOCKER_COMPOSE}" ]; then
+          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file}}" ]; then
             echo "Specifying the buildx bake by the service compose file."
-            docker-compose -f ${{env.BUILDER_DOCKER_COMPOSE}} config ${{env.DEFAULT_TARGET_SERVICE}};
-            docker buildx bake -f ${{env.BUILDER_DOCKER_COMPOSE}} ${{env.DEFAULT_TARGET_SERVICE}} --print;
+            docker-compose -f ${{ inputs.docker_compose_file }} config ${{ inputs.docker_compose_service }};
+            docker buildx bake -f ${{ inputs.docker_compose_file }} ${{ inputs.docker_compose_service }} --print;
           else
-            docker-compose config ${{env.DEFAULT_TARGET_SERVICE}}
-            docker buildx bake ${{env.DEFAULT_TARGET_SERVICE}} --print
+            docker-compose config ${{ inputs.docker_compose_service }}
+            docker buildx bake ${{ inputs.docker_compose_service }} --print
           fi
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
@@ -434,17 +433,17 @@ jobs:
         with:
           push: true
           # https://github.com/docker/bake-action/pull/76
-          workdir: ./${{ env.DOCKER_CONTEXT_PATH }}
+          workdir: ./${{ inputs.docker_compose_context }}
           targets: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
           builder: ${{ steps.buildx.outputs.name }}
-          files: ./${{ env.BUILDER_DOCKER_COMPOSE }}
-          # Builds a docker image and create multiple tags based on the tags below for the DEFAULT_TARGET_SERVICE in docker-compose
+          files: ./${{ inputs.docker_compose_file }}
+          # Builds a docker image and create multiple tags based on the tags below for the ${{ inputs.docker_compose_service }} in docker-compose
           # All the properties from https://github.com/docker/buildx/blob/master/docs/reference/buildx_bake.md#set
           # https://github.community/t/use-docker-layer-caching-with-docker-compose-build-not-just-docker/156049/3
           # https://stackoverflow.com/questions/55756372/when-using-buildkit-with-docker-how-do-i-see-the-output-of-run-commands/55759337#55759337
           # https://github.com/docker/buildx/blob/master/docs/reference/buildx_bake.md#set
           # https://github.com/docker/buildx/issues/872#issuecomment-1014891886
-          # # ${{steps.set-docker-image-settings.outputs.defaultDockerService}} could be used in addition to ${{env.DEFAULT_TARGET_SERVICE}}
+          # # ${{steps.set-docker-image-settings.outputs.defaultDockerService}} could be used in addition to ${{ inputs.docker_compose_service }}
           set: |
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageVersion}}
 
