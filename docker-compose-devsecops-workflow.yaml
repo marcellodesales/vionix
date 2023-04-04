@@ -36,15 +36,16 @@ on:
         description: "Docker Compose service to build"
         required: true
         type: string
+
+      seceng_devsecops_prisma_project:
+        description: "Prisma Project to scan the docker image"
+        required: false
+        type: string
        
 
-    # We need to declare the intent of secrets
+    # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
-      SECENG_DEVSECOPS_CLIENT_BLACKDUCK_TOKEN_PRD:
-        description: 'The token for the provided blackduck hum instance'
-        required: true
- 
       SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
         description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
         required: true
@@ -472,8 +473,6 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        checkType: [DockerImage]
 
     steps:
       - name: Annotate Job with current information
@@ -508,11 +507,11 @@ jobs:
         # To be referring to for results https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#example-using-a-public-action
         id: prisma_cloud_scan
         uses: seceng-devsecops-platform/devsecops-platform-action-prisma@develop
-        if: ${{ matrix.checkType == 'DockerImage' }}
+        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
         continue-on-error: true
         with:
-          prisma-cloud-url: https://twistlock.infosec.viasat.io
-          prisma-cloud-project: SecEng
+          prisma-cloud-url: https://${{ inputs.seceng_devsecops_prisma_domain }}
+          prisma-cloud-project: ${{ inputs.seceng_devsecops_prisma_project }}
           #### TODO: Use vault secrets management
           prisma-cloud-username: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}
           prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}
@@ -522,6 +521,7 @@ jobs:
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
       - name: Set outputs for Scan results
+        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
         id: scan-results-collection
         run: |
           echo "scan-outputs=${{ toJson(steps.prisma_cloud_scan.outputs) }}"
@@ -535,10 +535,12 @@ jobs:
           echo "::set-output name=passedVulnerabilitiesScan::${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
 
       - name: Scan result outputs
+        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
         run: |
           echo "scan-outputs=${{ toJson(steps.scan-results-collection.outputs) }}"
 
       - name: Annotate Job with current information
+        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# :microscope: Scanned Docker Image " >> $GITHUB_STEP_SUMMARY
@@ -565,7 +567,7 @@ jobs:
           echo "# 🚀 deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-      - name: Pull built docker-image ${{matrix.package.name}}
+      - name: Pull built docker-image 
         run: |
           docker pull ${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageVersion}}
           echo "Current images"
@@ -605,7 +607,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - if: endsWith(github.ref, '/main') || endsWith(github.ref, '/master')
-        name: Push latest Docker Image for main branch for ${{matrix.package.name}}
+        name: Push latest Docker Image for main branch for the image
         run: |
           # When there's an original tag (1.2.3 version), then we need to remove it
           if [ -n "${{needs.build.outputs.originalDockerImageTag}}" ]; then
