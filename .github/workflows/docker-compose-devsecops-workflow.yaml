@@ -507,7 +507,7 @@ jobs:
       - name: Login to Artifactory Docker Registry
         uses: seceng-devsecops-platform/docker-login-action@v1
         with:
-          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          registry: ${{ needs.build.outputs.defaultDockerRegistry }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
