@@ -710,6 +710,8 @@ jobs:
       # Used for identity the github status results
       # https://github.com/technote-space/workflow-conclusion-action/issues/122
       contents: read
+      # https://docs.github.com/en/rest/actions/workflow-jobs?apiVersion=2022-11-28#list-jobs-for-a-workflow-run
+      actions: read
 
     steps:
       # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
