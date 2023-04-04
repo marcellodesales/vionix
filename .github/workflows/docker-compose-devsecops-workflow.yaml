@@ -503,6 +503,14 @@ jobs:
           echo "code-outputs=${{ toJson(needs.code.outputs) }}"
           echo "build=${{ toJson(needs.build.outputs) }}"
 
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to Artifactory Docker Registry
+        uses: seceng-devsecops-platform/docker-login-action@v1
+        with:
+          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+
       - name: Pull built docker image ${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageVersion}}
         run: |
           docker pull ${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageVersion}}
@@ -571,6 +579,14 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🚀 deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to Artifactory Docker Registry
+        uses: seceng-devsecops-platform/docker-login-action@v1
+        with:
+          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
       - name: Pull built docker-image 
         run: |
