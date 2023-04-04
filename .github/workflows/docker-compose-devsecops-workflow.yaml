@@ -136,6 +136,7 @@ jobs:
           echo "BRANCH_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
           # Remove the / from topic branches for versions, etc:
           BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG} | sed -e 's/\//-/g')
+          BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG_FOR_VERSION} | sed -e 's/#/-/g')
           echo "BRANCH_TAG_FOR_VERSION=${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
           # The branch and sha together makes it easier to find
           GIT_SHORT_SHA=${GITHUB_SHA:0:7}
@@ -666,8 +667,8 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
-          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
-          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - if: endsWith(github.ref, '/main') || endsWith(github.ref, '/master')
@@ -676,17 +677,17 @@ jobs:
           # When there's an original tag (1.2.3 version), then we need to remove it
           if [ -n "${{needs.build.outputs.originalDockerImageTag}}" ]; then
             # Push original as defined by the user in the repo
-            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}
+            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}
             docker push ${{needs.build.outputs.defaultDockerImageRepo}}
             # Remove the tag to produce the latest version
             REPO="${{needs.build.outputs.defaultDockerImageRepo}}"
             TAG="${{needs.build.outputs.originalDockerImageTag}}"
             LATEST_IMAGE_REPO=${REPO/:$TAG/}
-            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageVersion}} ${LATEST_IMAGE_REPO}
+            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${LATEST_IMAGE_REPO}
             docker push ${LATEST_IMAGE_REPO}
           else
             # Just append the latest and push
-            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}
+            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}
             docker push ${{needs.build.outputs.defaultDockerImageRepo}}
           fi
 
