@@ -644,6 +644,13 @@ jobs:
     #continue-on-error: true
 
     needs: [code, build, check-build, deploy]
+
+    # providing permissions
+    permissions:
+      # Used for identity the github status results
+      # https://github.com/technote-space/workflow-conclusion-action/issues/122
+      actions: read
+
     steps:
       # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
       # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
@@ -703,6 +710,7 @@ jobs:
 
       - name: Slack Notification build failure of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
         if: ${{ env.WORKFLOW_CONCLUSION == 'failure' }}
