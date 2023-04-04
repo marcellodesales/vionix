@@ -649,7 +649,7 @@ jobs:
     permissions:
       # Used for identity the github status results
       # https://github.com/technote-space/workflow-conclusion-action/issues/122
-      actions: read
+      contents: read
 
     steps:
       # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
