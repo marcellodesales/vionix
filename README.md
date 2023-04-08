@@ -50,6 +50,9 @@ jobs:
 
 * https://git.viasat.com/Harmony/azure-chatgpt-spa-service/blob/develop/.github/workflows/docker-image-devsecops-workflow.yaml
 
+![Screenshot 2023-04-07 at 6 23 13 PM](https://media.git.viasat.com/user/6318/files/480bbb86-5b3b-432d-bd0c-39ccf7f6d906)
+
+
 ```yaml
 ####
 #### Author: Marcello DeSales (@mdesales)
