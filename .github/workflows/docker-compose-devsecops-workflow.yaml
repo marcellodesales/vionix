@@ -300,7 +300,7 @@ jobs:
   build:
     name: 📦 build
     needs: [code, check]
-    runs-on: self-hosted
+    runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
 
@@ -475,7 +475,7 @@ jobs:
   check-build:
     name: 🛡️ check-build
     needs: [code, build]
-    runs-on: self-hosted
+    runs-on: dind
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
       # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
@@ -601,7 +601,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build, check-build]
-    runs-on: self-hosted
+    runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
 
