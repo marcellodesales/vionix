@@ -48,6 +48,12 @@ on:
         required: true
         type: string
 
+      gitops_deploy_workflow:
+        description: "Cloud provider workflow deploy the repo using k8s"
+        required: false
+        type: string
+        default: az
+
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
@@ -128,6 +134,7 @@ jobs:
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
       - name: Set default envs from for tags and names
         run: |
+          env
           echo "DEFAULT_DOCKER_IMAGE_VERSION=${GITHUB_SHA}" >> $GITHUB_ENV
           # The repo name only without refs 
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
@@ -155,6 +162,27 @@ jobs:
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
           COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
+
+      - name: Setup deployment properties
+        if: ${{ inputs.gitops_deploy_workflow != "" && env.GITHUB_REF_TYPE == "branch" && ( env.GITHUB_HEAD_REF == "develop" || env.GITHUB_HEAD_REF == "master") }}
+        run: |
+          GITOPS_TARGET_ENV=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_HEAD_REF }}.env')
+          GITOPS_TARGET_SEGMENT=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_HEAD_REF }}.segment')
+          GITOPS_TARGET_URL=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_HEAD_REF }}.url')
+          GITOPS_TARGET_REPO=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
+          GITOPS_TARGET_REPO_BRANCH=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.ref')
+          GITOPS_TARGET_PROVIDER=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
+          GITOPS_TARGET_REGION=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.region')
+          GITOPS_TARGET_TYPE=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.type')
+
+          echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
 
       - name: Setting values
         id: set_base_values
@@ -249,6 +277,12 @@ jobs:
     name: 🛡️ check-code
     needs: [code]
     runs-on: self-hosted
+
+    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
+    environment:
+      name: ${{ env.GITOPS_TARGET_ENV }}
+      url: ${{ env.GITOPS_TARGET_URL }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -265,6 +299,34 @@ jobs:
         uses: viarise/checkout@v2
         with:
           fetch-depth: 1
+
+      - name: Checkout deploy repository
+        if: ${{ inputs.gitops_deploy_workflow != "" && env.GITHUB_REF_TYPE == "branch" && ( env.GITHUB_HEAD_REF == "develop" || env.GITHUB_HEAD_REF == "master") }}
+        uses: viarise/checkout@v2
+        with:
+          repository: ${{ env.GITOPS_TARGET_REPO }}
+          ref: ${{ env.GITOPS_TARGET_REPO_BRANCH }}
+          path: ./deploy
+
+      - name: Update kustomization version with the image version
+        if: ${{ inputs.gitops_deploy_workflow != "" && env.GITHUB_REF_TYPE == "branch" && ( env.GITHUB_HEAD_REF == "develop" || env.GITHUB_HEAD_REF == "master") }}
+        working-directory: ./deploy
+        run: |
+          echo "Updating env/${GITOPS_TARGET_PROVIDER}-${GITOPS_TARGET_REGION}-${GITOPS_TARGET_TYPE}-${GITOPS_TARGET_SEGMENT}-${GITOPS_TARGET_ENV}"
+          cd "env/${GITOPS_TARGET_PROVIDER}-${GITOPS_TARGET_REGION}-${GITOPS_TARGET_TYPE}-${GITOPS_TARGET_SEGMENT}-${GITOPS_TARGET_ENV}"
+
+          docker run --rm -v ${PWD}:/root/.kube:ro -ti dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.code.outputs.defaultDockerImageRepo}}:${${{needs.code.outputs.defaultDockerImageBranchShaTag}}}
+
+      - name: Commits the code to the repo
+        uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
+        if:  ${{ github.head_ref == 'develop' }}
+        with:
+          commit_user_name: ${{needs.code.outputs.committerName}}
+          commit_user_email: ${{needs.code.outputs.committerEmail}}
+          commit_author: "${{needs.code.outputs.committerName}} <${{needs.code.outputs.committerEmail}}>"
+          commit_message: ":building_construction: deploy SHA ${{ github.sha }} to DEV"
+          branch: ${{ github.head_ref }}
+          repository: ./deploy
 
       - name: Annotate Job with current information
         run: |
