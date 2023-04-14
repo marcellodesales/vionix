@@ -753,7 +753,7 @@ jobs:
     needs: [code, build, check-build, deploy]
     runs-on: dind
 
-    # providing permissions
+    # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
       # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
       contents: write
@@ -773,6 +773,8 @@ jobs:
           repository: ${{ needs.code.outputs.gitopsDeployTargetRepo }}
           ref: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}
           path: ./deploy
+          # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
+          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
       - name: Update kustomization version with the image version
         if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
@@ -796,6 +798,7 @@ jobs:
           commit_message: ":building_construction: deploy VERSION ${{needs.code.outputs.defaultDockerImageBranchShaTag}} to ${{ needs.code.outputs.gitopsDeployEnv }}"
           branch: ${{ github.head_ref }}
           repository: ./deploy
+
 
   report:
     name: 📢 notify
