@@ -756,7 +756,11 @@ jobs:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
 
     # providing permissions
-    permissions: write-all
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
+      contents: write
+      # To declare deployments updates
+      deployments: write
 
     # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
     environment:
@@ -771,6 +775,7 @@ jobs:
           repository: ${{ needs.code.outputs.gitopsDeployTargetRepo }}
           ref: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}
           path: ./deploy
+          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
       - name: Update kustomization version with the image version
         if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
