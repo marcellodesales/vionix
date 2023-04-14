@@ -170,14 +170,14 @@ jobs:
       - name: Setup deployment properties
         #if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
         run: |
-          GITOPS_TARGET_ENV=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.$GITHUB_BASE_REF.env')
-          GITOPS_TARGET_SEGMENT=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.$GITHUB_BASE_REF.segment')
-          GITOPS_TARGET_URL=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.$GITHUB_BASE_REF.url')
-          GITOPS_TARGET_REPO=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
-          GITOPS_TARGET_REPO_BRANCH=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.ref')
-          GITOPS_TARGET_PROVIDER=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
-          GITOPS_TARGET_REGION=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.region')
-          GITOPS_TARGET_TYPE=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.type')
+          GITOPS_TARGET_ENV=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.$GITHUB_BASE_REF.env')
+          GITOPS_TARGET_SEGMENT=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.$GITHUB_BASE_REF.segment')
+          GITOPS_TARGET_URL=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.$GITHUB_BASE_REF.url')
+          GITOPS_TARGET_REPO=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
+          GITOPS_TARGET_REPO_BRANCH=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.ref')
+          GITOPS_TARGET_PROVIDER=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
+          GITOPS_TARGET_REGION=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.region')
+          GITOPS_TARGET_TYPE=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.type')
           
           env
 
