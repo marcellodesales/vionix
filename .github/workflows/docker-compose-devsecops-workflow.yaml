@@ -752,8 +752,6 @@ jobs:
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build, check-build, deploy]
     runs-on: dind
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
 
     # providing permissions
     permissions:
@@ -784,6 +782,7 @@ jobs:
         run: |
           ls -la
           echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}"
+          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}"
           docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
           git diff
 
