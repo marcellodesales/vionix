@@ -765,8 +765,8 @@ jobs:
         if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         uses: viarise/checkout@v2
         with:
-          repository: ${{ env.GITOPS_TARGET_REPO }}
-          ref: ${{ env.GITOPS_TARGET_REPO_BRANCH }}
+          repository: ${{ needs.code.outputs.gitopsDeployTargetRepo }}
+          ref: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}
           path: ./deploy
 
       - name: Update kustomization version with the image version
