@@ -167,19 +167,20 @@ jobs:
           
           env
 
-      - name: Setup deployment properties
-        #if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
+      - name: Setup deployment properties for branch
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         run: |
-          GITOPS_TARGET_ENV=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${{ env.GITHUB_BASE_REF }} '.envs.$branch.env')
-          GITOPS_TARGET_SEGMENT=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${{ env.GITHUB_BASE_REF }} '.envs.$branch.segment')
-          GITOPS_TARGET_URL=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${{ env.GITHUB_BASE_REF }} '.envs.$branch.url')
-          GITOPS_TARGET_REPO=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
-          GITOPS_TARGET_REPO_BRANCH=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.ref')
-          GITOPS_TARGET_PROVIDER=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
-          GITOPS_TARGET_REGION=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.region')
-          GITOPS_TARGET_TYPE=$(echo '${{ inputs.gitops_deploy_workflow }}' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.type')
-          
-          env
+          GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
+          echo "deploy_workflow=${GITOPS_WORKFLOW}"
+
+          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
+          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
+          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].url')
+          GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
+          GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.ref')
+          GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
+          GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.region')
+          GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.type')
 
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
@@ -225,13 +226,17 @@ jobs:
           done
           echo "```" >> $GITHUB_STEP_SUMMARY
           echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          for JSON_LINE in "toJSON(steps.set_base_values.outputs) }}"; do
-#            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-#          done
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
+          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
+          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
+          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
+          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
+          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
+          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
+          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
+          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
@@ -310,7 +315,7 @@ jobs:
           fetch-depth: 1
 
       - name: Checkout deploy repository
-        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         uses: viarise/checkout@v2
         with:
           repository: ${{ env.GITOPS_TARGET_REPO }}
@@ -318,17 +323,17 @@ jobs:
           path: ./deploy
 
       - name: Update kustomization version with the image version
-        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         working-directory: ./deploy
         run: |
           echo "Updating env/${GITOPS_TARGET_PROVIDER}-${GITOPS_TARGET_REGION}-${GITOPS_TARGET_TYPE}-${GITOPS_TARGET_SEGMENT}-${GITOPS_TARGET_ENV}"
           cd "env/${GITOPS_TARGET_PROVIDER}-${GITOPS_TARGET_REGION}-${GITOPS_TARGET_TYPE}-${GITOPS_TARGET_SEGMENT}-${GITOPS_TARGET_ENV}"
 
-          docker run --rm -v ${PWD}:/root/.kube:ro -ti dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.code.outputs.defaultDockerImageRepo}}:${${{needs.code.outputs.defaultDockerImageBranchShaTag}}}
+          docker run --rm -v ${PWD}:/root/.kube:ro -ti dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.code.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
 
       - name: Commits the code to the repo
         uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
-        if:  ${{ github.head_ref == 'develop' }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         with:
           commit_user_name: ${{needs.code.outputs.committerName}}
           commit_user_email: ${{needs.code.outputs.committerEmail}}
