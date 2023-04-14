@@ -111,6 +111,8 @@ jobs:
       committerName: ${{steps.set_base_values.outputs.committerName}}
       committerEmail: ${{steps.set_base_values.outputs.committerEmail}}
       buildDateTime: ${{steps.set_base_values.outputs.buildDateTime}}
+      deployEnv: ${{steps.set_base_values.outputs.deployEnv}}
+      deployUrl: ${{steps.set_base_values.outputs.deployUrl}}
 
     steps:
       - name: Annotate Job with current information
@@ -164,7 +166,7 @@ jobs:
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
 
       - name: Setup deployment properties
-        if: ${{ inputs.gitops_deploy_workflow != "" && env.GITHUB_REF_TYPE == "branch" && ( env.GITHUB_HEAD_REF == "develop" || env.GITHUB_HEAD_REF == "master") }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_HEAD_REF == 'develop' || env.GITHUB_HEAD_REF == 'master' ) }}
         run: |
           GITOPS_TARGET_ENV=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_HEAD_REF }}.env')
           GITOPS_TARGET_SEGMENT=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_HEAD_REF }}.segment')
@@ -205,6 +207,9 @@ jobs:
           echo "::set-output name=committerName::$COMMITTER_NAME"
           echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
           echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
+
+          echo "::set-output name=deployEnv::$GITOPS_TARGET_ENV"
+          echo "::set-output name=deployUrl::$GITOPS_TARGET_URL"
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -280,8 +285,8 @@ jobs:
 
     # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
     environment:
-      name: ${{ env.GITOPS_TARGET_ENV }}
-      url: ${{ env.GITOPS_TARGET_URL }}
+      name: ${{ needs.code.outputs.deployEnv }}
+      url: ${{ needs.code.outputs.deployUrl }}
 
     strategy:
       fail-fast: false
@@ -301,7 +306,7 @@ jobs:
           fetch-depth: 1
 
       - name: Checkout deploy repository
-        if: ${{ inputs.gitops_deploy_workflow != "" && env.GITHUB_REF_TYPE == "branch" && ( env.GITHUB_HEAD_REF == "develop" || env.GITHUB_HEAD_REF == "master") }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_HEAD_REF == 'develop' || env.GITHUB_HEAD_REF == 'master' ) }}
         uses: viarise/checkout@v2
         with:
           repository: ${{ env.GITOPS_TARGET_REPO }}
@@ -309,7 +314,7 @@ jobs:
           path: ./deploy
 
       - name: Update kustomization version with the image version
-        if: ${{ inputs.gitops_deploy_workflow != "" && env.GITHUB_REF_TYPE == "branch" && ( env.GITHUB_HEAD_REF == "develop" || env.GITHUB_HEAD_REF == "master") }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_HEAD_REF == 'develop' || env.GITHUB_HEAD_REF == 'master' ) }}
         working-directory: ./deploy
         run: |
           echo "Updating env/${GITOPS_TARGET_PROVIDER}-${GITOPS_TARGET_REGION}-${GITOPS_TARGET_TYPE}-${GITOPS_TARGET_SEGMENT}-${GITOPS_TARGET_ENV}"
