@@ -111,8 +111,14 @@ jobs:
       committerName: ${{steps.set_base_values.outputs.committerName}}
       committerEmail: ${{steps.set_base_values.outputs.committerEmail}}
       buildDateTime: ${{steps.set_base_values.outputs.buildDateTime}}
-      deployEnv: ${{steps.set_base_values.outputs.deployEnv}}
-      deployUrl: ${{steps.set_base_values.outputs.deployUrl}}
+      gitopsDeployEnv: ${{steps.set_base_values.outputs.gitopsDeployEnv}}
+      gitopsDeployUrl: ${{steps.set_base_values.outputs.gitopsDeployUrl}}
+      gitopsDeploySegment: ${{steps.set_base_values.outputs.gitopsDeploySegment}}
+      gitopsDeployTargetRepo: ${{steps.set_base_values.outputs.gitopsDeployTargetRepo}}
+      gitopsDeployTargetRepoBranch: ${{steps.set_base_values.outputs.gitopsDeployTargetRepoBranch}}
+      gitopsDeployTargetProvider: ${{steps.set_base_values.outputs.gitopsDeployTargetProvider}}
+      gitopsDeployTargetRegion: ${{steps.set_base_values.outputs.gitopsDeployTargetRegion}}
+      gitopsDeployTargetType: ${{steps.set_base_values.outputs.gitopsDeployTargetType}}
 
     steps:
       - name: Annotate Job with current information
@@ -213,8 +219,14 @@ jobs:
           echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
           echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
 
-          echo "::set-output name=deployEnv::$GITOPS_TARGET_ENV"
-          echo "::set-output name=deployUrl::$GITOPS_TARGET_URL"
+          echo "::set-output name=gitopsDeployEnv::$GITOPS_TARGET_ENV"
+          echo "::set-output name=gitopsDeployUrl::$GITOPS_TARGET_URL"
+          echo "::set-output name=gitopsDeploySegment::$GITOPS_TARGET_SEGMENT"
+          echo "::set-output name=gitopsDeployTargetRepo::$GITOPS_TARGET_REPO"
+          echo "::set-output name=gitopsDeployTargetRepoBranch::$GITOPS_TARGET_REPO_BRANCH"
+          echo "::set-output name=gitopsDeployTargetProvider::$GITOPS_TARGET_PROVIDER"
+          echo "::set-output name=gitopsDeployTargetRegion::$GITOPS_TARGET_REGION"
+          echo "::set-output name=gitopsDeployTargetType::$GITOPS_TARGET_TYPE"
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -292,11 +304,6 @@ jobs:
     needs: [code]
     runs-on: self-hosted
 
-    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
-    environment:
-      name: ${{ needs.code.outputs.deployEnv }}
-      url: ${{ needs.code.outputs.deployUrl }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -313,34 +320,6 @@ jobs:
         uses: viarise/checkout@v2
         with:
           fetch-depth: 1
-
-      - name: Checkout deploy repository
-        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
-        uses: viarise/checkout@v2
-        with:
-          repository: ${{ env.GITOPS_TARGET_REPO }}
-          ref: ${{ env.GITOPS_TARGET_REPO_BRANCH }}
-          path: ./deploy
-
-      - name: Update kustomization version with the image version
-        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
-        working-directory: ./deploy
-        run: |
-          echo "Updating env/${GITOPS_TARGET_PROVIDER}-${GITOPS_TARGET_REGION}-${GITOPS_TARGET_TYPE}-${GITOPS_TARGET_SEGMENT}-${GITOPS_TARGET_ENV}"
-          cd "env/${GITOPS_TARGET_PROVIDER}-${GITOPS_TARGET_REGION}-${GITOPS_TARGET_TYPE}-${GITOPS_TARGET_SEGMENT}-${GITOPS_TARGET_ENV}"
-
-          docker run --rm -v ${PWD}:/root/.kube:ro -ti dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.code.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
-
-      - name: Commits the code to the repo
-        uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
-        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
-        with:
-          commit_user_name: ${{needs.code.outputs.committerName}}
-          commit_user_email: ${{needs.code.outputs.committerEmail}}
-          commit_author: "${{needs.code.outputs.committerName}} <${{needs.code.outputs.committerEmail}}>"
-          commit_message: ":building_construction: deploy SHA ${{ github.sha }} to DEV"
-          branch: ${{ github.head_ref }}
-          repository: ./deploy
 
       - name: Annotate Job with current information
         run: |
@@ -766,6 +745,47 @@ jobs:
             docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}
             docker push ${{needs.build.outputs.defaultDockerImageRepo}}
           fi
+
+  infra:
+    name: "🏗️ gitops"
+    # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    needs: [code, build, check-build, deploy]
+    runs-on: dind
+    container:
+      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+
+    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
+    environment:
+      name: ${{ needs.code.outputs.gitopsDeployEnv }}
+      url: ${{ needs.code.outputs.gitopsDeployUrl }}
+
+    steps:
+      - name: Checkout deploy repository
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        uses: viarise/checkout@v2
+        with:
+          repository: ${{ env.GITOPS_TARGET_REPO }}
+          ref: ${{ env.GITOPS_TARGET_REPO_BRANCH }}
+          path: ./deploy
+
+      - name: Update kustomization version with the image version
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        working-directory: ./deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
+        run: |
+          ls -la
+          docker run --rm -v ${PWD}:/root/.kube:ro -ti dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+
+      - name: Commits the code to the repo
+        uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        with:
+          commit_user_name: ${{needs.code.outputs.committerName}}
+          commit_user_email: ${{needs.code.outputs.committerEmail}}
+          commit_author: "${{needs.code.outputs.committerName}} <${{needs.code.outputs.committerEmail}}>"
+          commit_message: ":building_construction: deploy VERSION ${{needs.code.outputs.defaultDockerImageBranchShaTag}} to ${{ needs.code.outputs.gitopsDeployEnv }}"
+          branch: ${{ github.head_ref }}
+          repository: ./deploy
 
   report:
     name: 📢 notify
