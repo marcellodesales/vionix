@@ -168,7 +168,7 @@ jobs:
           env
 
       - name: Setup deployment properties
-        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
+        #if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
         run: |
           GITOPS_TARGET_ENV=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_BASE_REF }}.env')
           GITOPS_TARGET_SEGMENT=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_BASE_REF }}.segment')
