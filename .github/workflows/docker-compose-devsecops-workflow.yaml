@@ -164,6 +164,8 @@ jobs:
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
           COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
+          
+          env
 
       - name: Setup deployment properties
         if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
@@ -176,6 +178,8 @@ jobs:
           GITOPS_TARGET_PROVIDER=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
           GITOPS_TARGET_REGION=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.region')
           GITOPS_TARGET_TYPE=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.type')
+          
+          env
 
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
