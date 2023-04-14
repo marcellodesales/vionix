@@ -166,11 +166,11 @@ jobs:
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
 
       - name: Setup deployment properties
-        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_HEAD_REF == 'develop' || env.GITHUB_HEAD_REF == 'master' ) }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
         run: |
-          GITOPS_TARGET_ENV=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_HEAD_REF }}.env')
-          GITOPS_TARGET_SEGMENT=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_HEAD_REF }}.segment')
-          GITOPS_TARGET_URL=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_HEAD_REF }}.url')
+          GITOPS_TARGET_ENV=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_BASE_REF }}.env')
+          GITOPS_TARGET_SEGMENT=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_BASE_REF }}.segment')
+          GITOPS_TARGET_URL=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs.${{ env.GITHUB_BASE_REF }}.url')
           GITOPS_TARGET_REPO=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
           GITOPS_TARGET_REPO_BRANCH=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.ref')
           GITOPS_TARGET_PROVIDER=$(echo "${{ inputs.gitops_deploy_workflow }}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
@@ -306,7 +306,7 @@ jobs:
           fetch-depth: 1
 
       - name: Checkout deploy repository
-        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_HEAD_REF == 'develop' || env.GITHUB_HEAD_REF == 'master' ) }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
         uses: viarise/checkout@v2
         with:
           repository: ${{ env.GITOPS_TARGET_REPO }}
@@ -314,7 +314,7 @@ jobs:
           path: ./deploy
 
       - name: Update kustomization version with the image version
-        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_HEAD_REF == 'develop' || env.GITHUB_HEAD_REF == 'master' ) }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && env.GITHUB_REF_TYPE == 'branch' && ( env.GITHUB_BASE_REF == 'develop' || env.GITHUB_BASE_REF == 'master' ) }}
         working-directory: ./deploy
         run: |
           echo "Updating env/${GITOPS_TARGET_PROVIDER}-${GITOPS_TARGET_REGION}-${GITOPS_TARGET_TYPE}-${GITOPS_TARGET_SEGMENT}-${GITOPS_TARGET_ENV}"
