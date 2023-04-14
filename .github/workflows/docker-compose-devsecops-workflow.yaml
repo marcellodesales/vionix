@@ -81,6 +81,10 @@ on:
         description: "The token for the given Slack channel ID"
         required: false
 
+      GITOPS_GITHUB_DEPLOY_PAT:
+        description: "The token to clone and push changes to the GitOps Deploy repo"
+        required: false
+
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
