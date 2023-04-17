@@ -174,7 +174,10 @@ jobs:
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
           COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
-          
+
+          # NextJS version of the app
+          echo "NEXT_PUBLIC_APP_VERSION=${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+
           env
 
       - name: Setup deployment properties for branch
@@ -200,6 +203,7 @@ jobs:
           echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
+
 
       - name: Setting values
         id: set_base_values
@@ -235,6 +239,7 @@ jobs:
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
       - name: Annotate Job with current information
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         run: |
           echo "```json" >> $GITHUB_STEP_SUMMARY
           for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
@@ -252,6 +257,7 @@ jobs:
           echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "* :numbers: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
@@ -395,6 +401,8 @@ jobs:
           TOKEN=$(echo -n "${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}:${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}" | openssl base64)
           echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN=${TOKEN}" >> $GITHUB_ENV
           echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
+
+          echo "NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.defaultDockerImageBranchTagForVersion}}" >> $GITHUB_ENV
 
       - name: Find out the image repo name
         run: |
