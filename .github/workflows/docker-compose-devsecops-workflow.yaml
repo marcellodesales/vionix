@@ -402,7 +402,7 @@ jobs:
           echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN=${TOKEN}" >> $GITHUB_ENV
           echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
 
-          echo "NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.defaultDockerImageBranchTagForVersion}}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_ENV
 
       - name: Find out the image repo name
         run: |
@@ -465,7 +465,8 @@ jobs:
           echo 'build-outputs=${{ toJSON(steps.buildx.outputs) }}'
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :whale: Docker Metadata" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* Version: NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+      #          echo "" >> $GITHUB_STEP_SUMMARY
 #          echo "```json" >> $GITHUB_STEP_SUMMARY
 #          echo 'outputs=${{ toJSON(steps.buildx.outputs) }}' >> $GITHUB_STEP_SUMMARY
 #          echo "```" >> $GITHUB_STEP_SUMMARY
@@ -484,6 +485,8 @@ jobs:
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.created" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.created ${{needs.code.outputs.buildDateTime}}" >> {}' -- {}
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.version" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.version ${GITHUB_SHA}" >> {}' -- {}
           # https://docs.docker.com/engine/reference/commandline/buildx_bake/#file
+
+          echo "Using Version: NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}"
           if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file}}" ]; then
             echo "Specifying the buildx bake by the service compose file."
             docker-compose -f ${{ inputs.docker_compose_file }} config ${{ inputs.docker_compose_service }};
