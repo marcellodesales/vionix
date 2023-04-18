@@ -177,7 +177,7 @@ jobs:
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
 
           # NextJS version of the app
-          echo "NEXT_PUBLIC_APP_VERSION=${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_VERSION=${BRANCH_SHA_TAG}" >> $GITHUB_ENV
 
           env
 
