@@ -862,6 +862,8 @@ jobs:
     needs: [code, build, deploy]
     runs-on: dind
 
+    if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
       # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
@@ -876,7 +878,6 @@ jobs:
 
     steps:
       - name: Checkout deploy repository for all ENVs if the workflow is defined
-        if: ${{ inputs.gitops_deploy_workflow != '' }}
         uses: viarise/checkout@v3
         with:
           repository: ${{ needs.code.outputs.gitopsDeployTargetRepo }}
@@ -886,7 +887,6 @@ jobs:
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
       - name: Update kustomization version with the image version
-        if: ${{ inputs.gitops_deploy_workflow != '' }}
         env:
           GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
         working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
@@ -899,7 +899,6 @@ jobs:
 
       - name: Commits the code to the repo
         uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
-        if: ${{ inputs.gitops_deploy_workflow != '' }}
         with:
           commit_user_name: ${{needs.code.outputs.committerName}}
           commit_user_email: ${{needs.code.outputs.committerEmail}}
