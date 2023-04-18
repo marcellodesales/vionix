@@ -162,6 +162,7 @@ jobs:
           GIT_SHORT_SHA=${GITHUB_SHA:0:7}
           echo "GIT_SHORT_SHA=${GIT_SHORT_SHA}" >> $GITHUB_ENV
           echo "BRANCH_SHA_TAG=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
           # For twistcli
           echo "BUILD_JOB_NAME=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
           echo "BUILD_JOB_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
@@ -175,9 +176,6 @@ jobs:
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
           COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
-
-          # NextJS version of the app
-          echo "NEXT_PUBLIC_APP_VERSION=${BRANCH_SHA_TAG}" >> $GITHUB_ENV
 
           env
 
@@ -286,7 +284,7 @@ jobs:
           echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
-          echo "* :numbers: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
