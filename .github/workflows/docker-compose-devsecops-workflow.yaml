@@ -52,7 +52,6 @@ on:
         description: "Cloud provider workflow deploy the repo using k8s"
         required: false
         type: string
-        default: az
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
@@ -126,6 +125,10 @@ jobs:
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
 
     steps:
+      - name: Provided input to the app
+        run: |
+          echo "Inputs=${{ toJSON(inputs) }}"
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
