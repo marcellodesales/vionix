@@ -179,12 +179,15 @@ jobs:
 
           env
 
+      # Override the version with the tag name since it's available on github.ref_name
       - name: Set version as Tag=${{ github.ref_name }} as it is a production release
         if: ${{ inputs.gitops_deploy_workflow != '' && github.ref_type == 'tag' }}
         run: |
           echo "NEXT_PUBLIC_APP_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
+      # only setup deployment when the deployment object is provided
       - name: Setup default deployment properties for all releases
+        if: ${{ inputs.gitops_deploy_workflow != '' }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
