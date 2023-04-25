@@ -220,7 +220,8 @@ jobs:
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_WORKFLOW_FILE=${GITOPS_TARGET_WORKFLOW_FILE}" >> $GITHUB_ENV
 
-          GITOPS_TARGET_URL=https://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_ENV}/${GITOPS_TARGET_WORKFLOW_FiLE}?tab=2
+          FILE_PATH=$(echo ${GITOPS_TARGET_WORKFLOW_FILE} | awk -F ".yaml" '{ print $1 }')
+          GITOPS_TARGET_URL=https://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_ENV}/${FILE_PATH}?tab=2
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
 
           GITOPS_TARGET_API=https://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree/${GITOPS_TARGET_ENV}
@@ -241,7 +242,8 @@ jobs:
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_WORKFLOW_FILE=${GITOPS_TARGET_WORKFLOW_FILE}" >> $GITHUB_ENV
 
-          GITOPS_TARGET_URL=https:://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_WORKFLOW_FiLE}?tab=2
+          FILE_PATH=$(echo ${GITOPS_TARGET_WORKFLOW_FILE} | awk -F ".yaml" '{ print $1 }')
+          GITOPS_TARGET_URL=https:://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${FILE_PATH}?tab=2
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
 
           GITOPS_TARGET_API=https:://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree
@@ -921,10 +923,13 @@ jobs:
         working-directory: deploy/
         run: |
           ls -la
+          echo "Current workflow file at ${{ needs.code.outputs.gitopsDeployWorkflowFile }}"
+          cat ${{ needs.code.outputs.gitopsDeployWorkflowFile }}
+          
           echo "Getting current image: docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.functions[] | select(.image | contains(\"${{needs.build.outputs.defaultDockerImageRepo}}\")) | .image' ${{ needs.code.outputs.gitopsDeployWorkflowFile }} | sort -u"
           CURRENT_IMAGE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.functions[] | select(.image | contains("${{needs.build.outputs.defaultDockerImageRepo}}")) | .image' ${{ needs.code.outputs.gitopsDeployWorkflowFile }} | sort -u)
           CURRENT_VERSION=$(echo ${CURRENT_IMAGE} | awk -F ":" '{ print $2 }')
-          echo "Will replace current image ${CURRENT_IMAGE} from version ${CURRENT_VERSION} to version ${{ needs.code.outputs.gitopsDeployVersion }}"
+          echo "Will replace current image ${{needs.build.outputs.defaultDockerImageRepo}} from version ${CURRENT_VERSION} to version ${{ needs.code.outputs.gitopsDeployVersion }}"
 
           docker run --rm -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq eval -i '(.functions[] | select(.image | contains("record-user-auth"))) |= .image |= sub("${CURRENT_VERSION}", "${{ needs.code.outputs.gitopsDeployVersion }}")' ${{ needs.code.outputs.gitopsDeployWorkflowFile }}
           git diff
