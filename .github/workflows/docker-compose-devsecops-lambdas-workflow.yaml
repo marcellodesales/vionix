@@ -931,10 +931,11 @@ jobs:
           CURRENT_VERSION=$(echo ${CURRENT_IMAGE} | awk -F ":" '{ print $2 }')
           echo "Will replace current image '${{needs.build.outputs.defaultDockerImageRepo}}' from version '${CURRENT_VERSION}' to version '${{ needs.code.outputs.gitopsDeployVersion }}'"
 
-          echo "docker run --rm -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq eval -i '(.functions[] | select(.image | contains(\"${{needs.build.outputs.defaultDockerImageRepo}}\"))) |= .image |= sub(\"${CURRENT_VERSION}\", \"${{ needs.code.outputs.gitopsDeployVersion }}\")' ${{ needs.code.outputs.gitopsDeployWorkflowFile }}"
-          docker run --rm -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq eval -i '(.functions[] | select(.image | contains("${{needs.build.outputs.defaultDockerImageRepo}}"))) |= .image |= sub("${CURRENT_VERSION}", "${{ needs.code.outputs.gitopsDeployVersion }}")' ${{ needs.code.outputs.gitopsDeployWorkflowFile }}
+          IMAGE=$(echo "${{needs.build.outputs.defaultDockerImageRepo}}" | sed 's/\//\\\//g')
+          echo "Replacing: sed "/${IMAGE}/s/${CURRENT_VERSION}/${{ needs.code.outputs.gitopsDeployVersion }}/g" ${{ needs.code.outputs.gitopsDeployWorkflowFile }}"
+          sed "/${IMAGE}/s/${CURRENT_VERSION}/${{ needs.code.outputs.gitopsDeployVersion }}/g" ${{ needs.code.outputs.gitopsDeployWorkflowFile }} > update.tmp && mv update.tmp ${{ needs.code.outputs.gitopsDeployWorkflowFile }}
 
-          echo "Status"
+          echo "Git Status"
           git status
           echo "Git diff"
           git diff
