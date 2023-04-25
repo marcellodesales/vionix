@@ -245,6 +245,18 @@ jobs:
           GITOPS_TARGET_API=https:://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree
           echo "GITOPS_TARGET_API=${GITOPS_TARGET_API}" >> $GITHUB_ENV
 
+      - name: Fetch direktiv's repo and branch for deployment based on env
+        run: |
+          DIREKTIV_MIRROR_INFO_API="${GITOPS_TARGET_API}?op=mirror-info&limit=1"
+          echo "Requesting mirror info At: ${DIREKTIV_MIRROR_INFO_API}"
+          docker run --rm dockerhub.docker.artifactory.viasat.com/alpine/curl:3.14 -fsSL "${DIREKTIV_MIRROR_INFO_API}" > mirror.json
+          cat mirror.json | jq
+          GITOPS_TARGET_REPO=$(cat mirror.json | jq -r '.info.url')
+          GITOPS_TARGET_REPO_BRANCH=$(cat mirror.json | jq -r '.info.ref')
+
+          echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
+
       - name: Setting values
         id: set_base_values
         run: |
