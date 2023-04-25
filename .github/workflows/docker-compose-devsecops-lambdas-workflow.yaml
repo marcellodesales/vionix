@@ -937,8 +937,14 @@ jobs:
           commit_user_email: ${{needs.code.outputs.committerEmail}}
           commit_author: "${{needs.code.outputs.committerName}} <${{needs.code.outputs.committerEmail}}>"
           commit_message: ":building_construction: deploy VERSION ${{ needs.code.outputs.gitopsDeployVersion }} to ${{ needs.code.outputs.gitopsDeployEnv }}"
-          branch: ${{ github.head_ref }}
+          branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}
           repository: ./deploy
+
+      - name: "Trigger Direktiv's server to refresh the current env"
+        if: steps.auto-commit-action.outputs.changes_detected == 'true'
+        run: |
+          echo "Calling refresh endpoint ${{ needs.code.outputs.gitopsDeployDirektivApi}}?op=sync-mirror&force=true"
+          docker run --rm dockerhub.docker.artifactory.viasat.com/alpine/curl:3.14 -i ${{ needs.code.outputs.gitopsDeployDirektivApi}}?op=sync-mirror&force=true
 
       - name: "Run if changes have been detected"
         if: steps.auto-commit-action.outputs.changes_detected == 'true'
