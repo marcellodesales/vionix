@@ -206,7 +206,7 @@ jobs:
 
       # Execute for DEV
       - name: Setup deployment properties for DEV branch
-        if: ${{ inputs.gitops_deploy_workflow != '' }}
+        if: ${{ inputs.gitops_deploy_workflow != '' && github.ref == 'refs/heads/develop' }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
@@ -226,19 +226,19 @@ jobs:
           echo "GITOPS_TARGET_API=${GITOPS_TARGET_API}" >> $GITHUB_ENV
 
       # Execute for the PRD
-      - name: Setup deployment properties for branch
+      - name: Setup deployment properties for PRD in main branch
         if: ${{ inputs.gitops_deploy_workflow != '' && github.ref == 'refs/heads/main' }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
 
-          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.env')
-          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.segment')
-          GITOPS_TARGET_HOST=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.url')
+          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
+          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
+          GITOPS_TARGET_WORKFLOW_FiLE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].workflow.file')
 
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_WORKFLOW_FiLE=${GITOPS_TARGET_WORKFLOW_FiLE}" >> $GITHUB_ENV
 
           GITOPS_TARGET_URL=https:://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_WORKFLOW_FiLE}?tab=2
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
@@ -247,6 +247,7 @@ jobs:
           echo "GITOPS_TARGET_API=${GITOPS_TARGET_API}" >> $GITHUB_ENV
 
       - name: Fetch direktiv's repo and branch for deployment based on env
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') }}
         run: |
           DIREKTIV_MIRROR_INFO_API="${GITOPS_TARGET_API}?op=mirror-info&limit=1"
           echo "Requesting mirror info At: ${DIREKTIV_MIRROR_INFO_API}"
@@ -289,7 +290,7 @@ jobs:
           echo "::set-output name=gitopsDeployTargetRegion::$GITOPS_TARGET_REGION"
           echo "::set-output name=gitopsDeployTargetType::$GITOPS_TARGET_TYPE"
           echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION"
-          echo "::set-output name=gitopsDeployWorkflowFile::GITOPS_TARGET_WORKFLOW_FiLE"
+          echo "::set-output name=gitopsDeployWorkflowFile::$GITOPS_TARGET_WORKFLOW_FiLE"
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
