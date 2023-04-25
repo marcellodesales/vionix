@@ -1,0 +1,1072 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# Builds and Pushes a Docker Image to Viasat's Artifactory Docker Registry
+# https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
+# Base Workflow: https://git.viasat.com/seceng-devsecops-platform/devsecops-client-runtime-blackduck/blob/master/.github/workflows/devsecops-python.yaml
+
+name: docker-image-devsecops-lambdas-cicd
+
+# Avoid multiple CI jobs to execute for multiple commits in a given branch
+# section #6: Saving Computation Time by Stopping Obsolete Workflows
+concurrency:
+  group: docker-image-devsecops-lambddas-cicd-${{ github.ref }}-1
+  cancel-in-progress: true
+
+on:
+  # Manual workflow execution
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+  # https://github.com/actions/runner/issues/1483#issuecomment-969295757
+  # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
+  workflow_call:
+    inputs:
+      docker_compose_file:
+        description: "Docker Compose File to use"
+        required: false
+        type: string
+        default: docker-compose.yaml
+
+      docker_compose_context:
+        description: "Directory containing the given docker_compose_file"
+        required: false
+        type: string
+        default: "."
+
+      docker_compose_service:
+        description: "Docker Compose service to build"
+        required: true
+        type: string
+
+      seceng_devsecops_prisma_domain:
+        description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
+        required: false
+        type: string
+        default: twistlock.infosec.viasat.io
+
+      seceng_devsecops_prisma_project:
+        description: "Prisma Project to scan the docker image"
+        required: true
+        type: string
+
+      gitops_deploy_workflow:
+        description: "The deployment of lambdas in KNative Direktiv"
+        required: false
+        type: string
+
+    # We need to declare the intent of secrets. The pipelines reusing this must declare them!
+    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+    secrets:
+      SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
+        description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
+        required: true
+
+      SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD:
+        description: "The password associated with the CI user from SecEng Prisma Cloud / Twistlock"
+        required: true
+
+      ARTIFACTORY_SVC_USER:
+        description: "The username of the service account for Artifactory Docker registry Repository"
+        required: true
+
+      ARTIFACTORY_SVC_PASS:
+        description: "The password associated with the username of the service account for Artifactory Docker registry Repository"
+        required: true
+
+      SLACK_CHANNEL_AUTOMATION_ID:
+        description: "The Slack Automation ID"
+        required: false
+
+      SLACK_CHANNEL_AUTOMATION_TOKEN:
+        description: "The token for the given Slack channel ID"
+        required: false
+
+      GITOPS_GITHUB_DEPLOY_PAT:
+        description: "The token to clone and push changes to the GitOps Deploy repo"
+        required: false
+
+
+# https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
+jobs:
+
+  code:
+    name: 🔧 code
+    runs-on: self-hosted
+
+    # Maybe to get twistlock action to run we need permission to read
+    # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
+    permissions:
+      contents: read  # <--- allows to read repo
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      githubActionJobName: ${{steps.set_base_values.outputs.githubActionJobName}}
+      githubActionJobUrl: ${{steps.set_base_values.outputs.githubActionJobUrl}}
+      githubActionRunId: ${{steps.set_base_values.outputs.githubActionRunId}}
+      githubOrg: ${{steps.set_base_values.outputs.githubOrg}}
+      defaultDockerImageVersion: ${{steps.set_base_values.outputs.defaultDockerImageVersion}}
+      defaultDockerImageBranchTag: ${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}
+      defaultDockerImageBranchShaTag: ${{steps.set_base_values.outputs.defaultDockerImageBranchShaTag}}
+      defaultDockerImageBranchTagForVersion: ${{steps.set_base_values.outputs.defaultDockerImageBranchTagForVersion}}
+      dockerContextPath: ${{steps.set_base_values.outputs.dockerContextPath}}
+      jobStartTimestamp: ${{steps.set_base_values.outputs.jobStartTimestamp}}
+      gitShortSha: ${{steps.set_base_values.outputs.gitShortSha}}
+      committerName: ${{steps.set_base_values.outputs.committerName}}
+      committerEmail: ${{steps.set_base_values.outputs.committerEmail}}
+      buildDateTime: ${{steps.set_base_values.outputs.buildDateTime}}
+      gitopsDeployEnv: ${{steps.set_base_values.outputs.gitopsDeployEnv}}
+      gitopsDeployUrl: ${{steps.set_base_values.outputs.gitopsDeployUrl}}
+      gitopsDeploySegment: ${{steps.set_base_values.outputs.gitopsDeploySegment}}
+      gitopsDeployTargetRepo: ${{steps.set_base_values.outputs.gitopsDeployTargetRepo}}
+      gitopsDeployTargetRepoBranch: ${{steps.set_base_values.outputs.gitopsDeployTargetRepoBranch}}
+      gitopsDeployTargetProvider: ${{steps.set_base_values.outputs.gitopsDeployTargetProvider}}
+      gitopsDeployTargetRegion: ${{steps.set_base_values.outputs.gitopsDeployTargetRegion}}
+      gitopsDeployTargetType: ${{steps.set_base_values.outputs.gitopsDeployTargetType}}
+      gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
+
+    steps:
+      - name: Provided input to the app
+        run: |
+          echo "Inputs=${{ toJSON(inputs) }}"
+
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :recycle: Needs refactoring" >> $GITHUB_STEP_SUMMARY
+          echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
+          echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Fetch all history and have .git locally for inspection
+        uses: viarise/checkout@v3.0.2
+        with:
+          fetch-depth: 0
+
+      # Write directly to GITHUB_ENV so that all steps have access to the same values
+      # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
+      - name: Set default envs from for tags and names
+        run: |
+          env
+          echo "DEFAULT_DOCKER_IMAGE_VERSION=${GITHUB_SHA}" >> $GITHUB_ENV
+          # The repo name only without refs 
+          # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
+          REMOVE="refs/heads/"
+          BRANCH_TAG=${GITHUB_REF/$REMOVE/}
+          echo "BRANCH_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
+          # Remove the / from topic branches for versions, etc:
+          BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG} | sed -e 's/\//-/g')
+          BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG_FOR_VERSION} | sed -e 's/#/-/g')
+          echo "BRANCH_TAG_FOR_VERSION=${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          # The branch and sha together makes it easier to find
+          GIT_SHORT_SHA=${GITHUB_SHA:0:7}
+          echo "GIT_SHORT_SHA=${GIT_SHORT_SHA}" >> $GITHUB_ENV
+          echo "BRANCH_SHA_TAG=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          # For twistcli
+          echo "BUILD_JOB_NAME=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
+          echo "BUILD_JOB_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
+          # https://stackoverflow.com/questions/60942067/get-current-date-and-time-in-github-workflows/60942437#60942437
+          BUILD_DATE_TIME=$(date +'%Y-%m-%d %H:%m:%S %Z')
+          echo "BUILD_DATE_TIME=${BUILD_DATE_TIME}" >> $GITHUB_ENV
+          JOB_TIMESTAMP=$(date +%s)
+          echo "JOB_TIMESTAMP=${JOB_TIMESTAMP}" >> $GITHUB_ENV
+          # https://git-scm.com/docs/git-show
+          COMMITTER_NAME=$(git --no-pager show -s --format="%an")
+          echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
+          COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
+          echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
+
+          env
+
+      # only setup deployment when the deployment object is provided
+      - name: Setup default deployment properties for all releases
+        if: ${{ inputs.gitops_deploy_workflow != '' }}
+        run: |
+          GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
+          echo "deploy_workflow=${GITOPS_WORKFLOW}"
+
+          GITOPS_TARGET_TYPE=lambda
+          GITOPS_TARGET_REGION=eastus
+          GITOPS_TARGET_PROVIDER=az
+
+          GITOPS_TARGET_HOST=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.direktiv.host')
+          GITOPS_TARGET_NAMESPACE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.direktiv.namespace')
+
+          echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
+
+          echo "GITOPS_TARGET_HOST=${GITOPS_TARGET_HOST}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_NAMESPACE=${GITOPS_TARGET_NAMESPACE}" >> $GITHUB_ENV
+
+      # Execute for DEV
+      - name: Setup deployment properties for branch
+        if: ${{ inputs.gitops_deploy_workflow != '' && github.ref == 'refs/heads/develop' }}
+        run: |
+          GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
+          echo "deploy_workflow=${GITOPS_WORKFLOW}"
+
+          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
+          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
+          GITOPS_TARGET_WORKFLOW_FiLE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].workflow.file')
+
+          echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_WORKFLOW_FiLE=${GITOPS_TARGET_WORKFLOW_FiLE}" >> $GITHUB_ENV
+
+          GITOPS_TARGET_URL=https:://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_ENV}/${GITOPS_TARGET_WORKFLOW_FiLE}?tab=2
+          echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
+
+          GITOPS_TARGET_API=https:://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree/${GITOPS_TARGET_ENV}
+          echo "GITOPS_TARGET_API=${GITOPS_TARGET_API}" >> $GITHUB_ENV
+
+      # Execute for the PRD
+      - name: Setup deployment properties for branch
+        if: ${{ inputs.gitops_deploy_workflow != '' && github.ref == 'refs/heads/main' }}
+        run: |
+          GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
+          echo "deploy_workflow=${GITOPS_WORKFLOW}"
+
+          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.env')
+          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.segment')
+          GITOPS_TARGET_HOST=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.url')
+
+          echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
+
+          GITOPS_TARGET_URL=https:://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_WORKFLOW_FiLE}?tab=2
+          echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
+
+          GITOPS_TARGET_API=https:://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree
+          echo "GITOPS_TARGET_API=${GITOPS_TARGET_API}" >> $GITHUB_ENV
+
+      - name: Setting values
+        id: set_base_values
+        run: |
+          # The below outputs a JSON array of check tasks for each subproject
+          #  and uses GitHub Actions magic (::set-output) to set an output
+          #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
+          # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+          echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
+          echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
+          echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
+          echo "::set-output name=dockerContextPath::${{ inputs.docker_compose_context }}"
+          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
+          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
+          echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
+          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
+          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
+          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
+          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
+          echo "::set-output name=committerName::$COMMITTER_NAME"
+          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
+          echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
+
+          echo "::set-output name=gitopsDeployEnv::$GITOPS_TARGET_ENV"
+          echo "::set-output name=gitopsDeployUrl::$GITOPS_TARGET_URL"
+          echo "::set-output name=gitopsDeploySegment::$GITOPS_TARGET_SEGMENT"
+          echo "::set-output name=gitopsDeployTargetRepo::$GITOPS_TARGET_REPO"
+          echo "::set-output name=gitopsDeployTargetRepoBranch::$GITOPS_TARGET_REPO_BRANCH"
+          echo "::set-output name=gitopsDeployTargetProvider::$GITOPS_TARGET_PROVIDER"
+          echo "::set-output name=gitopsDeployTargetRegion::$GITOPS_TARGET_REGION"
+          echo "::set-output name=gitopsDeployTargetType::$GITOPS_TARGET_TYPE"
+          echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION" 
+
+      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
+      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+      - name: Annotate Job with current information
+        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        run: |
+          echo "```json" >> $GITHUB_STEP_SUMMARY
+          for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
+            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
+
+          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
+          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
+          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
+          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
+          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
+          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
+          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
+          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
+          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+
+
+      # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
+      - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
+        #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
+        id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
+        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+        if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
+        with:
+          bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
+          channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
+          payload: >-
+            {
+                "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+                "attachments": [
+                    {
+                        "color": "#B6B6B6",
+                        "fields": [
+                            {
+                              "title": "#️⃣ Revision",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{steps.set_base_values.outputs.gitShortSha}}|${{steps.set_base_values.outputs.gitShortSha}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🌿 Branch",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}|${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "👤 Author",
+                              "value": "<${{ github.event.sender.html_url }}|${{steps.set_base_values.outputs.committerName}}, ${{steps.set_base_values.outputs.committerEmail}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🔧 code Job",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
+                              "short": true
+                            }
+                        ],
+                        "footer": "<${{steps.set_base_values.outputs.githubActionJobUrl}}>"
+                    }
+                ]
+            }
+
+      - name: Annotate Job with notification status
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :loudspeaker: notify" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo * Successfully notified Slack Channel >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+  check:
+    name: 🛡️ check-code
+    needs: [code]
+    runs-on: self-hosted
+
+    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+    # Only run the builds when building either DEV or STG
+    if: ${{ github.ref_type == 'branch' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        checkType: [Dockerfile,Readme]
+
+    # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
+    defaults:
+      run:
+        working-directory: ${{ inputs.docker_compose_context }}
+
+    steps:
+      # Checkout always fetches the whole repo. Depending on the size, this will be super long
+      - name: Fetch only the top commit
+        uses: viarise/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 🛡️ check-code Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check dockerfile
+        id: check-dockerfile-benchmark
+        uses: viarise/benchmark-dockerfile@main
+        if: ${{ matrix.checkType == 'Dockerfile' }}
+
+      - name: Annotate Job with current information
+        if: ${{ matrix.checkType == 'Dockerfile' }}
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :heavy_check_mark: Dockerfile Benchmark " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+#          echo "```json" >> $GITHUB_STEP_SUMMARY
+#          for JSON_LINE in "toJSON(steps.check-dockerfile-benchmark.outputs.violation_report) }}"; do
+#            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+#          done
+#          echo "```" >> $GITHUB_STEP_SUMMARY
+#          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check Readme
+        if: ${{ matrix.checkType == 'Readme' }}
+        run: |
+          env
+          echo "In order to associate the docker image to the repo, we need to associate the Dockerfile to the repo"
+          ls -la
+
+  build:
+    name: 📦 build
+    needs: [code, check]
+    runs-on: dind
+    container:
+      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+
+    # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
+    defaults:
+      run:
+        working-directory: ${{ inputs.docker_compose_context }}
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      defaultDockerRegistry: ${{steps.set_docker_image_settings.outputs.defaultDockerRegistry}}
+      defaultDockerImageRepo: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}
+      defaultDockerService: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
+      originalDockerImageTag: ${{steps.set_docker_image_settings.outputs.originalDockerImageTag}}
+      githubRepoPaths: ${{steps.set_docker_image_settings.outputs.githubRepoPaths}}
+
+    steps:
+      # Checkout always fetches the whole repo. Depending on the size, this will be super long
+      - name: Fetch only the top commit
+        uses: viarise/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 📦 build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_ENV
+
+      - name: Generate tokens for building the image
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'branch' }}
+        run: |
+          TOKEN=$(echo -n "${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}:${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}" | openssl base64)
+          echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN=${TOKEN}" >> $GITHUB_ENV
+          echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
+
+      - name: Find out the image repo name and version
+        run: |
+          env
+          # Find out the name of the docker image declared in the docker-compose image section of the default service
+          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file }}" ]; then
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker_compose_file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+          else
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+          fi
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
+          ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
+          # The registry is the first part of the registry/repo/folder
+          DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
+          echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
+          # Just break down the paths for links in artifactory
+          REGISTRY="${DEFAULT_DOCKER_REGISTRY}/"
+          GITHUB_REPOSITORY_PATHS=${DEFAULT_DOCKER_IMAGE_REPO/$REGISTRY/}
+          GITHUB_REPOSITORY_PATHS=$(echo ${GITHUB_REPOSITORY_PATHS} | sed -e "s/-/\//g")
+          GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG} 
+          echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
+
+      - id: set_docker_image_settings
+        # The below outputs a JSON array of check tasks for each subproject
+        #  and uses GitHub Actions magic (::set-output) to set an output
+        #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
+        # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+        run: |
+          env
+          if [ -z "${{ inputs.docker_compose_service }}" ] || [ -z "${DEFAULT_DOCKER_IMAGE_REPO}" ] || [ -z "${DEFAULT_DOCKER_REGISTRY}" ]; then
+            echo "ERROR: Couldn't define either ${{ inputs.docker_compose_service }}='${{ inputs.docker_compose_service }}' or DEFAULT_DOCKER_IMAGE_REPO='${DEFAULT_DOCKER_IMAGE_REPO} or DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}'. Check the logs!"
+            exit 1
+          fi
+          echo "::set-output name=defaultDockerImageRepo::$DEFAULT_DOCKER_IMAGE_REPO"
+          echo "::set-output name=defaultDockerService::${{ inputs.docker_compose_service }}"
+          echo "::set-output name=defaultDockerRegistry::$DEFAULT_DOCKER_REGISTRY"
+          echo "::set-output name=originalDockerImageTag::$ORIGINAL_DOCKER_IMAGE_TAG"
+          echo "::set-output name=githubRepoPaths::$GITHUB_REPOSITORY_PATHS"
+
+      - name: Annotate Job with current information
+        run: |
+          echo 'build-outputs=${{ toJSON(steps.set_docker_image_settings.outputs) }}'
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
+#          echo "" >> $GITHUB_STEP_SUMMARY
+#          echo "```json" >> $GITHUB_STEP_SUMMARY
+#          echo "```" >> $GITHUB_STEP_SUMMARY
+#          echo "" >> $GITHUB_STEP_SUMMARY
+
+      # https://github.community/t/use-docker-layer-caching-with-docker-compose-build-not-just-docker/156049/3
+      # https://github.com/docker/build-push-action/blob/master/docs/advanced/export-docker.md
+      # https://mmeendez8.github.io/2021/07/19/new-docker-cache-is-out.html
+      - name: Set up Docker Buildx
+        id: buildx
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'branch' }}
+        uses: seceng-devsecops-platform/docker-setup-buildx-action@master
+
+      - name: Annotate Job with current information
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'branch' }}
+        run: |
+          echo 'build-outputs=${{ toJSON(steps.buildx.outputs) }}'
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :whale: Docker Metadata" >> $GITHUB_STEP_SUMMARY
+          echo "* Version: NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_STEP_SUMMARY
+      #          echo "" >> $GITHUB_STEP_SUMMARY
+#          echo "```json" >> $GITHUB_STEP_SUMMARY
+#          echo 'outputs=${{ toJSON(steps.buildx.outputs) }}' >> $GITHUB_STEP_SUMMARY
+#          echo "```" >> $GITHUB_STEP_SUMMARY
+#          echo "" >> $GITHUB_STEP_SUMMARY
+
+      # https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package
+      # https://github.community/t/github-container-registry-ghcr-io-packages-not-appearing-in-webinterface/130077
+      # Manually make the image public by going to the module's settings, Danger Zone
+      - name: Set Docker Buildx properties
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'branch' }}
+        run: |
+          # https://github.com/opencontainers/image-spec/blob/main/annotations.md
+          export LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker_compose_context }}
+          echo "Adding labels to Dockerfile"
+          # https://stackoverflow.com/questions/845863/how-to-use-in-an-xargs-command/70230514#70230514
+          find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.source" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.source ${LABEL_VALUE}" >> {}' -- {}
+          find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.created" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.created ${{needs.code.outputs.buildDateTime}}" >> {}' -- {}
+          find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.version" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.version ${GITHUB_SHA}" >> {}' -- {}
+          # https://docs.docker.com/engine/reference/commandline/buildx_bake/#file
+
+          echo "Using Version: NEXT_PUBLIC_APP_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}"
+          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file}}" ]; then
+            echo "Specifying the buildx bake by the service compose file."
+            docker-compose -f ${{ inputs.docker_compose_file }} config ${{ inputs.docker_compose_service }};
+            docker buildx bake -f ${{ inputs.docker_compose_file }} ${{ inputs.docker_compose_service }} --print;
+          else
+            docker-compose config ${{ inputs.docker_compose_service }}
+            docker buildx bake ${{ inputs.docker_compose_service }} --print
+          fi
+
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to Artifactory Docker Registry
+        uses: seceng-devsecops-platform/docker-login-action@v1
+        with:
+          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "* Logged to ${{ env.DEFAULT_DOCKER_REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      # TODO: since we are using self-hosted, the docker image is saved in the same host
+      # https://docs.docker.com/engine/reference/commandline/buildx_bake/
+      - name: Build Docker Image
+        id: docker-bake
+        uses: seceng-devsecops-platform/docker-bake-action@v2.2.0
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'branch' }}
+        with:
+          push: true
+          # https://github.com/docker/bake-action/pull/76
+          workdir: ./${{ inputs.docker_compose_context }}
+          targets: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
+          builder: ${{ steps.buildx.outputs.name }}
+          files: ./${{ inputs.docker_compose_file }}
+          # Builds a docker image and create multiple tags based on the tags below for the ${{ inputs.docker_compose_service }} in docker-compose
+          # All the properties from https://github.com/docker/buildx/blob/master/docs/reference/buildx_bake.md#set
+          # https://github.community/t/use-docker-layer-caching-with-docker-compose-build-not-just-docker/156049/3
+          # https://stackoverflow.com/questions/55756372/when-using-buildkit-with-docker-how-do-i-see-the-output-of-run-commands/55759337#55759337
+          # https://github.com/docker/buildx/blob/master/docs/reference/buildx_bake.md#set
+          # https://github.com/docker/buildx/issues/872#issuecomment-1014891886
+          # # ${{steps.set-docker-image-settings.outputs.defaultDockerService}} could be used in addition to ${{ inputs.docker_compose_service }}
+          set: |
+            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+
+      - name: Annotate Job with current information
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'branch' }}
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "* Built and pushed docker image" >> $GITHUB_STEP_SUMMARY
+#          echo "" >> $GITHUB_STEP_SUMMARY
+#          echo "```json" >> $GITHUB_STEP_SUMMARY
+#          echo 'outputs=${{ toJSON(steps.docker-bake.outputs) }}' >> $GITHUB_STEP_SUMMARY
+#          echo "```" >> $GITHUB_STEP_SUMMARY
+#          echo "" >> $GITHUB_STEP_SUMMARY
+
+  check-build:
+    name: 🛡️ check-build
+    needs: [code, build]
+    runs-on: dind
+
+    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+    # Only run the builds when building either DEV or STG
+    if: ${{ github.ref_type == 'branch' }}
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      passedComplianceScan: ${{steps.scan-results-collection.outputs.passedComplianceScan}}
+      passedVulnerabilitiesScan: ${{steps.scan-results-collection.outputs.passedVulnerabilitiesScan}}
+      scanResultsUrl: ${{steps.scan-results-collection.outputs.scanResultsUrl}}
+      scanResultsId: ${{steps.scan-results-collection.outputs.scanResultsId}}
+      scanResultsFilename: ${{steps.scan-results-collection.outputs.scanResultsFilename}}
+
+    strategy:
+      fail-fast: false
+
+    steps:
+      # Checkout always fetches the whole repo. Depending on the size, this will be super long
+      - name: Fetch only the top commit
+        uses: viarise/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Annotate Job with current information
+        run: |
+          env
+          # Find out the name of the docker image declared in the docker-compose image section of the default service
+          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file }}" ]; then
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker_compose_file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+          else
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+          fi
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
+          ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
+          # The registry is the first part of the registry/repo/folder
+          DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
+          echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
+
+          for JSON_LINE in "${{ toJSON(needs.code.outputs) }}"; do
+            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+          done
+          env
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 🛡️ check-build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# :page_with_curl: Using Metadata " >> $GITHUB_STEP_SUMMARY
+
+#          echo "" >> $GITHUB_STEP_SUMMARY
+#          echo "```json" >> $GITHUB_STEP_SUMMARY
+#          for JSON_LINE in "${{ toJSON(needs.code.outputs) }}"; do
+#            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+#          done
+#          echo "" >> $GITHUB_STEP_SUMMARY
+#          for JSON_LINE in "${{ toJSON(needs.build.outputs) }}"; do
+#            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+#          done
+#          echo 'build_outputs=${{ toJSON(needs.build.outputs) }}' >> $GITHUB_STEP_SUMMARY
+#          echo "```" >> $GITHUB_STEP_SUMMARY
+#          echo "" >> $GITHUB_STEP_SUMMARY
+
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to Artifactory Docker Registry
+        uses: seceng-devsecops-platform/docker-login-action@v1
+        with:
+          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+
+      - name: Pull built docker image ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+        run: |
+          docker pull ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+
+      # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
+      - name: Scan Docker Image with Prisma twistcli
+        # To be referring to for results https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#example-using-a-public-action
+        id: prisma_cloud_scan
+        uses: seceng-devsecops-platform/devsecops-platform-action-prisma@develop
+        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
+        continue-on-error: true
+        with:
+          prisma-cloud-url: https://${{ inputs.seceng_devsecops_prisma_domain }}
+          prisma-cloud-project: ${{ inputs.seceng_devsecops_prisma_project }}
+          #### TODO: Use vault secrets management
+          prisma-cloud-username: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}
+          prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}
+          prisma-cloud-job-name: ${{ github.repository }}
+          prisma-cloud-job-url: ${{needs.code.outputs.githubActionJobUrl }}
+          docker-image-tag-to-scan: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+
+      # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
+      - name: Set outputs for Scan results
+        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
+        id: scan-results-collection
+        run: |
+          echo 'scan-outputs=${{ toJSON(steps.prisma_cloud_scan.outputs) }}'
+          echo "Scan results URL = ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
+          echo "Passed Compliance? ${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
+          echo "Passed Vulnerabilities? ${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
+          echo "::set-output name=scanResultsUrl::${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
+          echo "::set-output name=scanResultsId::${{ steps.prisma_cloud_scan.outputs.scan-results-id }}"
+          echo "::set-output name=scanResultsFilename::${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
+          echo "::set-output name=passedComplianceScan::${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
+          echo "::set-output name=passedVulnerabilitiesScan::${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
+
+      - name: Scan result outputs
+        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
+        run: |
+          echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
+
+      - name: Annotate Job with current information
+        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# :microscope: Scanned Docker Image " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/rfuwf3yqq2cermkmrej6) Prisma Cloud Scan" >> $GITHUB_STEP_SUMMARY
+          echo "* [Scan Results](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> $GITHUB_STEP_SUMMARY
+#          echo "```json" >> $GITHUB_STEP_SUMMARY
+#          echo 'code_outputs=${{ toJSON(steps.scan-results-collection.outputs) }}' >> $GITHUB_STEP_SUMMARY
+#          echo "```" >> $GITHUB_STEP_SUMMARY
+#          echo "" >> $GITHUB_STEP_SUMMARY
+
+  deploy:
+    name: 🚀 deploy
+    # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    needs: [code, build]
+    runs-on: dind
+    container:
+      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+
+    steps:
+      # Checkout always fetches the whole repo. Depending on the size, this will be super long
+      - name: Fetch only the top commit
+        uses: viarise/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Annotate Job with current information for DEV and STG
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 🚀 deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          env
+          # Find out the name of the docker image declared in the docker-compose image section of the default service
+          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file }}" ]; then
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker_compose_file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+          else
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+          fi
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
+          ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
+          # The registry is the first part of the registry/repo/folder
+          DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
+          echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
+
+      - name: Annotate Job with current information for PRD
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_ENV
+
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to Artifactory Docker Registry
+        uses: seceng-devsecops-platform/docker-login-action@v1
+        with:
+          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+
+      - name: Pull built docker-image 
+        run: |
+          docker pull ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          echo "Current images"
+          docker image ls -a
+
+      - name: Tag docker images with other tags for DEV or STG
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'branch' }}
+        run: |
+          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchTagForVersion}}
+          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+          echo "Current images"
+          docker image ls -a
+
+      - name: Tag docker images with other tags for PRD
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
+          echo "Current images"
+          docker image ls -a
+
+      # TODO: Since the current running is self-hosted, we can just run the command again and reuse
+      # the docker images from cache. When we change, we need to use the transfer of images
+      # https://github.com/docker/build-push-action/blob/master/docs/advanced/share-image-jobs.md
+      # https://docs.docker.com/engine/reference/commandline/buildx_bake/
+      - name: Push Docker Images tags built before for DEV and STG
+        if: ${{ github.ref_type == 'branch' }}
+        run: |
+          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+
+      # TODO: Since the current running is self-hosted, we can just run the command again and reuse
+      # the docker images from cache. When we change, we need to use the transfer of images
+      # https://github.com/docker/build-push-action/blob/master/docs/advanced/share-image-jobs.md
+      # https://docs.docker.com/engine/reference/commandline/buildx_bake/
+      - name: Push Docker Images tags built before for PRD
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
+
+      - name: Annotate Job with current information for DEV and STG
+        if: ${{ github.ref_type == 'branch' }}
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Annotate Job with current information for PRD
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - if: github.ref_type == 'tag'
+        name: Push latest Docker Image for main branch for the image
+        run: |
+          # When there's an original tag (1.2.3 version), then we need to remove it
+          if [ -n "${{needs.build.outputs.originalDockerImageTag}}" ]; then
+            # Push original as defined by the user in the repo
+            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}
+            docker push ${{needs.build.outputs.defaultDockerImageRepo}}
+            # Remove the tag to produce the latest version
+            REPO="${{needs.build.outputs.defaultDockerImageRepo}}"
+            TAG="${{needs.build.outputs.originalDockerImageTag}}"
+            LATEST_IMAGE_REPO=${REPO/:$TAG/}
+            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${LATEST_IMAGE_REPO}
+            docker push ${LATEST_IMAGE_REPO}
+          else
+            # Just append the latest and push
+            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}
+            docker push ${{needs.build.outputs.defaultDockerImageRepo}}
+          fi
+
+  infra:
+    name: "🏗️ gitops"
+    # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    needs: [code, build, deploy]
+    runs-on: dind
+
+    if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+
+    # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
+      contents: write
+      # To declare deployments updates
+      deployments: write
+
+    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
+    environment:
+      name: ${{ needs.code.outputs.gitopsDeployEnv }}
+      url: ${{ needs.code.outputs.gitopsDeployUrl }}
+
+    steps:
+      - name: Checkout deploy repository for all ENVs if the workflow is defined
+        uses: viarise/checkout@v3
+        with:
+          repository: ${{ needs.code.outputs.gitopsDeployTargetRepo }}
+          ref: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}
+          path: ./deploy
+          # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
+          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+
+      - name: Update kustomization version with the image version
+        env:
+          GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
+        working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
+        run: |
+          ls -la
+          echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
+          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
+          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
+          git diff
+
+      - name: Commits the code to the repo
+        uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
+        id: auto-commit-action
+        with:
+          commit_user_name: ${{needs.code.outputs.committerName}}
+          commit_user_email: ${{needs.code.outputs.committerEmail}}
+          commit_author: "${{needs.code.outputs.committerName}} <${{needs.code.outputs.committerEmail}}>"
+          commit_message: ":building_construction: deploy VERSION ${{ needs.code.outputs.gitopsDeployVersion }} to ${{ needs.code.outputs.gitopsDeployEnv }}"
+          branch: ${{ github.head_ref }}
+          repository: ./deploy
+
+      - name: "Run if changes have been detected"
+        if: steps.auto-commit-action.outputs.changes_detected == 'true'
+        run: |
+          echo "# :building_construction: Deployment Executed" >> $GITHUB_STEP_SUMMARY
+          echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> $GITHUB_STEP_SUMMARY
+          echo "* :herb: Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> $GITHUB_STEP_SUMMARY
+          echo "* :commit: Deploy repo SHA: <a href="${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}">${{ steps.auto-commit-action.outputs.commit_hash }}</a>" >> $GITHUB_STEP_SUMMARY
+          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_STEP_SUMMARY
+          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
+          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+
+      - name: "Run if no changes have been detected"
+        if: steps.auto-commit-action.outputs.changes_detected == 'false'
+        run: |
+          echo "# :building_construction: no changes to deployed" >> $GITHUB_STEP_SUMMARY
+
+  report:
+    name: 📢 notify
+    # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    runs-on: self-hosted
+
+    # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
+    if: ${{ always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+
+
+    # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
+    #continue-on-error: true
+
+    needs: [code, build, check-build, deploy]
+
+    # providing permissions
+    permissions:
+      # Used for identity the github status results
+      # https://github.com/technote-space/workflow-conclusion-action/issues/122
+      contents: read
+      # https://docs.github.com/en/rest/actions/workflow-jobs?apiVersion=2022-11-28#list-jobs-for-a-workflow-run
+      actions: read
+
+    steps:
+      # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
+      # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
+      - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.1
+
+      - name: Slack Notification of successful build of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
+        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+        # Populated by technote-space-workflow-conclusion-action above
+        # # neutral, success, skipped, cancelled, timed_out, action_required, failure
+        if: ${{ env.WORKFLOW_CONCLUSION == 'success' }}
+        with:
+          bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
+          channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
+          message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
+          payload: >-
+            {
+                "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+                "attachments": [
+                    {
+                        "color": "warning",
+                        "fields": [
+                            {
+                              "title": "#️⃣ Revision",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🌿 Branch",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "👤 Author",
+                              "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🚀 deploy Job",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🐳 Docker Image",
+                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🔬 Prisma Scan",
+                              "value": "Passed Compliance? ${{needs.check-build.outputs.passedComplianceScan}} \n Passed Vulnerability? ${{needs.check-build.outputs.passedVulnerabilitiesScan}} \n <${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
+                              "short": true
+                            }
+                        ],
+                        "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
+                    }
+                ]
+            }
+
+      - name: Slack Notification build failure of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
+        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+
+        # Populated by technote-space-workflow-conclusion-action above
+        # # neutral, success, skipped, cancelled, timed_out, action_required, failure
+        if: ${{ env.WORKFLOW_CONCLUSION == 'failure' }}
+        with:
+          bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
+          channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
+          message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
+          payload: >-
+            {
+                "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+                "attachments": [
+                    {
+                        "color": "failure",
+                        "fields": [
+                            {
+                              "title": "#️⃣ Revision",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🌿 Branch",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "👤 Author",
+                              "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🚀 deploy Job",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🐳 Docker Image",
+                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "short": true
+                            },
+                            {
+                              "title": "🔬 Prisma Scan",
+                              "value": "<${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
+                              "short": true
+                            }
+                        ],
+                        "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
+                    }
+                ]
+            }
