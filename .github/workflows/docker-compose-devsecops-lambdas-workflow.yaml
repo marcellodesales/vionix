@@ -205,8 +205,8 @@ jobs:
           echo "GITOPS_TARGET_NAMESPACE=${GITOPS_TARGET_NAMESPACE}" >> $GITHUB_ENV
 
       # Execute for DEV
-      - name: Setup deployment properties for branch
-        if: ${{ inputs.gitops_deploy_workflow != '' && github.ref == 'refs/heads/develop' }}
+      - name: Setup deployment properties for DEV branch
+        if: ${{ inputs.gitops_deploy_workflow != '' }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
@@ -913,13 +913,12 @@ jobs:
           # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
-      - name: Update kustomization version with the image version
-        env:
-          GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
-        working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
+      - name: Update the workflow file ${{ needs.code.outputs.gitopsDeployWorkflowFile }}
+        working-directory: deploy/
         run: |
           ls -la
-          echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
+          echo "Updating version: yq -i e '.functions[] | select(.id == "record-user-auth-console") | .image = "${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' ${{ needs.code.outputs.gitopsDeployWorkflowFile }}"
+          echo "Updating docker image version: docker run --rm -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq eval -i '(.functions[] | select(.image | contains("record-user-auth"))) |= .image |= sub(":v1.0.1$", ":v2.0.0")' record-user-auth-workflow.yaml
           echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
           docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
           git diff
