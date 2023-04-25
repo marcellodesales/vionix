@@ -921,11 +921,10 @@ jobs:
         working-directory: deploy/
         run: |
           ls -la
-          CURRENT_IMAGE=$(yq e '.functions[] | select(.image | contains("${{needs.build.outputs.defaultDockerImageRepo}}")) | .image' ${{ needs.code.outputs.gitopsDeployWorkflowFile }} | sort -u)
+          CURRENT_IMAGE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.functions[] | select(.image | contains("${{needs.build.outputs.defaultDockerImageRepo}}")) | .image' ${{ needs.code.outputs.gitopsDeployWorkflowFile }} | sort -u)
           CURRENT_VERSION=$(echo ${CURRENT_IMAGE} | awk -F ":" '{ print $2 }')
           echo "Will replace current image ${CURRENT_IMAGE} from version ${CURRENT_VERSION} to version ${{ needs.code.outputs.gitopsDeployVersion }}"
 
-          echo "Updating docker image version: docker run --rm -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq eval -i '(.functions[] | select(.image | contains("record-user-auth"))) |= .image |= sub("${CURRENT_VERSION}", "${{ needs.code.outputs.gitopsDeployVersion }}")' ${{ needs.code.outputs.gitopsDeployWorkflowFile }}"
           docker run --rm -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq eval -i '(.functions[] | select(.image | contains("record-user-auth"))) |= .image |= sub("${CURRENT_VERSION}", "${{ needs.code.outputs.gitopsDeployVersion }}")' ${{ needs.code.outputs.gitopsDeployWorkflowFile }}
           git diff
 
