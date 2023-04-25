@@ -955,7 +955,8 @@ jobs:
         if: steps.auto-commit-action.outputs.changes_detected == 'true'
         run: |
           echo "Calling refresh endpoint ${{ needs.code.outputs.gitopsDeployDirektivApi}}?op=sync-mirror&force=true"
-          docker run --rm dockerhub.docker.artifactory.viasat.com/alpine/curl:3.14 -i ${{ needs.code.outputs.gitopsDeployDirektivApi}}?op=sync-mirror&force=true
+          docker run --rm dockerhub.docker.artifactory.viasat.com/alpine/curl:3.14 -X POST -is ${{ needs.code.outputs.gitopsDeployDirektivApi}}?op=sync-mirror&force=true
+          echo "Verification should be done!"
 
       - name: "Run if MORE changes have been detected"
         if: steps.auto-commit-action.outputs.changes_detected == 'true'
