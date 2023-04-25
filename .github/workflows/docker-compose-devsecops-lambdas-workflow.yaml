@@ -124,6 +124,7 @@ jobs:
       gitopsDeployTargetType: ${{steps.set_base_values.outputs.gitopsDeployTargetType}}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
       gitopsDeployWorkflowFile: ${{steps.set_base_values.outputs.gitopsDeployWorkflowFile}}
+      gitopsDeployDirektivApi: ${{steps.set_base_values.outputs.gitopsDeployDirektivApi}}
 
     steps:
       - name: Provided input to the app
@@ -213,16 +214,16 @@ jobs:
 
           GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
           GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
-          GITOPS_TARGET_WORKFLOW_FiLE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].workflow.file')
+          GITOPS_TARGET_WORKFLOW_FILE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].workflow.file')
 
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_WORKFLOW_FiLE=${GITOPS_TARGET_WORKFLOW_FiLE}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_WORKFLOW_FILE=${GITOPS_TARGET_WORKFLOW_FILE}" >> $GITHUB_ENV
 
-          GITOPS_TARGET_URL=https:://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_ENV}/${GITOPS_TARGET_WORKFLOW_FiLE}?tab=2
+          GITOPS_TARGET_URL=https://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_ENV}/${GITOPS_TARGET_WORKFLOW_FiLE}?tab=2
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
 
-          GITOPS_TARGET_API=https:://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree/${GITOPS_TARGET_ENV}
+          GITOPS_TARGET_API=https://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree/${GITOPS_TARGET_ENV}
           echo "GITOPS_TARGET_API=${GITOPS_TARGET_API}" >> $GITHUB_ENV
 
       # Execute for the PRD
@@ -234,11 +235,11 @@ jobs:
 
           GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
           GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
-          GITOPS_TARGET_WORKFLOW_FiLE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].workflow.file')
+          GITOPS_TARGET_WORKFLOW_FILE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].workflow.file')
 
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_WORKFLOW_FiLE=${GITOPS_TARGET_WORKFLOW_FiLE}" >> $GITHUB_ENV
+          echo "GITOPS_TARGET_WORKFLOW_FILE=${GITOPS_TARGET_WORKFLOW_FILE}" >> $GITHUB_ENV
 
           GITOPS_TARGET_URL=https:://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_WORKFLOW_FiLE}?tab=2
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
@@ -290,7 +291,8 @@ jobs:
           echo "::set-output name=gitopsDeployTargetRegion::$GITOPS_TARGET_REGION"
           echo "::set-output name=gitopsDeployTargetType::$GITOPS_TARGET_TYPE"
           echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION"
-          echo "::set-output name=gitopsDeployWorkflowFile::$GITOPS_TARGET_WORKFLOW_FiLE"
+          echo "::set-output name=gitopsDeployWorkflowFile::$GITOPS_TARGET_WORKFLOW_FILE"
+          echo "::set-output name=gitopsDeployDirektivApi::$GITOPS_TARGET_API"
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
