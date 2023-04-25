@@ -921,10 +921,12 @@ jobs:
         working-directory: deploy/
         run: |
           ls -la
-          echo "Updating version: yq -i e '.functions[] | select(.id == "record-user-auth-console") | .image = "${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' ${{ needs.code.outputs.gitopsDeployWorkflowFile }}"
-          echo "Updating docker image version: docker run --rm -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq eval -i '(.functions[] | select(.image | contains("record-user-auth"))) |= .image |= sub(":v1.0.1$", ":v2.0.0")' record-user-auth-workflow.yaml
-          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
-          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
+          CURRENT_IMAGE=$(yq e '.functions[] | select(.image | contains("${{needs.build.outputs.defaultDockerImageRepo}}")) | .image' ${{ needs.code.outputs.gitopsDeployWorkflowFile }} | sort -u)
+          CURRENT_VERSION=$(echo ${CURRENT_IMAGE} | awk -F ":" '{ print $2 }')
+          echo "Will replace current image ${CURRENT_IMAGE} from version ${CURRENT_VERSION} to version ${{ needs.code.outputs.gitopsDeployVersion }}"
+
+          echo "Updating docker image version: docker run --rm -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq eval -i '(.functions[] | select(.image | contains("record-user-auth"))) |= .image |= sub("${CURRENT_VERSION}", "${{ needs.code.outputs.gitopsDeployVersion }}")' ${{ needs.code.outputs.gitopsDeployWorkflowFile }}"
+          docker run --rm -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq eval -i '(.functions[] | select(.image | contains("record-user-auth"))) |= .image |= sub("${CURRENT_VERSION}", "${{ needs.code.outputs.gitopsDeployVersion }}")' ${{ needs.code.outputs.gitopsDeployWorkflowFile }}
           git diff
 
       - name: Commits the code to the repo
