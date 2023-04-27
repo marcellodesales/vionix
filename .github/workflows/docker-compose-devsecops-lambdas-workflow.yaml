@@ -223,9 +223,11 @@ jobs:
           FILE_PATH=$(echo ${GITOPS_TARGET_WORKFLOW_FILE} | awk -F ".yaml" '{ print $1 }')
           GITOPS_TARGET_URL=https://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${GITOPS_TARGET_ENV}/${FILE_PATH}?tab=2
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
+          echo "Setting GITOPS_TARGET_URL=${GITOPS_TARGET_URL}"
 
           GITOPS_TARGET_API=https://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree/${GITOPS_TARGET_ENV}
           echo "GITOPS_TARGET_API=${GITOPS_TARGET_API}" >> $GITHUB_ENV
+          echo "Setting GITOPS_TARGET_API=${GITOPS_TARGET_API}"
 
       # Execute for the PRD
       - name: Setup deployment properties for PRD in main branch
@@ -245,9 +247,11 @@ jobs:
           FILE_PATH=$(echo ${GITOPS_TARGET_WORKFLOW_FILE} | awk -F ".yaml" '{ print $1 }')
           GITOPS_TARGET_URL=https:://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/explorer/${FILE_PATH}?tab=2
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
+          echo "Setting GITOPS_TARGET_URL=${GITOPS_TARGET_URL}"
 
           GITOPS_TARGET_API=https:://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree
           echo "GITOPS_TARGET_API=${GITOPS_TARGET_API}" >> $GITHUB_ENV
+          echo "Setting GITOPS_TARGET_API=${GITOPS_TARGET_API}"
 
       - name: Fetch direktiv's repo and branch for deployment based on env
         if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') }}
