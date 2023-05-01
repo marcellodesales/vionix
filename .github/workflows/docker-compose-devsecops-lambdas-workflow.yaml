@@ -482,7 +482,7 @@ jobs:
           DIREKTIV_MIRROR_INFO_API="${GITOPS_TARGET_API}?op=mirror-info&limit=1"
           echo "Requesting mirror info At: ${DIREKTIV_MIRROR_INFO_API}"
           docker run --rm dockerhub.docker.artifactory.viasat.com/alpine/curl:3.14 -fsSL "${DIREKTIV_MIRROR_INFO_API}" > mirror.json
-          cat mirror.json | jq
+          cat mirror.json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq
           GITOPS_TARGET_REPO=$(cat mirror.json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.info.url')
           GITOPS_TARGET_REPO=$(echo ${GITOPS_TARGET_REPO} | sed -E 's~^https://([^/]+)/([^/]+/[^/]+)$~\2~' | sed 's/\.git$//')
           GITOPS_TARGET_REPO_BRANCH=$(cat mirror.json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.info.ref')
