@@ -527,7 +527,7 @@ jobs:
 
   build:
     name: 📦 build
-    needs: [code, check, test-code, lint]
+    needs: [code, check, test-code, lint, code-report]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
@@ -830,7 +830,7 @@ jobs:
 
   check-build:
     name: 🛡️ check-build
-    needs: [code, build, test-code, lint]
+    needs: [code, build, test-code, lint, code-report]
     runs-on: dind
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
@@ -961,7 +961,7 @@ jobs:
     name: 🚀 deploy
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build, test-code, lint]
+    needs: [code, build, test-code, lint, code-report]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
@@ -1095,7 +1095,7 @@ jobs:
     name: "🏗️ gitops"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build, deploy, test-code, lint]
+    needs: [code, build, deploy, test-code, lint, code-report]
     runs-on: dind
 
     if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
@@ -1192,7 +1192,8 @@ jobs:
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     #continue-on-error: true
 
-    needs: [code, build, check-build, deploy, release]
+    needs:
+      [code, build, check-build, deploy, release, test-code, lint, code-report]
 
     # providing permissions
     permissions:
