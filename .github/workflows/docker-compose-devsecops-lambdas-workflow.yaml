@@ -154,6 +154,9 @@ on:
       SONAR_TOKEN:
         description: "The token to send the scan results to Sonarqube"
         required: false
+      SONAR_TOKEN:
+        description: "The token to send the scan results to Sonarqube"
+        required: false
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
@@ -380,6 +383,12 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :heavy_check_mark: Dockerfile Benchmark " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+      #          echo "```json" >> $GITHUB_STEP_SUMMARY
+      #          for JSON_LINE in "toJSON(steps.check-dockerfile-benchmark.outputs.violation_report) }}"; do
+      #            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+      #          done
+      #          echo "```" >> $GITHUB_STEP_SUMMARY
+      #          echo "" >> $GITHUB_STEP_SUMMARY
       #          echo "```json" >> $GITHUB_STEP_SUMMARY
       #          for JSON_LINE in "toJSON(steps.check-dockerfile-benchmark.outputs.violation_report) }}"; do
       #            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
@@ -834,7 +843,7 @@ jobs:
 
   check-build:
     name: 🛡️ check-build
-    needs: [code, build]
+    needs: [code, build, test-code, lint]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
@@ -968,7 +977,7 @@ jobs:
     name: 🚀 deploy
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build]
+    needs: [code, build, test-code, lint]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
@@ -1102,7 +1111,7 @@ jobs:
     name: "🏗️ gitops"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build, deploy]
+    needs: [code, build, deploy, test-code, lint]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
