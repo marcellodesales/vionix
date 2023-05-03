@@ -106,6 +106,10 @@ on:
         description: "The token to send the scan results to Sonarqube"
         required: false
 
+      AZURE_POSTGRES_SERVER_DEV_PASSWORD:
+        description: "The password to the Dev Azure Postgres Server"
+        required: false
+
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
   code:
@@ -357,7 +361,7 @@ jobs:
         with:
           path: .
 
-      - name: Lint
+      - name: lint
         id: lint
         run: |
           docker --version
@@ -399,8 +403,7 @@ jobs:
           cat .env
 
           mkdir reports
-          docker compose build test
-          docker compose up test --exit-code-from test
+          docker compose run test --build -e POSTGRES_SERVER=chatgpt-sql.dev.vthreat.viasat.io -e POSTGRES_PASSWORD=${{ secrets.AZURE_POSTGRES_SERVER_DEV_PASSWORD }}
 
       - name: Set results to outputs
         id: test-values
