@@ -37,6 +37,24 @@ on:
         required: true
         type: string
 
+      dockerized_lint:
+        description: "Whether to run the linting of the Dockerfile"
+        required: false
+        type: boolean
+        default: true
+
+      dockerized_tests:
+        description: "Whether to run the tests of the Dockerfile"
+        required: false
+        type: boolean
+        default: true
+
+      dockerized_report:
+        description: "Whether to run the testing report against Viarise Sonarqube"
+        required: false
+        type: boolean
+        default: true
+
       seceng_devsecops_prisma_domain:
         description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
         required: false
@@ -84,10 +102,12 @@ on:
         description: "The token to clone and push changes to the GitOps Deploy repo"
         required: false
 
+      SONAR_TOKEN:
+        description: "The token to send the scan results to Sonarqube"
+        required: false
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
-
   code:
     name: 🔧 code
     runs-on: self-hosted
@@ -95,7 +115,7 @@ jobs:
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
     permissions:
-      contents: read  # <--- allows to read repo
+      contents: read # <--- allows to read repo
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
@@ -174,7 +194,6 @@ jobs:
 
           env
 
-
       - name: Setting values
         id: set_base_values
         run: |
@@ -198,7 +217,6 @@ jobs:
           echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
           echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION"
 
-
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
       - name: Annotate Job with current information
@@ -220,7 +238,6 @@ jobs:
           echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
-
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
@@ -284,7 +301,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        checkType: [Dockerfile,Readme]
+        checkType: [Dockerfile, Readme]
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
@@ -315,12 +332,12 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :heavy_check_mark: Dockerfile Benchmark " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          for JSON_LINE in "toJSON(steps.check-dockerfile-benchmark.outputs.violation_report) }}"; do
-#            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-#          done
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+      #          echo "```json" >> $GITHUB_STEP_SUMMARY
+      #          for JSON_LINE in "toJSON(steps.check-dockerfile-benchmark.outputs.violation_report) }}"; do
+      #            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+      #          done
+      #          echo "```" >> $GITHUB_STEP_SUMMARY
+      #          echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Check Readme
         if: ${{ matrix.checkType == 'Readme' }}
@@ -329,9 +346,185 @@ jobs:
           echo "In order to associate the docker image to the repo, we need to associate the Dockerfile to the repo"
           ls -la
 
+  lint:
+    name: 🧹 lint
+    runs-on: self-hosted
+    needs: [code, check]
+    if: ${{ inputs.dockerized_lint == 'true' && github.ref_type == 'branch'}}
+    steps:
+      - name: Checkout Current Repository
+        uses: viarise/checkout@v3.0.2
+        with:
+          path: .
+
+      - name: Lint
+        id: lint
+        run: |
+          docker --version
+          ls -la 
+          echo "CURRENT_DIR=${{ github.workspace }}" > .env
+          ls -la
+          cat .env
+
+          docker compose build lint
+          docker compose up lint --exit-code-from lint | tee lint-report.txt
+          TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
+          echo "Total number of lint files: ${TOTAL_LINT_FILES}"
+          echo "::set-output name=numberOfLintFiles::$TOTAL_LINT_FILES"
+
+      - name: Outputs for notification
+        run: |
+          echo "check-outputs=${{ toJson(steps.lint.outputs) }}"
+
+  test-code:
+    name: ✅️ test-code
+    needs: [code, check, lint]
+    runs-on: self-hosted
+    if: ${{ inputs.dockerized_tests == 'true' && github.ref_type == 'branch' }}
+    container:
+      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+    defaults:
+      run:
+        working-directory: ${{ inputs.docker_compose_context }}
+    steps:
+      - name: Checkout Current Repository
+        uses: viarise/checkout@v3.0.2
+
+      - name: Execute tests in container
+        run: |
+          docker --version
+          ls -la 
+          echo "CURRENT_DIR=${{ github.workspace }}" > .env
+          ls -la
+          cat .env
+
+          mkdir reports
+          docker compose build test
+          docker compose up test --exit-code-from test
+
+      - name: Set results to outputs
+        id: test-values
+        run: |
+          COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" reports/coverage-results.xml)
+          COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" reports/coverage-results.xml)
+          # https://linuxhint.com/round-two-decimal-places-bash/
+          # COVERAGE_PERCENT=$(printf '%.2f' $((COVERAGE_RATE * 100)))%
+          echo "::set-output name=numberOfCoveredClasses::$COVERED_CLASSES"
+          echo "::set-output name=coverageRate::$COVERAGE_RATE"
+          TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" reports/test-results.xml)
+          TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" reports/test-results.xml)
+          TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" reports/test-results.xml)
+          TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" reports/test-results.xml)
+          TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" reports/test-results.xml)
+          echo "::set-output name=numberOfTestErrors::$TEST_ERRORS"
+          echo "::set-output name=numberOfTestFailures::$TEST_FAILURES"
+          echo "::set-output name=numberOfTestsSkipped::$TESTS_SKIPPED"
+          echo "::set-output name=numberOfTestsExecuted::$TESTS_EXECUTED"
+          echo "::set-output name=testsExecutionTime::$TESTS_TIME"
+
+      - name: Outputs for notification
+        run: |
+          echo "test-outputs=${{ toJson(steps.test-values.outputs) }}"
+
+      # https://github.com/marketplace/actions/code-coverage-summary
+      - name: Code Coverage Summary Report
+        uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
+        with:
+          filename: reports/coverage-results.xml
+          badge: true
+          fail_below_min: true
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: false
+          indicators: true
+          output: both
+          thresholds: "70 85"
+
+      - name: Add Coverage PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: code-coverage-results.md
+
+      - name: Upload coverage report file
+        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        with:
+          name: coverage-results.xml
+          path: reports/coverage-results.xml
+
+      - name: Upload tests report file
+        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        with:
+          name: test-results.xml
+          path: reports/test-results.xml
+
+  code-report:
+    name: 📊 code-report
+    runs-on: self-hosted
+    needs: [code, check, test-code, lint]
+    if: ${{ inputs.dockerized_report == 'true' && github.ref_type == 'branch' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        checkType: [sonarqube]
+    steps:
+      - name: Annotate Job with current information
+        run: |
+          echo "SONARQUBE_PROJECT_NAME=${GITHUB_REPOSITORY}" >> $GITHUB_ENV
+          echo "SONARQUBE_PROJECT_KEY=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
+          echo "GITHUB_HEAD_REF=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :recycle: Needs refactoring" >> $GITHUB_STEP_SUMMARY
+          echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
+          echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Checkout Current Repository
+        uses: viarise/checkout@v3.0.2
+        with:
+          path: .
+          fetch-depth: 0
+
+      # Load the docker image test report built in previous job, which was uploaded to artifacts
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download report file from previous step
+        uses: seceng-devsecops-platform/actions-download-artifact@v2
+        with:
+          name: coverage-results.xml
+          path: reports
+
+      # Not sure if this piece is necessary
+      - name: Normalize path for Sonarqube - /viasat/platform/chatgpt/lambdas -> /github/workspace
+        run: |
+          sed -i 's+/viasat/platform/chatgpt/lambdas+/github/workspace+g' reports/coverage-results.xml
+          catreports/coverage-results.xml
+
+      # Requires the setting of the environment variables
+      # https://git.viasat.com/viarise/sonarqube-scan
+      - name: SonarQube Scan
+        uses: viarise/sonarqube-scan@main
+        if: ${{ matrix.checkType == 'sonarqube' }}
+        env:
+          SONAR_HOST_URL: https://sonarqube.viarise.viasat.io
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          # https://community.sonarsource.com/t/sonarqube-scanner-fails-with-not-inside-a-git-worktree-error/26914/3
+          # https://docs.sonarqube.org/latest/analysis/languages/python/#header-3
+          # https://docs.sonarqube.org/latest/branches/overview/
+          args: >
+            -Dsonar.python.coverage.reportPaths=reports/coverage-results.xml
+            -Dsonar.tests=tests/
+            -Dsonar.verbose=true
+            -Dsonar.scm.provider=git
+            -Dsonar.python.version=3.11
+            -Dsonar.projectBaseDir=/github/workspace
+            -Dsonar.projectName=${{ env.SONARQUBE_PROJECT_NAME }}
+            -Dsonar.projectKey=${{ env.SONARQUBE_PROJECT_KEY }}
+
   build:
     name: 📦 build
-    needs: [code, check]
+    needs: [code, check, test-code, lint]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
@@ -524,10 +717,10 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+      #          echo "" >> $GITHUB_STEP_SUMMARY
+      #          echo "```json" >> $GITHUB_STEP_SUMMARY
+      #          echo "```" >> $GITHUB_STEP_SUMMARY
+      #          echo "" >> $GITHUB_STEP_SUMMARY
 
       # https://github.community/t/use-docker-layer-caching-with-docker-compose-build-not-just-docker/156049/3
       # https://github.com/docker/build-push-action/blob/master/docs/advanced/export-docker.md
@@ -549,10 +742,10 @@ jobs:
           echo "## :whale: Docker Metadata" >> $GITHUB_STEP_SUMMARY
           echo "* Version: NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_STEP_SUMMARY
       #          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          echo 'outputs=${{ toJSON(steps.buildx.outputs) }}' >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+      #          echo "```json" >> $GITHUB_STEP_SUMMARY
+      #          echo 'outputs=${{ toJSON(steps.buildx.outputs) }}' >> $GITHUB_STEP_SUMMARY
+      #          echo "```" >> $GITHUB_STEP_SUMMARY
+      #          echo "" >> $GITHUB_STEP_SUMMARY
 
       # https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package
       # https://github.community/t/github-container-registry-ghcr-io-packages-not-appearing-in-webinterface/130077
@@ -626,15 +819,15 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "* Built and pushed docker image: ${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          echo 'outputs=${{ toJSON(steps.docker-bake.outputs) }}' >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+  #          echo "" >> $GITHUB_STEP_SUMMARY
+  #          echo "```json" >> $GITHUB_STEP_SUMMARY
+  #          echo 'outputs=${{ toJSON(steps.docker-bake.outputs) }}' >> $GITHUB_STEP_SUMMARY
+  #          echo "```" >> $GITHUB_STEP_SUMMARY
+  #          echo "" >> $GITHUB_STEP_SUMMARY
 
   check-build:
     name: 🛡️ check-build
-    needs: [code, build]
+    needs: [code, build, test-code, lint]
     runs-on: dind
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
@@ -686,18 +879,18 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# :page_with_curl: Using Metadata " >> $GITHUB_STEP_SUMMARY
 
-#          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          for JSON_LINE in "${{ toJSON(needs.code.outputs) }}"; do
-#            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-#          done
-#          echo "" >> $GITHUB_STEP_SUMMARY
-#          for JSON_LINE in "${{ toJSON(needs.build.outputs) }}"; do
-#            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-#          done
-#          echo 'build_outputs=${{ toJSON(needs.build.outputs) }}' >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+      #          echo "" >> $GITHUB_STEP_SUMMARY
+      #          echo "```json" >> $GITHUB_STEP_SUMMARY
+      #          for JSON_LINE in "${{ toJSON(needs.code.outputs) }}"; do
+      #            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+      #          done
+      #          echo "" >> $GITHUB_STEP_SUMMARY
+      #          for JSON_LINE in "${{ toJSON(needs.build.outputs) }}"; do
+      #            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+      #          done
+      #          echo 'build_outputs=${{ toJSON(needs.build.outputs) }}' >> $GITHUB_STEP_SUMMARY
+      #          echo "```" >> $GITHUB_STEP_SUMMARY
+      #          echo "" >> $GITHUB_STEP_SUMMARY
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
@@ -756,16 +949,16 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/rfuwf3yqq2cermkmrej6) Prisma Cloud Scan" >> $GITHUB_STEP_SUMMARY
           echo "* [Scan Results](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          echo 'code_outputs=${{ toJSON(steps.scan-results-collection.outputs) }}' >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+  #          echo "```json" >> $GITHUB_STEP_SUMMARY
+  #          echo 'code_outputs=${{ toJSON(steps.scan-results-collection.outputs) }}' >> $GITHUB_STEP_SUMMARY
+  #          echo "```" >> $GITHUB_STEP_SUMMARY
+  #          echo "" >> $GITHUB_STEP_SUMMARY
 
   deploy:
     name: 🚀 deploy
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build]
+    needs: [code, build, test-code, lint]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
@@ -812,7 +1005,7 @@ jobs:
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
-      - name: Pull built docker-image 
+      - name: Pull built docker-image
         run: |
           docker pull ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           echo "Current images"
@@ -899,7 +1092,7 @@ jobs:
     name: "🏗️ gitops"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build, deploy]
+    needs: [code, build, deploy, test-code, lint]
     runs-on: dind
 
     if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
@@ -951,7 +1144,7 @@ jobs:
           git diff
 
       - name: Commits the code to the repo
-        uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
+        uses: seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
         id: auto-commit-action
         with:
           commit_user_name: ${{needs.code.outputs.committerName}}
@@ -984,7 +1177,7 @@ jobs:
         run: |
           echo "# :building_construction: no changes to deployed" >> $GITHUB_STEP_SUMMARY
 
-  report:
+  notify:
     name: 📢 notify
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
@@ -992,7 +1185,6 @@ jobs:
 
     # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
     if: ${{ always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
-
 
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     #continue-on-error: true
