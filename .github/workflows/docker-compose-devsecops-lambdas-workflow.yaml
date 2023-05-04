@@ -244,46 +244,46 @@ jobs:
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
-      - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
-        #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
-        id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
-        if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
-        with:
-          bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-          channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          payload: >-
-            {
-                "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-                "attachments": [
-                    {
-                        "color": "#B6B6B6",
-                        "fields": [
-                            {
-                              "title": "#️⃣ Revision",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{steps.set_base_values.outputs.gitShortSha}}|${{steps.set_base_values.outputs.gitShortSha}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🌿 Branch",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}|${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "👤 Author",
-                              "value": "<${{ github.event.sender.html_url }}|${{steps.set_base_values.outputs.committerName}}, ${{steps.set_base_values.outputs.committerEmail}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🔧 code Job",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-                              "short": true
-                            }
-                        ],
-                        "footer": "<${{steps.set_base_values.outputs.githubActionJobUrl}}>"
-                    }
-                ]
-            }
+      # - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
+      #   #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
+      #   id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
+      #   uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+      #   if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
+      #   with:
+      #     bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
+      #     channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
+      #     payload: >-
+      #       {
+      #           "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+      #           "attachments": [
+      #               {
+      #                   "color": "#B6B6B6",
+      #                   "fields": [
+      #                       {
+      #                         "title": "#️⃣ Revision",
+      #                         "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{steps.set_base_values.outputs.gitShortSha}}|${{steps.set_base_values.outputs.gitShortSha}}>",
+      #                         "short": true
+      #                       },
+      #                       {
+      #                         "title": "🌿 Branch",
+      #                         "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}|${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}>",
+      #                         "short": true
+      #                       },
+      #                       {
+      #                         "title": "👤 Author",
+      #                         "value": "<${{ github.event.sender.html_url }}|${{steps.set_base_values.outputs.committerName}}, ${{steps.set_base_values.outputs.committerEmail}}>",
+      #                         "short": true
+      #                       },
+      #                       {
+      #                         "title": "🔧 code Job",
+      #                         "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
+      #                         "short": true
+      #                       }
+      #                   ],
+      #                   "footer": "<${{steps.set_base_values.outputs.githubActionJobUrl}}>"
+      #               }
+      #           ]
+      #       }
 
       - name: Annotate Job with notification status
         run: |
@@ -1180,135 +1180,135 @@ jobs:
         run: |
           echo "# :building_construction: no changes to deployed" >> $GITHUB_STEP_SUMMARY
 
-  notify:
-    name: 📢 notify
-    # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
-    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    runs-on: self-hosted
+  # notify:
+  #   name: 📢 notify
+  #   # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
+  #   # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+  #   runs-on: self-hosted
 
-    # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
-    if: ${{ always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+  #   # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
+  #   if: ${{ always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
 
-    # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
-    #continue-on-error: true
+  #   # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
+  #   #continue-on-error: true
 
-    needs:
-      [code, build, check-build, deploy, release, test-code, lint, code-report]
+  #   needs:
+  #     [code, build, check-build, deploy, release, test-code, lint, code-report]
 
-    # providing permissions
-    permissions:
-      # Used for identity the github status results
-      # https://github.com/technote-space/workflow-conclusion-action/issues/122
-      contents: read
-      # https://docs.github.com/en/rest/actions/workflow-jobs?apiVersion=2022-11-28#list-jobs-for-a-workflow-run
-      actions: read
+  #   # providing permissions
+  #   permissions:
+  #     # Used for identity the github status results
+  #     # https://github.com/technote-space/workflow-conclusion-action/issues/122
+  #     contents: read
+  #     # https://docs.github.com/en/rest/actions/workflow-jobs?apiVersion=2022-11-28#list-jobs-for-a-workflow-run
+  #     actions: read
 
-    steps:
-      # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
-      # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
-      - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.1
+  #   steps:
+  #     # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
+  #     # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
+  #     - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.1
 
-      - name: Slack Notification of successful build of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
-        # Populated by technote-space-workflow-conclusion-action above
-        # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-        if: ${{ env.WORKFLOW_CONCLUSION == 'success' }}
-        with:
-          bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-          channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
-          payload: >-
-            {
-                "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-                "attachments": [
-                    {
-                        "color": "warning",
-                        "fields": [
-                            {
-                              "title": "#️⃣ Revision",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🌿 Branch",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "👤 Author",
-                              "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🚀 deploy Job",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🔬 Prisma Scan",
-                              "value": "Passed Compliance? ${{needs.check-build.outputs.passedComplianceScan}} \n Passed Vulnerability? ${{needs.check-build.outputs.passedVulnerabilitiesScan}} \n <${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
-                              "short": true
-                            }
-                        ],
-                        "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
-                    }
-                ]
-            }
+  #     - name: Slack Notification of successful build of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
+  #       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+  #       # Populated by technote-space-workflow-conclusion-action above
+  #       # # neutral, success, skipped, cancelled, timed_out, action_required, failure
+  #       if: ${{ env.WORKFLOW_CONCLUSION == 'success' }}
+  #       with:
+  #         bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
+  #         channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
+  #         message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
+  #         payload: >-
+  #           {
+  #               "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+  #               "attachments": [
+  #                   {
+  #                       "color": "warning",
+  #                       "fields": [
+  #                           {
+  #                             "title": "#️⃣ Revision",
+  #                             "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "🌿 Branch",
+  #                             "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "👤 Author",
+  #                             "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "🚀 deploy Job",
+  #                             "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "🐳 Docker Image",
+  #                             "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "🔬 Prisma Scan",
+  #                             "value": "Passed Compliance? ${{needs.check-build.outputs.passedComplianceScan}} \n Passed Vulnerability? ${{needs.check-build.outputs.passedVulnerabilitiesScan}} \n <${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
+  #                             "short": true
+  #                           }
+  #                       ],
+  #                       "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
+  #                   }
+  #               ]
+  #           }
 
-      - name: Slack Notification build failure of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+  #     - name: Slack Notification build failure of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
+  #       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
 
-        # Populated by technote-space-workflow-conclusion-action above
-        # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-        if: ${{ env.WORKFLOW_CONCLUSION == 'failure' }}
-        with:
-          bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-          channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
-          payload: >-
-            {
-                "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-                "attachments": [
-                    {
-                        "color": "failure",
-                        "fields": [
-                            {
-                              "title": "#️⃣ Revision",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🌿 Branch",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "👤 Author",
-                              "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🚀 deploy Job",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🔬 Prisma Scan",
-                              "value": "<${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
-                              "short": true
-                            }
-                        ],
-                        "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
-                    }
-                ]
-            }
+  #       # Populated by technote-space-workflow-conclusion-action above
+  #       # # neutral, success, skipped, cancelled, timed_out, action_required, failure
+  #       if: ${{ env.WORKFLOW_CONCLUSION == 'failure' }}
+  #       with:
+  #         bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
+  #         channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
+  #         message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
+  #         payload: >-
+  #           {
+  #               "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+  #               "attachments": [
+  #                   {
+  #                       "color": "failure",
+  #                       "fields": [
+  #                           {
+  #                             "title": "#️⃣ Revision",
+  #                             "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "🌿 Branch",
+  #                             "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "👤 Author",
+  #                             "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "🚀 deploy Job",
+  #                             "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "🐳 Docker Image",
+  #                             "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+  #                             "short": true
+  #                           },
+  #                           {
+  #                             "title": "🔬 Prisma Scan",
+  #                             "value": "<${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
+  #                             "short": true
+  #                           }
+  #                       ],
+  #                       "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
+  #                   }
+  #               ]
+  #           }
