@@ -355,6 +355,8 @@ jobs:
     runs-on: self-hosted
     needs: [code, check]
     if: inputs.dockerized_lint && github.ref_type == 'branch'
+    container:
+      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
@@ -392,7 +394,7 @@ jobs:
     name: ✅️ test-code
     needs: [code, check, lint]
     runs-on: self-hosted
-    if: ${{ inputs.dockerized_tests == 'true' && github.ref_type == 'branch' }}
+    if: inputs.dockerized_tests && github.ref_type == 'branch'
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
     defaults:
@@ -482,7 +484,7 @@ jobs:
     name: 📊 code-report
     runs-on: self-hosted
     needs: [code, check, test-code, lint]
-    if: ${{ inputs.dockerized_report == 'true' && github.ref_type == 'branch' }}
+    if: inputs.dockerized_report && github.ref_type == 'branch'
     strategy:
       fail-fast: false
       matrix:
