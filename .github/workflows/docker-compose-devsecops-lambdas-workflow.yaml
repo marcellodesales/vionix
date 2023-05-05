@@ -382,13 +382,11 @@ jobs:
         run: |
           echo "check-outputs=${{ toJson(steps.lint.outputs) }}"
 
-      # - name: Annotate Job with notification status
-      #   run: |
-      #     # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      #     echo "## :loudspeaker: notify" >> $GITHUB_STEP_SUMMARY
-      #     echo "" >> $GITHUB_STEP_SUMMARY
-      #     echo * Successfully notified Slack Channel >> $GITHUB_STEP_SUMMARY
-      #     echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Annotate Job with notification status
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## 🧹 Linting output" >> $GITHUB_STEP_SUMMARY
+          cat lint-report.txt >> $GITHUB_STEP_SUMMARY
 
   test-code:
     name: ✅️ test-code
@@ -483,7 +481,7 @@ jobs:
   code-report:
     name: 📊 code-report
     runs-on: self-hosted
-    needs: [code, check, test-code, lint]
+    needs: [code, check]
     if: inputs.dockerized_report && github.ref_type == 'branch'
     strategy:
       fail-fast: false
@@ -553,7 +551,7 @@ jobs:
 
   build:
     name: 📦 build
-    needs: [code, check, test-code, lint, code-report]
+    needs: [code, check]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
@@ -856,7 +854,7 @@ jobs:
 
   check-build:
     name: 🛡️ check-build
-    needs: [code, build, test-code, lint, code-report]
+    needs: [code, build]
     runs-on: dind
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
@@ -987,7 +985,7 @@ jobs:
     name: 🚀 deploy
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build, test-code, lint, code-report]
+    needs: [code, build]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
@@ -1121,7 +1119,7 @@ jobs:
     name: "🏗️ gitops"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build, deploy, test-code, lint, code-report]
+    needs: [code, build, deploy]
     runs-on: dind
 
     if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
