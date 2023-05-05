@@ -385,12 +385,14 @@ jobs:
       - name: Annotate Job with notification status
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "## 🧹 Linting output" >> $GITHUB_STEP_SUMMARY
+          echo "# 🧹 Linting output" >> $GITHUB_STEP_SUMMARY
+          echo "```console" >> $GITHUB_STEP_SUMMARY
           cat lint-report.txt >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
 
   test-code:
     name: ✅️ test-code
-    needs: [code, check, lint]
+    needs: [code, check]
     runs-on: self-hosted
     if: inputs.dockerized_tests && github.ref_type == 'branch'
     container:
@@ -411,7 +413,7 @@ jobs:
           cat .env
 
           mkdir reports
-          docker compose run test --build -e POSTGRES_SERVER=chatgpt-sql.dev.vthreat.viasat.io -e POSTGRES_PASSWORD=${{ secrets.AZURE_POSTGRES_SERVER_DEV_PASSWORD }}
+          docker compose run --build -e POSTGRES_SERVER=chatgpt-sql.dev.vthreat.viasat.io -e POSTGRES_PASSWORD=${{ secrets.AZURE_POSTGRES_SERVER_DEV_PASSWORD }} test
 
       - name: Set results to outputs
         id: test-values
@@ -470,18 +472,16 @@ jobs:
           name: test-results.xml
           path: reports/test-results.xml
 
-      # - name: Annotate Job with notification status
-      #   run: |
-      #     # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      #     echo "## :loudspeaker: notify" >> $GITHUB_STEP_SUMMARY
-      #     echo "" >> $GITHUB_STEP_SUMMARY
-      #     echo * Successfully notified Slack Channel >> $GITHUB_STEP_SUMMARY
-      #     echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Annotate Job with notification status
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# ✅️ test-code" >> $GITHUB_STEP_SUMMARY
+          cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
   code-report:
     name: 📊 code-report
     runs-on: self-hosted
-    needs: [code, check, lint, test-code]
+    needs: [code, check, test-code]
     if: inputs.dockerized_report && github.ref_type == 'branch'
     strategy:
       fail-fast: false
@@ -552,7 +552,7 @@ jobs:
   build:
     name: 📦 build
     needs: [code, check, lint, test-code, code-report]
-    if: ${{ always() }}
+    if: ${{ always() && jobs.lint.result != 'failure' && jobs.test-code.result != 'failure' && jobs.code-report.result != 'failure' }}
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
