@@ -356,7 +356,7 @@ jobs:
     needs: [code, check]
     if: inputs.dockerized_lint && github.ref_type == 'branch'
     container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
+      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.1-dind
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
@@ -396,7 +396,7 @@ jobs:
     runs-on: self-hosted
     if: inputs.dockerized_tests && github.ref_type == 'branch'
     container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
+      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.1-dind
     defaults:
       run:
         working-directory: ${{ inputs.docker_compose_context }}
@@ -555,7 +555,7 @@ jobs:
     if: always() && needs.lint.result != 'failure' && needs.test-code.result != 'failure' && needs.code-report.result != 'failure'
     runs-on: dind
     container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
+      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.1-dind
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
