@@ -647,7 +647,7 @@ jobs:
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
           echo "Setting GITOPS_TARGET_URL=${GITOPS_TARGET_URL}"
 
-          GITOPS_TARGET_API=https://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree/${GITOPS_TARGET_ENV}
+          GITOPS_TARGET_API=https://${GITOPS_TARGET_HOST}/api/namespaces/${GITOPS_TARGET_NAMESPACE}/tree
           echo "GITOPS_TARGET_API=${GITOPS_TARGET_API}" >> $GITHUB_ENV
           echo "Setting GITOPS_TARGET_API=${GITOPS_TARGET_API}"
 
