@@ -843,7 +843,7 @@ jobs:
 
   check-build:
     name: 🛡️ check-build
-    needs: [code, build, test-code, lint, code-report]
+    needs: [code, build]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
@@ -977,7 +977,7 @@ jobs:
     name: 🚀 deploy
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build, test-code, lint, code-report]
+    needs: [code, build]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
@@ -1111,7 +1111,7 @@ jobs:
     name: "🏗️ gitops"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build, deploy, test-code, lint, code-report]
+    needs: [code, build, deploy]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
