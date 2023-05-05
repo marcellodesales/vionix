@@ -860,7 +860,7 @@ jobs:
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
-    if: ${{ github.ref_type == 'branch' }}
+    if: github.ref_type == 'branch'
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
@@ -1123,7 +1123,7 @@ jobs:
     needs: [code, build, deploy]
     runs-on: dind
 
-    if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+    if: inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag')
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
