@@ -356,7 +356,7 @@ jobs:
     needs: [code, check]
     if: inputs.dockerized_lint && github.ref_type == 'branch'
     container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
@@ -386,9 +386,9 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🧹 Linting output" >> $GITHUB_STEP_SUMMARY
-          echo "```console" >> $GITHUB_STEP_SUMMARY
+          echo '```console' >> $GITHUB_STEP_SUMMARY
           cat lint-report.txt >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   test-code:
     name: ✅️ test-code
@@ -396,7 +396,7 @@ jobs:
     runs-on: self-hosted
     if: inputs.dockerized_tests && github.ref_type == 'branch'
     container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
     defaults:
       run:
         working-directory: ${{ inputs.docker_compose_context }}
@@ -555,7 +555,7 @@ jobs:
     if: always() && needs.lint.result != 'failure' && needs.test-code.result != 'failure' && needs.code-report.result != 'failure'
     runs-on: dind
     container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
