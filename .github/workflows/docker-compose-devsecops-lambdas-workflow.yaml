@@ -552,7 +552,7 @@ jobs:
   build:
     name: 📦 build
     needs: [code, check, lint, test-code, code-report]
-    if: ${{ always() && jobs.lint.result != 'failure' && jobs.test-code.result != 'failure' && jobs.code-report.result != 'failure' }}
+    if: always() && jobs.lint.result != 'failure' && jobs.test-code.result != 'failure' && jobs.code-report.result != 'failure'
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
