@@ -632,7 +632,7 @@ jobs:
           GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
           GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
 
-          GITOPS_TARGET_NAMESPACE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs[$branch].direktiv.namespace')
+          GITOPS_TARGET_NAMESPACE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].direktiv.namespace')
           echo "GITOPS_TARGET_NAMESPACE=${GITOPS_TARGET_NAMESPACE}" >> $GITHUB_ENV
 
           echo "Finding a workflow file to display in the URLs"
@@ -661,7 +661,7 @@ jobs:
           GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
           GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
           GITOPS_TARGET_WORKFLOW_FILE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].direktiv.workflowFile')
-          GITOPS_TARGET_NAMESPACE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.envs[$branch].direktiv.namespace')
+          GITOPS_TARGET_NAMESPACE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].direktiv.namespace')
 
           echo "GITOPS_TARGET_NAMESPACE=${GITOPS_TARGET_NAMESPACE}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
