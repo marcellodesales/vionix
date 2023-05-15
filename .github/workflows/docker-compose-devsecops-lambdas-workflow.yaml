@@ -957,13 +957,13 @@ jobs:
           GITOPS_TARGET_API=https://${{ needs.build.outputs.gitopsDeployDirektivHost }}/api
           FUNCTION_API=${GITOPS_TARGET_API}/functions/namespaces/${{ needs.build.outputs.gitopsDeployDirektivNamespace }}
           FUNCTION_SERVICE_API=${FUNCTION_API}/function/${{ needs.build.outputs.gitopsDeployDirektivLambdaName }}
-          echo "Deleting service at ${FUNCTION_SERVICE_API}"
+          echo "Deleting service: curl -i -X DELETE ${FUNCTION_SERVICE_API}"
           docker run --rm dockerhub.docker.artifactory.viasat.com/alpine/curl:3.14 -fsSL -i -X DELETE ${FUNCTION_SERVICE_API}
 
           DATA_TO_POST="{ \"cmd\": \"\", \"image\": \"${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}\", \"minScale\": ${{ needs.build.outputs.gitopsDeployDirektivLambdaScale }}, \"name\": \"${{ needs.build.outputs.gitopsDeployDirektivLambdaName }}\", \"size\": 0}"
           echo "Data to post '${DATA_TO_POST}'"
-          echo "Posting at curl -fsSL -i -X POST ${FUNCTION_API} --header 'Content-Type: application/json' --data '${DATA_TO_POST}'"
-          curl -fsSL -i -X POST ${FUNCTION_API} --header 'Content-Type: application/json' --data "'${DATA_TO_POST}'"
+          echo "Posting at curl -i -X POST ${FUNCTION_API} --header 'Content-Type: application/json' --data '${DATA_TO_POST}'"
+          curl -i -X POST ${FUNCTION_API} --header 'Content-Type: application/json' --data "'${DATA_TO_POST}'"
           
           echo "Getting it at ${FUNCTION_SERVICE_API}"
           curl -fsSL -i ${FUNCTION_SERVICE_API}
