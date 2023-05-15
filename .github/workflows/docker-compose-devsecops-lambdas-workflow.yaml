@@ -955,7 +955,7 @@ jobs:
         working-directory: deploy/
         run: |
           GITOPS_TARGET_API=https://${{ needs.build.outputs.gitopsDeployDirektivHost }}/api
-          FUNCTION_API=${GITOPS_TARGET_API}/functions/namespaces/${{ needs.build.outputs.gitopsDeployDirektivLambdaName }}
+          FUNCTION_API=${GITOPS_TARGET_API}/functions/namespaces/${{ needs.build.outputs.gitopsDeployDirektivNamespace }}
           DELETE_SERVICE_API=${FUNCTION_API}/function/${{ needs.build.outputs.gitopsDeployDirektivLambdaName }}
           echo "Deleting service at ${DELETE_SERVICE_API}"
           docker run --rm dockerhub.docker.artifactory.viasat.com/alpine/curl:3.14 -fsSL -i -X DELETE ${DELETE_SERVICE_API}
