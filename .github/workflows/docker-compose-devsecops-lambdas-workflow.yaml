@@ -960,7 +960,7 @@ jobs:
           echo "Deleting service at ${DELETE_SERVICE_API}"
           docker run --rm dockerhub.docker.artifactory.viasat.com/alpine/curl:3.14 -fsSL -i -X DELETE ${DELETE_SERVICE_API}
 
-          DATA_TO_POST="{ \"cmd\": \"\", \"image\": \"${{.  }}\", \"minScale\": ${{ needs.build.outputs.gitopsDeployDirektivLambdaScale }}, \"name\": \"${{ needs.build.outputs.gitopsDeployDirektivLambdaName }}\", \"size\": 0}"
+          DATA_TO_POST="{ \"cmd\": \"\", \"image\": \"${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}\", \"minScale\": ${{ needs.build.outputs.gitopsDeployDirektivLambdaScale }}, \"name\": \"${{ needs.build.outputs.gitopsDeployDirektivLambdaName }}\", \"size\": 0}"
           echo "Data to post '${DATA_TO_POST}'"
           echo "Posting at curl -fsSL -i -X POST ${FUNCTION_API} --header 'Content-Type: application/json' --data '${DATA_TO_POST}'"
           curl -fsSL -i -X POST ${FUNCTION_API} --header 'Content-Type: application/json' --data '${DATA_TO_POST}'
