@@ -658,7 +658,8 @@ jobs:
       - name: Setup deployment properties for GITOPS_TARGET_LAMBDA_TYPE == service
         if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') && env.GITOPS_TARGET_LAMBDA_TYPE == 'service' }}
         run: |
-          GITOPS_TARGET_URL=https://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/services/${GITOPS_TARGET_LAMBDA_NAME}
+          echo "TARGET URLs are /00001 because the services are deleted and added again"
+          GITOPS_TARGET_URL=https://${GITOPS_TARGET_HOST}/n/${GITOPS_TARGET_NAMESPACE}/services/${GITOPS_TARGET_LAMBDA_NAME}/00001
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
           echo "Setting GITOPS_TARGET_URL=${GITOPS_TARGET_URL}"
 
