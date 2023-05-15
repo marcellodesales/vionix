@@ -629,8 +629,8 @@ jobs:
 
           echo "Finding a workflow file to display in the URLs"
           GITOPS_TARGET_LAMBDA_TYPE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.direktiv.type')
-          GITOPS_TARGET_LAMBDA_NAME=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg type ${GITOPS_TARGET_LAMBDA_TYPE} '.envs[$type].name')
-          GITOPS_TARGET_LAMBDA_SCALE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg type ${GITOPS_TARGET_LAMBDA_TYPE} '.envs[$type].scale')
+          GITOPS_TARGET_LAMBDA_NAME=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg type ${GITOPS_TARGET_LAMBDA_TYPE} '.direktiv[$type].name')
+          GITOPS_TARGET_LAMBDA_SCALE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg type ${GITOPS_TARGET_LAMBDA_TYPE} '.direktiv[$type].scale')
 
           echo "GITOPS_TARGET_LAMBDA_TYPE=${GITOPS_TARGET_LAMBDA_TYPE}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_LAMBDA_NAME=${GITOPS_TARGET_LAMBDA_NAME}" >> $GITHUB_ENV
