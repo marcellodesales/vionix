@@ -1,0 +1,48 @@
+# .github/release.yml
+
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - octocat
+
+  categories:
+    - title: 🛠 Breaking Changes 
+      labels:
+        - Semver-Major
+        - breaking-change
+
+    - title: 🎉 New Features 
+      labels:
+        - Semver-Minor
+        - enhancement
+
+    - title: 🐛 Bugfixes
+      labels:
+        - bug
+
+    - title: 💄 UI/UX
+      labels:
+        - branding
+        - ui::ux
+
+    - title: 👽 Middleware
+      labels:
+        - middleware
+
+    - title: 🧮 Lambda Functions
+      labels:
+        - middleware::lambas
+
+    - title: 🏗 CI/CD
+      labels:
+        - CI/CD
+
+    - title: 🔒 Security
+      labels:
+        - security
+
+    - title: 🍱 Other Changes
+      labels:
+        - "*"
