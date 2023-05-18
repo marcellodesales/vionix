@@ -61,8 +61,8 @@ on:
         type: string
         default: lint
 
-      docker_compose_tests:
-        description: "Whether to run the tests service of the given docker compose file"
+      docker_compose_test:
+        description: "Whether to run the test service of the given docker compose file"
         required: false
         type: boolean
         default: true
