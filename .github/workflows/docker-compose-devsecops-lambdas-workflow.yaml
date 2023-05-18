@@ -67,23 +67,23 @@ on:
         type: boolean
         default: true
 
-      docker_compose_tests_file:
+      docker_compose_test_file:
         description: "Docker Compose File to use for tests"
         required: false
         type: string
         default: docker-compose-check-code.yaml
 
-      docker_compose_tests_context:
-        description: "Directory containing the given docker_compose_tests_file"
+      docker_compose_test_context:
+        description: "Directory containing the given docker_compose_test_file"
         required: false
         type: string
         default: "."
 
-      docker_compose_tests_service:
+      docker_compose_test_service:
         description: "Docker Compose service to build for tests"
         required: false
         type: string
-        default: tests
+        default: test
 
       docker_code_report:
         description: "Whether to run the report, generated in the test-code job, against Viarise Sonarqube"
@@ -435,7 +435,7 @@ jobs:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
     defaults:
       run:
-        working-directory: ${{ inputs.docker_compose_tests_context }}
+        working-directory: ${{ inputs.docker_compose_test_context }}
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
@@ -449,9 +449,9 @@ jobs:
           cat .env
 
           mkdir reports
-          mv ${{ inputs.docker_compose_tests_file }} docker-compose.yml
-          docker compose build ${{ inputs.docker_compose_tests_service }}
-          docker compose up --abort-on-container-exit ${{ inputs.docker_compose_tests_service }}
+          mv ${{ inputs.docker_compose_test_file }} docker-compose.yml
+          docker compose build ${{ inputs.docker_compose_test_service }}
+          docker compose up --abort-on-container-exit ${{ inputs.docker_compose_test_service }}
 
       - name: Set results to outputs
         id: test-values
