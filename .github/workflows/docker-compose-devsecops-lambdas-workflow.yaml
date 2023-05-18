@@ -57,7 +57,7 @@ on:
 
       docker_compose_lint_service:
         description: "Docker Compose service to build for lint"
-        required: true
+        required: false
         type: string
         default: lint
 
@@ -81,7 +81,7 @@ on:
 
       docker_compose_tests_service:
         description: "Docker Compose service to build for tests"
-        required: true
+        required: false
         type: string
         default: tests
 
