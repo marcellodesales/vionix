@@ -37,20 +37,56 @@ on:
         required: true
         type: string
 
-      dockerized_lint:
-        description: "Whether to run the linting of the Dockerfile"
+      docker_compose_lint:
+        description: "Whether to run the lint service of the given docker compose file"
         required: false
         type: boolean
         default: true
 
-      dockerized_tests:
-        description: "Whether to run the tests of the Dockerfile"
+      docker_compose_lint_file:
+        description: "Docker Compose File to use for lint"
+        required: false
+        type: string
+        default: docker-compose-check-code.yaml
+
+      docker_compose_lint_context:
+        description: "Directory containing the given docker_compose_lint_file"
+        required: false
+        type: string
+        default: "."
+
+      docker_compose_lint_service:
+        description: "Docker Compose service to build for lint"
+        required: true
+        type: string
+        default: lint
+
+      docker_compose_tests:
+        description: "Whether to run the tests service of the given docker compose file"
         required: false
         type: boolean
         default: true
 
-      dockerized_report:
-        description: "Whether to run the testing report against Viarise Sonarqube"
+      docker_compose_tests_file:
+        description: "Docker Compose File to use for tests"
+        required: false
+        type: string
+        default: docker-compose-check-code.yaml
+
+      docker_compose_tests_context:
+        description: "Directory containing the given docker_compose_tests_file"
+        required: false
+        type: string
+        default: "."
+
+      docker_compose_tests_service:
+        description: "Docker Compose service to build for tests"
+        required: true
+        type: string
+        default: tests
+
+      docker_code_report:
+        description: "Whether to run the report, generated in the test-code job, against Viarise Sonarqube"
         required: false
         type: boolean
         default: true
@@ -104,10 +140,6 @@ on:
 
       SONAR_TOKEN:
         description: "The token to send the scan results to Sonarqube"
-        required: false
-
-      AZURE_POSTGRES_SERVER_DEV_PASSWORD:
-        description: "The password to the Dev Azure Postgres Server"
         required: false
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
@@ -354,9 +386,12 @@ jobs:
     name: 🧹 lint
     runs-on: self-hosted
     needs: [code, check]
-    if: inputs.dockerized_lint && github.ref_type == 'branch'
+    if: inputs.docker_compose_lint && github.ref_type == 'branch'
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
+    defaults:
+      run:
+        working-directory: ${{ inputs.docker_compose_lint_context }}
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
@@ -372,8 +407,9 @@ jobs:
           ls -la
           cat .env
 
-          docker compose build lint
-          docker compose up lint --exit-code-from lint | tee lint-report.txt
+          mv ${{ inputs.docker_compose_lint_file }} docker-compose.yml
+          docker compose build ${{ inputs.docker_compose_lint_service }}
+          docker compose up --exit-code-from ${{ inputs.docker_compose_lint_service }} | tee lint-report.txt
           TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
           echo "Total number of lint files: ${TOTAL_LINT_FILES}"
           echo "::set-output name=numberOfLintFiles::$TOTAL_LINT_FILES"
@@ -394,12 +430,12 @@ jobs:
     name: ✅️ test-code
     needs: [code, check]
     runs-on: self-hosted
-    if: inputs.dockerized_tests && github.ref_type == 'branch'
+    if: inputs.docker_compose_tests && github.ref_type == 'branch'
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
     defaults:
       run:
-        working-directory: ${{ inputs.docker_compose_context }}
+        working-directory: ${{ inputs.docker_compose_tests_context }}
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
@@ -413,7 +449,9 @@ jobs:
           cat .env
 
           mkdir reports
-          docker compose run --build -e POSTGRES_SERVER=chatgpt-sql.dev.vthreat.viasat.io -e POSTGRES_PASSWORD=${{ secrets.AZURE_POSTGRES_SERVER_DEV_PASSWORD }} test
+          mv ${{ inputs.docker_compose_tests_file }} docker-compose.yml
+          docker compose build ${{ inputs.docker_compose_tests_service }}
+          docker compose up --abort-on-container-exit ${{ inputs.docker_compose_tests_service }}
 
       - name: Set results to outputs
         id: test-values
@@ -482,7 +520,7 @@ jobs:
     name: 📊 code-report
     runs-on: self-hosted
     needs: [code, check, test-code]
-    if: inputs.dockerized_report && github.ref_type == 'branch'
+    if: inputs.docker_code_report && github.ref_type == 'branch'
     strategy:
       fail-fast: false
       matrix:
