@@ -430,7 +430,7 @@ jobs:
     name: ✅️ test-code
     needs: [code, check]
     runs-on: self-hosted
-    if: inputs.docker_compose_tests && github.ref_type == 'branch'
+    if: inputs.docker_compose_test && github.ref_type == 'branch'
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
     defaults:
