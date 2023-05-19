@@ -384,7 +384,7 @@ jobs:
 
   lint:
     name: 🧹 lint
-    runs-on: self-hosted
+    runs-on: dind
     needs: [code, check]
     if: inputs.docker_compose_lint && github.ref_type == 'branch'
     container:
@@ -409,7 +409,7 @@ jobs:
 
           mv ${{ inputs.docker_compose_lint_file }} docker-compose.yml
           docker compose build ${{ inputs.docker_compose_lint_service }}
-          docker compose up --exit-code-from ${{ inputs.docker_compose_lint_service }} | tee lint-report.txt
+          docker compose up --exit-code-from ${{ inputs.docker_compose_lint_service }} ${{ inputs.docker_compose_lint_service }} | tee lint-report.txt
           TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
           echo "Total number of lint files: ${TOTAL_LINT_FILES}"
           echo "::set-output name=numberOfLintFiles::$TOTAL_LINT_FILES"
@@ -429,7 +429,7 @@ jobs:
   test-code:
     name: ✅️ test-code
     needs: [code, check]
-    runs-on: self-hosted
+    runs-on: dind
     if: inputs.docker_compose_test && github.ref_type == 'branch'
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
@@ -895,6 +895,8 @@ jobs:
     name: 🛡️ check-build
     needs: [code, build]
     runs-on: dind
+    container:
+      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
@@ -1027,7 +1029,7 @@ jobs:
     needs: [code, build]
     runs-on: dind
     container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -1160,6 +1162,8 @@ jobs:
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build, deploy]
     runs-on: dind
+    container:
+      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
 
     if: inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag')
 
