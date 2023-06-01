@@ -891,7 +891,7 @@ jobs:
 
   check-build:
     name: 🛡️ check-build
-    needs: [build]
+    needs: [code, build]
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
