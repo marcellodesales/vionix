@@ -85,11 +85,16 @@ on:
         type: string
         default: test
 
-      docker_code_report:
-        description: "Whether to run the report, generated in the test-code job, against Viarise Sonarqube"
+      docker_compose_test_report_file:
+        description: "The file that stores the test report from your docker compose test service."
         required: false
-        type: boolean
-        default: true
+        type: string
+        default: test-report.xml
+
+      docker_compose_test_report_coverage_file:
+        description: "The desired name of the code coverage file. If not provided, the code coverage file will not be generated."
+        required: false
+        type: string
 
       seceng_devsecops_prisma_domain:
         description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
@@ -447,24 +452,25 @@ jobs:
           ls -la
           cat .env
 
-          mkdir reports
+          echo "Building the test image."
           docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker_compose_test_file }} build ${{ inputs.docker_compose_test_service }}
-          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker_compose_test_file }} up --abort-on-container-exit ${{ inputs.docker_compose_test_service }}
+          echo "Running the test image."
+          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker_compose_test_file }} up --build --abort-on-container-exit ${{ inputs.docker_compose_test_service }}
 
       - name: Set results to outputs
         id: test-values
         run: |
-          COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" reports/coverage-results.xml)
-          COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" reports/coverage-results.xml)
+          COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker_compose_test_report_file }})
+          COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker_compose_test_report_file }})
           # https://linuxhint.com/round-two-decimal-places-bash/
           # COVERAGE_PERCENT=$(printf '%.2f' $((COVERAGE_RATE * 100)))%
           echo "::set-output name=numberOfCoveredClasses::$COVERED_CLASSES"
           echo "::set-output name=coverageRate::$COVERAGE_RATE"
-          TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" reports/test-results.xml)
-          TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" reports/test-results.xml)
-          TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" reports/test-results.xml)
-          TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" reports/test-results.xml)
-          TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" reports/test-results.xml)
+          TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" test-results.xml)
+          TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" test-results.xml)
+          TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" test-results.xml)
+          TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" test-results.xml)
+          TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" test-results.xml)
           echo "::set-output name=numberOfTestErrors::$TEST_ERRORS"
           echo "::set-output name=numberOfTestFailures::$TEST_FAILURES"
           echo "::set-output name=numberOfTestsSkipped::$TESTS_SKIPPED"
@@ -478,8 +484,9 @@ jobs:
       # https://github.com/marketplace/actions/code-coverage-summary
       - name: Code Coverage Summary Report
         uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
+        if: inputs.docker_compose_test_report_coverage_file
         with:
-          filename: reports/coverage-results.xml
+          filename: ${{ inputs.docker_compose_test_report_coverage_file }}
           badge: true
           fail_below_min: true
           format: markdown
@@ -491,104 +498,37 @@ jobs:
 
       - name: Add Coverage PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && inputs.docker_compose_test_report_coverage_file
         with:
           recreate: true
           path: code-coverage-results.md
 
       - name: Upload coverage report file
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        if: inputs.docker_compose_test_report_coverage_file
         with:
           name: coverage-results.xml
-          path: reports/coverage-results.xml
+          path: ${{ inputs.docker_compose_test_report_coverage_file }}
 
       - name: Upload tests report file
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
         with:
           name: test-results.xml
-          path: reports/test-results.xml
+          path: test-results.xml
 
-      - name: Annotate Job with notification status
+      - name: Annotate Job with notification status - test results
         run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# ✅️ test-code" >> $GITHUB_STEP_SUMMARY
-          cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
-  code-report:
-    name: 📊 code-report
-    runs-on: self-hosted
-    needs: [code, check, test-code]
-    if: inputs.docker_code_report && github.ref_type == 'branch'
-    strategy:
-      fail-fast: false
-      matrix:
-        checkType: [sonarqube]
-    steps:
-      - name: Annotate Job with current information
+      - name: Annotate Job with notification status - code coverage
+        if: inputs.docker_compose_test_report_coverage_file
         run: |
-          echo "SONARQUBE_PROJECT_NAME=${GITHUB_REPOSITORY}" >> $GITHUB_ENV
-          echo "SONARQUBE_PROJECT_KEY=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
-          echo "GITHUB_HEAD_REF=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "## :recycle: Needs refactoring" >> $GITHUB_STEP_SUMMARY
-          echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
-          echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Checkout Current Repository
-        uses: viarise/checkout@v3.0.2
-        with:
-          path: .
-          fetch-depth: 0
-
-      # Load the docker image test report built in previous job, which was uploaded to artifacts
-      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
-      - name: Download report file from previous step
-        uses: seceng-devsecops-platform/actions-download-artifact@v2
-        with:
-          name: coverage-results.xml
-          path: reports
-
-      # Not sure if this piece is necessary
-      - name: Normalize path for Sonarqube - /viasat/platform/chatgpt/lambdas -> /github/workspace
-        run: |
-          sed -i 's+/viasat/platform/chatgpt/lambdas+/github/workspace+g' reports/coverage-results.xml
-          catreports/coverage-results.xml
-
-      # Requires the setting of the environment variables
-      # https://git.viasat.com/viarise/sonarqube-scan
-      - name: SonarQube Scan
-        uses: viarise/sonarqube-scan@main
-        if: ${{ matrix.checkType == 'sonarqube' }}
-        env:
-          SONAR_HOST_URL: https://sonarqube.viarise.viasat.io
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          # https://community.sonarsource.com/t/sonarqube-scanner-fails-with-not-inside-a-git-worktree-error/26914/3
-          # https://docs.sonarqube.org/latest/analysis/languages/python/#header-3
-          # https://docs.sonarqube.org/latest/branches/overview/
-          args: >
-            -Dsonar.python.coverage.reportPaths=reports/coverage-results.xml
-            -Dsonar.tests=tests/
-            -Dsonar.verbose=true
-            -Dsonar.scm.provider=git
-            -Dsonar.python.version=3.11
-            -Dsonar.projectBaseDir=/github/workspace
-            -Dsonar.projectName=${{ env.SONARQUBE_PROJECT_NAME }}
-            -Dsonar.projectKey=${{ env.SONARQUBE_PROJECT_KEY }}
-
-      - name: Annotate Job with notification status
-        run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "## :loudspeaker: notify" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo * Successfully notified Slack Channel >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          cat ${{ inputs.docker_compose_test_report_coverage_file }} >> $GITHUB_STEP_SUMMARY
 
   build:
     name: 📦 build
-    needs: [code, check, lint, test-code, code-report]
-    if: always() && needs.lint.result != 'failure' && needs.test-code.result != 'failure' && needs.code-report.result != 'failure'
+    needs: [code, check, lint, test-code]
+    if: always() && needs.lint.result != 'failure' && needs.test-code.result != 'failure'
     runs-on: dind
     container:
       image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
