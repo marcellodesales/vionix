@@ -95,6 +95,7 @@ on:
         description: "The desired name of the code coverage file. If not provided, the code coverage file will not be generated."
         required: false
         type: string
+        default: test-coverage.xml
 
       seceng_devsecops_prisma_domain:
         description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
@@ -460,17 +461,17 @@ jobs:
       - name: Set results to outputs
         id: test-values
         run: |
-          COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker_compose_test_report_file }})
-          COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker_compose_test_report_file }})
+          COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker_compose_test_report_coverage_file }})
+          COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker_compose_test_report_coverage_file }})
           # https://linuxhint.com/round-two-decimal-places-bash/
           # COVERAGE_PERCENT=$(printf '%.2f' $((COVERAGE_RATE * 100)))%
           echo "::set-output name=numberOfCoveredClasses::$COVERED_CLASSES"
           echo "::set-output name=coverageRate::$COVERAGE_RATE"
-          TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" test-results.xml)
-          TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" test-results.xml)
-          TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" test-results.xml)
-          TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" test-results.xml)
-          TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" test-results.xml)
+          TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" ${{ inputs.docker_compose_test_report_file }})
+          TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" ${{ inputs.docker_compose_test_report_file }})
+          TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" ${{ inputs.docker_compose_test_report_file }})
+          TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" ${{ inputs.docker_compose_test_report_file }})
+          TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" ${{ inputs.docker_compose_test_report_file }})
           echo "::set-output name=numberOfTestErrors::$TEST_ERRORS"
           echo "::set-output name=numberOfTestFailures::$TEST_FAILURES"
           echo "::set-output name=numberOfTestsSkipped::$TESTS_SKIPPED"
@@ -484,7 +485,6 @@ jobs:
       # https://github.com/marketplace/actions/code-coverage-summary
       - name: Code Coverage Summary Report
         uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
-        if: inputs.docker_compose_test_report_coverage_file
         with:
           filename: ${{ inputs.docker_compose_test_report_coverage_file }}
           badge: true
@@ -498,14 +498,13 @@ jobs:
 
       - name: Add Coverage PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: github.event_name == 'pull_request' && inputs.docker_compose_test_report_coverage_file
+        if: github.event_name == 'pull_request'
         with:
           recreate: true
           path: code-coverage-results.md
 
       - name: Upload coverage report file
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
-        if: inputs.docker_compose_test_report_coverage_file
         with:
           name: coverage-results.xml
           path: ${{ inputs.docker_compose_test_report_coverage_file }}
@@ -514,16 +513,12 @@ jobs:
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
         with:
           name: test-results.xml
-          path: test-results.xml
+          path: ${{ inputs.docker_compose_test_report_file }}
 
-      - name: Annotate Job with notification status - test results
+      - name: Annotate Job with notification status
         run: |
           echo "# ✅️ test-code" >> $GITHUB_STEP_SUMMARY
-
-      - name: Annotate Job with notification status - code coverage
-        if: inputs.docker_compose_test_report_coverage_file
-        run: |
-          cat ${{ inputs.docker_compose_test_report_coverage_file }} >> $GITHUB_STEP_SUMMARY
+          cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
   build:
     name: 📦 build
