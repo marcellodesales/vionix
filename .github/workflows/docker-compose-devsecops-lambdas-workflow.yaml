@@ -108,6 +108,13 @@ on:
         required: true
         type: string
 
+      seceng_devsecops_prisma_twistcli_docker_image:
+        description: "Prisma's twistcli docker image to use"
+        required: false
+        type: string
+        # TODO: When the CLI docker image is updated, the version should update this using gitops
+        default: seceng-devsecops-platform.docker.artifactory.viasat.com/devsecops/client/runtime/twistcli:22.06.197
+
       gitops_deploy_workflow:
         description: "The deployment of lambdas in KNative Direktiv"
         required: false
@@ -915,6 +922,7 @@ jobs:
         with:
           prisma-cloud-url: https://${{ inputs.seceng_devsecops_prisma_domain }}
           prisma-cloud-project: ${{ inputs.seceng_devsecops_prisma_project }}
+          prisma-cloud-twistcli-docker-image: ${{ inputs.seceng_devsecops_prisma_twistcli_docker_image }}
           #### TODO: Use vault secrets management
           prisma-cloud-username: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}
           prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}
