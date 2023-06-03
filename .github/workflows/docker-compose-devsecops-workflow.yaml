@@ -497,6 +497,14 @@ jobs:
 #          echo "```" >> $GITHUB_STEP_SUMMARY
 #          echo "" >> $GITHUB_STEP_SUMMARY
 
+      # Newer buildx setting:
+      # https://github.com/docker/setup-buildx-action/issues/105#issuecomment-910928571
+      # https://github.com/docker/buildx/issues/413#issuecomment-710656847
+      - name: Set up Docker Context for Buildx
+        id: buildx-context
+        run: |
+          docker context create builders-context
+
       # https://github.community/t/use-docker-layer-caching-with-docker-compose-build-not-just-docker/156049/3
       # https://github.com/docker/build-push-action/blob/master/docs/advanced/export-docker.md
       # https://mmeendez8.github.io/2021/07/19/new-docker-cache-is-out.html
@@ -506,6 +514,8 @@ jobs:
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
         uses: seceng-devsecops-platform/docker-setup-buildx-action@master
+        with:
+          endpoint: builders-context
 
       - name: Annotate Job with current information
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
