@@ -25,6 +25,7 @@ jobs:
 
     # Properties required
     with:
+      seceng-devsecops-dind-runner-tag: "The github action runner tag to run the workflow in"
       docker-compose-context: "The directory where the a docker compose file lives for the build"
       docker-compose-file: "The name of the file used `docker-compose.yaml`"
       docker-compose-service: "The name of the the service within the docker-compose file that contains the image definition"
@@ -99,6 +100,7 @@ jobs:
     uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/docker-compose-devsecops-workflow.yaml@feature/support-docker-compose-devsecops-workflow
 
     with:
+      seceng-devsecops-dind-runner-tag: dind
       docker-compose-file: docker-compose.yml
       docker-compose-context: .
       docker-compose-service: chatgpt-spa-runtime
