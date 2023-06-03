@@ -25,11 +25,11 @@ jobs:
 
     # Properties required
     with:
-      docker_compose_context: "The directory where the a docker compose file lives for the build"
-      docker_compose_file: "The name of the file used `docker-compose.yaml`"
-      docker_compose_service: "The name of the the service within the docker-compose file that contains the image definition"
-      seceng_devsecops_prisma_domain: "The optional value of the Prisma/Twistlock Server where to send scan results"
-      seceng_devsecops_prisma_project: "The name of the Prisma Project to flow " 
+      docker-compose-context: "The directory where the a docker compose file lives for the build"
+      docker-compose-file: "The name of the file used `docker-compose.yaml`"
+      docker-compose-service: "The name of the the service within the docker-compose file that contains the image definition"
+      seceng-devsecops-prisma-domain: "The optional value of the Prisma/Twistlock Server where to send scan results"
+      seceng-devsecops-prisma-project: "The name of the Prisma Project to flow " 
 
     # Pass the secrets
     secrets:
@@ -99,12 +99,12 @@ jobs:
     uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/docker-compose-devsecops-workflow.yaml@feature/support-docker-compose-devsecops-workflow
 
     with:
-      docker_compose_file: docker-compose.yml
-      docker_compose_context: .
-      docker_compose_service: chatgpt-spa-runtime
+      docker-compose-file: docker-compose.yml
+      docker-compose-context: .
+      docker-compose-service: chatgpt-spa-runtime
 
-      seceng_devsecops_prisma_domain: twistlock.infosec.viasat.io
-      seceng_devsecops_prisma_project: Container Services
+      seceng-devsecops-prisma-domain: twistlock.infosec.viasat.io
+      seceng-devsecops-prisma-project: Container Services
 
     # Pass the secrets
     # https://docs.github.com/en/enterprise-server@3.5/actions/using-workflows/reusing-workflows#passing-inputs-and-secrets-to-a-reusable-workflow
