@@ -151,13 +151,6 @@ on:
         description: "The token to clone and push changes to the GitOps Deploy repo"
         required: false
 
-      SONAR_TOKEN:
-        description: "The token to send the scan results to Sonarqube"
-        required: false
-      SONAR_TOKEN:
-        description: "The token to send the scan results to Sonarqube"
-        required: false
-
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
   code:
@@ -1228,8 +1221,7 @@ jobs:
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     #continue-on-error: true
 
-    needs:
-      [code, build, check-build, deploy, release, test-code, lint, code-report]
+    needs: [code, build, check-build, deploy, release]
 
     # providing permissions
     permissions:
