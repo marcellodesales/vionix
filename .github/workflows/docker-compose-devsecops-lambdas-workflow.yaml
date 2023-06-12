@@ -570,7 +570,6 @@ jobs:
       gitopsDeployTargetRegion: ${{steps.set_docker_image_settings.outputs.gitopsDeployTargetRegion}}
       gitopsDeployTargetType: ${{steps.set_docker_image_settings.outputs.gitopsDeployTargetType}}
       gitopsDeployService: ${{steps.set_docker_image_settings.outputs.gitopsDeployService}}
-
       gitopsDeployDirektivHost: ${{steps.set_docker_image_settings.outputs.gitopsDeployDirektivHost}}
       gitopsDeployDirektivApi: ${{steps.set_docker_image_settings.outputs.gitopsDeployDirektivApi}}
       gitopsDeployDirektivLambdaName: ${{steps.set_docker_image_settings.outputs.gitopsDeployDirektivLambdaName}}
@@ -1183,7 +1182,6 @@ jobs:
           echo "Data to post '${DATA_TO_POST}'"
           echo "Posting at curl -i -X POST ${FUNCTION_API} --header 'Content-Type: application/json' --data '${DATA_TO_POST}'"
           curl -i -X POST ${FUNCTION_API} --header 'Content-Type: application/json' --data "${DATA_TO_POST}"
-
           echo "Getting it at curl -fsSL -i ${FUNCTION_SERVICE_API}"
           curl -fsSL -i ${FUNCTION_SERVICE_API}
 
