@@ -97,6 +97,18 @@ on:
         type: string
         default: test-coverage.xml
 
+      test_coverage_thresholds:
+        description: "Thresholds percentages of the 'FAIL PASS' levels for the code coverage."
+        required: false
+        type: string
+        default: "70 85"
+
+      test_coverage_report_fail_below_min:
+        description: "Whether or not the workflow should fail if the coverage is less than the min threshold."
+        required: false
+        type: boolean
+        default: false
+
       seceng_devsecops_prisma_domain:
         description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
         required: false
@@ -495,14 +507,14 @@ jobs:
         uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
         with:
           filename: ${{ inputs.docker_compose_test_report_coverage_file }}
+          fail_below_min: ${{ inputs.test_coverage_report_fail_below_min }}
+          thresholds: ${{ inputs.test_coverage_thresholds }}
           badge: true
-          fail_below_min: true
           format: markdown
           hide_branch_rate: false
           hide_complexity: false
           indicators: true
           output: both
-          thresholds: "70 85"
 
       - name: Add Coverage PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
