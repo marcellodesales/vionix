@@ -1117,8 +1117,6 @@ jobs:
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build, deploy]
     runs-on: dind
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
 
     if: inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag')
 
