@@ -24,6 +24,7 @@ on:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
         default: devsecops
 
       docker-compose-file:
@@ -182,7 +183,6 @@ jobs:
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
           COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
-
           env
 
       - name: Setting values
