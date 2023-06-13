@@ -100,7 +100,6 @@ jobs:
     uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/docker-compose-devsecops-workflow.yaml@feature/support-docker-compose-devsecops-workflow
 
     with:
-      seceng-devsecops-dind-runner-tag: dind
       docker-compose-file: docker-compose.yml
       docker-compose-context: .
       docker-compose-service: chatgpt-spa-runtime

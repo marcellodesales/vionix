@@ -48,7 +48,6 @@ on:
         description: "Whether to run the lint service of the given docker compose file"
         required: false
         type: boolean
-        default: true
 
       docker-compose-lint-file:
         description: "Docker Compose File to use for lint"
@@ -72,7 +71,6 @@ on:
         description: "Whether to run the test service of the given docker compose file"
         required: false
         type: boolean
-        default: true
 
       docker-compose-test-file:
         description: "Docker Compose File to use for tests"
