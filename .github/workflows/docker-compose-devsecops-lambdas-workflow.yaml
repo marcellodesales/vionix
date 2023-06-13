@@ -20,6 +20,12 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
+      seceng-devsecops-dind-runner-label:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        default: devsecops
+
       docker-compose-file:
         description: "Docker Compose File to use"
         required: false
@@ -95,7 +101,7 @@ on:
 jobs:
   code:
     name: 🔧 code
-    runs-on: self-hosted
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
@@ -276,7 +282,7 @@ jobs:
   check:
     name: 🛡️ check-code
     needs: [code]
-    runs-on: self-hosted
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
@@ -338,11 +344,12 @@ jobs:
 
   lint:
     name: 🧹 lint
-    runs-on: dind
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
     needs: [code, check]
+
     if: inputs.docker_compose_lint && github.ref_type == 'branch'
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
+
     defaults:
       run:
         working-directory: ${{ inputs.docker_compose_lint_context }}
@@ -382,10 +389,10 @@ jobs:
   test-code:
     name: ✅️ test-code
     needs: [code, check]
-    runs-on: dind
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
     if: inputs.docker_compose_test && github.ref_type == 'branch'
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
+
     defaults:
       run:
         working-directory: ${{ inputs.docker_compose_test_context }}
@@ -472,9 +479,7 @@ jobs:
     name: 📦 build
     needs: [code, check, lint, test-code]
     if: always() && needs.lint.result != 'failure' && needs.test-code.result != 'failure'
-    runs-on: dind
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
@@ -776,9 +781,7 @@ jobs:
   check-build:
     name: 🛡️ check-build
     needs: [code, build]
-    runs-on: dind
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
@@ -910,9 +913,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build]
-    runs-on: dind
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -1044,15 +1045,8 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build, deploy]
-    runs-on: dind
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:23.0.5-dind
-
-<<<<<<< HEAD
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
     if: inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag')
-=======
-    if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') }}
->>>>>>> 4d23740 (:octocat: :memo: :boom: rename params from _ with -)
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
@@ -1155,7 +1149,7 @@ jobs:
     name: 📢 notify
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    runs-on: self-hosted
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
     if: ${{ always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
