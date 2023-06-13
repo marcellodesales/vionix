@@ -68,7 +68,7 @@ on:
         type: string
         default: lint
 
-      docker_compose_test:
+      docker-compose-test:
         description: "Whether to run the test service of the given docker compose file"
         required: false
         type: boolean
@@ -463,7 +463,7 @@ jobs:
     needs: [code, check]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    if: inputs.docker_compose_test && github.ref_type == 'branch'
+    if: inputs.docker-compose-test && github.ref_type == 'branch'
 
     defaults:
       run:
