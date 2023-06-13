@@ -548,6 +548,7 @@ jobs:
   build:
     name: 📦 build
     needs: [code, check, lint, test]
+    # https://docs.github.com/en/actions/learn-github-actions/contexts#needs-context
     if: always() && needs.lint.result != 'failure' && needs.test-code.result != 'failure'
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
@@ -863,6 +864,10 @@ jobs:
     needs: [code, build]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
+    # As build depends on test and lint, it would not execute, however, always guarantees it will run independently
+    # https://docs.github.com/en/actions/learn-github-actions/contexts#needs-context
+    if: always()
+
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
     # if: github.ref_type == 'branch'
@@ -995,6 +1000,10 @@ jobs:
     needs: [code, build]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
+    # As build depends on test and lint, it would not execute, however, always guarantees it will run independently
+    # https://docs.github.com/en/actions/learn-github-actions/contexts#needs-context
+    if: always()
+
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
@@ -1126,7 +1135,10 @@ jobs:
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build, deploy]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
-    if: inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag')
+
+    # always() As build depends on test and lint, it would not execute, however, always guarantees it will run independently
+    # https://docs.github.com/en/actions/learn-github-actions/contexts#needs-context
+    if: always() && inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag')
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
