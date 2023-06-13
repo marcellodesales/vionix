@@ -44,6 +44,78 @@ on:
         required: true
         type: string
 
+      docker-compose-lint:
+        description: "Whether to run the lint service of the given docker compose file"
+        required: false
+        type: boolean
+        default: true
+
+      docker-compose-lint-file:
+        description: "Docker Compose File to use for lint"
+        required: false
+        type: string
+        default: docker-compose-check-code.yaml
+
+      docker-compose-lint-context:
+        description: "Directory containing the given docker-compose-lint-file"
+        required: false
+        type: string
+        default: "."
+
+      docker-compose-lint-service:
+        description: "Docker Compose service to build for lint"
+        required: false
+        type: string
+        default: lint
+
+      docker_compose_test:
+        description: "Whether to run the test service of the given docker compose file"
+        required: false
+        type: boolean
+        default: true
+
+      docker-compose-test-file:
+        description: "Docker Compose File to use for tests"
+        required: false
+        type: string
+        default: docker-compose-check-code.yaml
+
+      docker-compose-test-context:
+        description: "Directory containing the given docker-compose-test-file"
+        required: false
+        type: string
+        default: "."
+
+      docker-compose-test-service:
+        description: "Docker Compose service to build for tests"
+        required: false
+        type: string
+        default: test
+
+      docker-compose-test-report-file:
+        description: "A JUnit compatible XML file that stores the test report from your docker compose test service."
+        required: false
+        type: string
+        default: test-report.xml
+
+      docker-compose-test-report-coverage-file:
+        description: "The JUnit compatible XML file that stores the test coverage report from your docker compose test service."
+        required: false
+        type: string
+        default: test-coverage.xml
+
+      test-coverage-thresholds:
+        description: "Thresholds percentages of the 'FAIL PASS' levels for the code coverage."
+        required: false
+        type: string
+        default: "70 85"
+
+      test-coverage-report-fail-below-min:
+        description: "Whether or not the workflow should fail if the coverage is less than the min threshold."
+        required: false
+        type: boolean
+        default: false
+
       seceng-devsecops-prisma-domain:
         description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
         required: false
@@ -348,11 +420,11 @@ jobs:
 
     needs: [code, check]
 
-    if: inputs.docker_compose_lint && github.ref_type == 'branch'
+    if: inputs.docker-compose-lint && github.ref_type == 'branch'
 
     defaults:
       run:
-        working-directory: ${{ inputs.docker_compose_lint_context }}
+        working-directory: ${{ inputs.docker-compose-lint-context }}
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
@@ -368,8 +440,8 @@ jobs:
           ls -la
           cat .env
 
-          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker_compose_lint_file }} build ${{ inputs.docker_compose_lint_service }}
-          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker_compose_lint_file }} up --exit-code-from ${{ inputs.docker_compose_lint_service }} ${{ inputs.docker_compose_lint_service }} | tee lint-report.txt
+          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
+          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker-compose-lint-file }} up --exit-code-from ${{ inputs.docker-compose-lint-service }} ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
           TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
           echo "Total number of lint files: ${TOTAL_LINT_FILES}"
           echo "::set-output name=numberOfLintFiles::$TOTAL_LINT_FILES"
@@ -395,7 +467,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ${{ inputs.docker_compose_test_context }}
+        working-directory: ${{ inputs.docker-compose-test-context }}
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
@@ -409,24 +481,24 @@ jobs:
           cat .env
 
           echo "Building the test image."
-          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker_compose_test_file }} build ${{ inputs.docker_compose_test_service }}
+          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}
           echo "Running the test image."
-          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker_compose_test_file }} up --build --abort-on-container-exit ${{ inputs.docker_compose_test_service }}
+          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker-compose-test-file }} up --build --abort-on-container-exit ${{ inputs.docker-compose-test-service }}
 
       - name: Set results to outputs
         id: test-values
         run: |
-          COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker_compose_test_report_coverage_file }})
-          COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker_compose_test_report_coverage_file }})
+          COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker-compose-test-report-coverage-file }})
+          COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker-compose-test-report-coverage-file }})
           # https://linuxhint.com/round-two-decimal-places-bash/
           # COVERAGE_PERCENT=$(printf '%.2f' $((COVERAGE_RATE * 100)))%
           echo "::set-output name=numberOfCoveredClasses::$COVERED_CLASSES"
           echo "::set-output name=coverageRate::$COVERAGE_RATE"
-          TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" ${{ inputs.docker_compose_test_report_file }})
-          TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" ${{ inputs.docker_compose_test_report_file }})
-          TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" ${{ inputs.docker_compose_test_report_file }})
-          TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" ${{ inputs.docker_compose_test_report_file }})
-          TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" ${{ inputs.docker_compose_test_report_file }})
+          TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" ${{ inputs.docker-compose-test-report-file }})
+          TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" ${{ inputs.docker-compose-test-report-file }})
+          TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" ${{ inputs.docker-compose-test-report-file }})
+          TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" ${{ inputs.docker-compose-test-report-file }})
+          TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" ${{ inputs.docker-compose-test-report-file }})
           echo "::set-output name=numberOfTestErrors::$TEST_ERRORS"
           echo "::set-output name=numberOfTestFailures::$TEST_FAILURES"
           echo "::set-output name=numberOfTestsSkipped::$TESTS_SKIPPED"
@@ -441,9 +513,9 @@ jobs:
       - name: Code Coverage Summary Report
         uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
         with:
-          filename: ${{ inputs.docker_compose_test_report_coverage_file }}
-          fail_below_min: ${{ inputs.test_coverage_report_fail_below_min }}
-          thresholds: ${{ inputs.test_coverage_thresholds }}
+          filename: ${{ inputs.docker-compose-test-report-coverage-file }}
+          fail_below_min: ${{ inputs.test-coverage-report-fail-below-min }}
+          thresholds: ${{ inputs.test-coverage-thresholds }}
           badge: true
           format: markdown
           hide_branch_rate: false
@@ -462,13 +534,13 @@ jobs:
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
         with:
           name: coverage-results.xml
-          path: ${{ inputs.docker_compose_test_report_coverage_file }}
+          path: ${{ inputs.docker-compose-test-report-coverage-file }}
 
       - name: Upload tests report file
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
         with:
           name: test-results.xml
-          path: ${{ inputs.docker_compose_test_report_file }}
+          path: ${{ inputs.docker-compose-test-report-file }}
 
       - name: Annotate Job with notification status
         run: |
