@@ -438,8 +438,8 @@ jobs:
           ls -la
           cat .env
 
-          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
-          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker-compose-lint-file }} up --exit-code-from ${{ inputs.docker-compose-lint-service }} ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
+          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
+          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-lint-file }} up --exit-code-from ${{ inputs.docker-compose-lint-service }} ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
           TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
           echo "Total number of lint files: ${TOTAL_LINT_FILES}"
           echo "::set-output name=numberOfLintFiles::$TOTAL_LINT_FILES"
@@ -479,9 +479,9 @@ jobs:
           cat .env
 
           echo "Building the test image."
-          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}
+          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}
           echo "Running the test image."
-          docker compose -f ${{ inputs.docker_compose_file }} -f ${{ inputs.docker-compose-test-file }} up --build --abort-on-container-exit ${{ inputs.docker-compose-test-service }}
+          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-test-file }} up --build --abort-on-container-exit ${{ inputs.docker-compose-test-service }}
 
       - name: Set results to outputs
         id: test-values
