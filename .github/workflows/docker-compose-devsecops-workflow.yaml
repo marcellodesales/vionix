@@ -20,35 +20,42 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-      docker_compose_file:
+      seceng-devsecops-dind-runner-label:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: devsecops
+
+      docker-compose-file:
         description: "Docker Compose File to use"
         required: false
         type: string
         default: docker-compose.yaml
 
-      docker_compose_context:
-        description: "Directory containing the given docker_compose_file"
+      docker-compose-context:
+        description: "Directory containing the given docker-compose-file"
         required: false
         type: string
         default: "."
 
-      docker_compose_service:
+      docker-compose-service:
         description: "Docker Compose service to build"
         required: true
         type: string
 
-      seceng_devsecops_prisma_domain:
+      seceng-devsecops-prisma-domain:
         description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
         required: false
         type: string
         default: twistlock.infosec.viasat.io
 
-      seceng_devsecops_prisma_project:
+      seceng-devsecops-prisma-project:
         description: "Prisma Project to scan the docker image"
         required: true
         type: string
 
-      gitops_deploy_workflow:
+      gitops-deploy-workflow:
         description: "Cloud provider workflow deploy the repo using k8s"
         required: false
         type: string
@@ -90,7 +97,7 @@ jobs:
 
   code:
     name: 🔧 code
-    runs-on: self-hosted
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
@@ -184,15 +191,15 @@ jobs:
 
       # Override the version with the tag name since it's available on github.ref_name
       - name: Set version as Tag=${{ github.ref_name }} as it is a production release
-        if: ${{ inputs.gitops_deploy_workflow != '' && github.ref_type == 'tag' }}
+        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
         run: |
           echo "NEXT_PUBLIC_APP_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
       # only setup deployment when the deployment object is provided
       - name: Setup default deployment properties for all releases
-        if: ${{ inputs.gitops_deploy_workflow != '' }}
+        if: ${{ inputs.gitops-deploy-workflow != '' }}
         run: |
-          GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
+          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
 
           GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
@@ -209,9 +216,9 @@ jobs:
 
       # Execute for DEV and STG
       - name: Setup deployment properties for branch
-        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         run: |
-          GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
+          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
 
           GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
@@ -224,9 +231,9 @@ jobs:
 
       # Execute for the PRD TAGs
       - name: Setup deployment properties for branch
-        if: ${{ inputs.gitops_deploy_workflow != '' && github.ref_type == 'tag' }}
+        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
         run: |
-          GITOPS_WORKFLOW='${{ inputs.gitops_deploy_workflow }}'
+          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
 
           GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.env')
@@ -247,7 +254,7 @@ jobs:
           echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
           echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
           echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
-          echo "::set-output name=dockerContextPath::${{ inputs.docker_compose_context }}"
+          echo "::set-output name=dockerContextPath::${{ inputs.docker-compose-context }}"
           echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
           echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
           echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
@@ -272,7 +279,7 @@ jobs:
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
       - name: Annotate Job with current information
-        if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         run: |
           echo "```json" >> $GITHUB_STEP_SUMMARY
           for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
@@ -346,7 +353,7 @@ jobs:
   check:
     name: 🛡️ check-code
     needs: [code]
-    runs-on: self-hosted
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
@@ -360,7 +367,7 @@ jobs:
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
       run:
-        working-directory: ${{ inputs.docker_compose_context }}
+        working-directory: ${{ inputs.docker-compose-context }}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -403,14 +410,12 @@ jobs:
   build:
     name: 📦 build
     needs: [code, check]
-    runs-on: dind
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
       run:
-        working-directory: ${{ inputs.docker_compose_context }}
+        working-directory: ${{ inputs.docker-compose-context }}
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
@@ -448,10 +453,10 @@ jobs:
         run: |
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
-          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker_compose_file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+          if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
@@ -473,12 +478,12 @@ jobs:
         # https://github.community/t/sharing-a-variable-between-jobs/16967/14
         run: |
           env
-          if [ -z "${{ inputs.docker_compose_service }}" ] || [ -z "${DEFAULT_DOCKER_IMAGE_REPO}" ] || [ -z "${DEFAULT_DOCKER_REGISTRY}" ]; then
-            echo "ERROR: Couldn't define either ${{ inputs.docker_compose_service }}='${{ inputs.docker_compose_service }}' or DEFAULT_DOCKER_IMAGE_REPO='${DEFAULT_DOCKER_IMAGE_REPO} or DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}'. Check the logs!"
+          if [ -z "${{ inputs.docker-compose-service }}" ] || [ -z "${DEFAULT_DOCKER_IMAGE_REPO}" ] || [ -z "${DEFAULT_DOCKER_REGISTRY}" ]; then
+            echo "ERROR: Couldn't define either ${{ inputs.docker-compose-service }}='${{ inputs.docker-compose-service }}' or DEFAULT_DOCKER_IMAGE_REPO='${DEFAULT_DOCKER_IMAGE_REPO} or DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}'. Check the logs!"
             exit 1
           fi
           echo "::set-output name=defaultDockerImageRepo::$DEFAULT_DOCKER_IMAGE_REPO"
-          echo "::set-output name=defaultDockerService::${{ inputs.docker_compose_service }}"
+          echo "::set-output name=defaultDockerService::${{ inputs.docker-compose-service }}"
           echo "::set-output name=defaultDockerRegistry::$DEFAULT_DOCKER_REGISTRY"
           echo "::set-output name=originalDockerImageTag::$ORIGINAL_DOCKER_IMAGE_TAG"
           echo "::set-output name=githubRepoPaths::$GITHUB_REPOSITORY_PATHS"
@@ -493,6 +498,14 @@ jobs:
 #          echo "```" >> $GITHUB_STEP_SUMMARY
 #          echo "" >> $GITHUB_STEP_SUMMARY
 
+      # Newer buildx setting:
+      # https://github.com/docker/setup-buildx-action/issues/105#issuecomment-910928571
+      # https://github.com/docker/buildx/issues/413#issuecomment-710656847
+      - name: Set up Docker Context for Buildx
+        id: buildx-context
+        run: |
+          docker context create builders-context
+
       # https://github.community/t/use-docker-layer-caching-with-docker-compose-build-not-just-docker/156049/3
       # https://github.com/docker/build-push-action/blob/master/docs/advanced/export-docker.md
       # https://mmeendez8.github.io/2021/07/19/new-docker-cache-is-out.html
@@ -502,6 +515,8 @@ jobs:
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
         uses: seceng-devsecops-platform/docker-setup-buildx-action@master
+        with:
+          endpoint: builders-context
 
       - name: Annotate Job with current information
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
@@ -527,7 +542,7 @@ jobs:
         if: ${{ github.ref_type == 'branch' }}
         run: |
           # https://github.com/opencontainers/image-spec/blob/main/annotations.md
-          export LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker_compose_context }}
+          export LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker-compose-context }}
           echo "Adding labels to Dockerfile"
           # https://stackoverflow.com/questions/845863/how-to-use-in-an-xargs-command/70230514#70230514
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.source" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.source ${LABEL_VALUE}" >> {}' -- {}
@@ -536,13 +551,13 @@ jobs:
           # https://docs.docker.com/engine/reference/commandline/buildx_bake/#file
 
           echo "Using Version: NEXT_PUBLIC_APP_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}"
-          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file}}" ]; then
+          if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file}}" ]; then
             echo "Specifying the buildx bake by the service compose file."
-            docker-compose -f ${{ inputs.docker_compose_file }} config ${{ inputs.docker_compose_service }};
-            docker buildx bake -f ${{ inputs.docker_compose_file }} ${{ inputs.docker_compose_service }} --print;
+            docker-compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }};
+            docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }} --print;
           else
-            docker-compose config ${{ inputs.docker_compose_service }}
-            docker buildx bake ${{ inputs.docker_compose_service }} --print
+            docker-compose config ${{ inputs.docker-compose-service }}
+            docker buildx bake ${{ inputs.docker-compose-service }} --print
           fi
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
@@ -570,17 +585,17 @@ jobs:
         with:
           push: true
           # https://github.com/docker/bake-action/pull/76
-          workdir: ./${{ inputs.docker_compose_context }}
+          workdir: ./${{ inputs.docker-compose-context }}
           targets: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
           builder: ${{ steps.buildx.outputs.name }}
-          files: ./${{ inputs.docker_compose_file }}
-          # Builds a docker image and create multiple tags based on the tags below for the ${{ inputs.docker_compose_service }} in docker-compose
+          files: ./${{ inputs.docker-compose-file }}
+          # Builds a docker image and create multiple tags based on the tags below for the ${{ inputs.docker-compose-service }} in docker-compose
           # All the properties from https://github.com/docker/buildx/blob/master/docs/reference/buildx_bake.md#set
           # https://github.community/t/use-docker-layer-caching-with-docker-compose-build-not-just-docker/156049/3
           # https://stackoverflow.com/questions/55756372/when-using-buildkit-with-docker-how-do-i-see-the-output-of-run-commands/55759337#55759337
           # https://github.com/docker/buildx/blob/master/docs/reference/buildx_bake.md#set
           # https://github.com/docker/buildx/issues/872#issuecomment-1014891886
-          # # ${{steps.set-docker-image-settings.outputs.defaultDockerService}} could be used in addition to ${{ inputs.docker_compose_service }}
+          # # ${{steps.set-docker-image-settings.outputs.defaultDockerService}} could be used in addition to ${{ inputs.docker-compose-service }}
           set: |
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
@@ -600,7 +615,7 @@ jobs:
   check-build:
     name: 🛡️ check-build
     needs: [code, build]
-    runs-on: dind
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
@@ -629,10 +644,10 @@ jobs:
         run: |
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
-          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker_compose_file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+          if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
@@ -681,11 +696,11 @@ jobs:
         # To be referring to for results https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#example-using-a-public-action
         id: prisma_cloud_scan
         uses: seceng-devsecops-platform/devsecops-platform-action-prisma@develop
-        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         continue-on-error: true
         with:
-          prisma-cloud-url: https://${{ inputs.seceng_devsecops_prisma_domain }}
-          prisma-cloud-project: ${{ inputs.seceng_devsecops_prisma_project }}
+          prisma-cloud-url: https://${{ inputs.seceng-devsecops-prisma-domain }}
+          prisma-cloud-project: ${{ inputs.seceng-devsecops-prisma-project }}
           #### TODO: Use vault secrets management
           prisma-cloud-username: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}
           prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}
@@ -695,7 +710,7 @@ jobs:
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
       - name: Set outputs for Scan results
-        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         id: scan-results-collection
         run: |
           echo 'scan-outputs=${{ toJSON(steps.prisma_cloud_scan.outputs) }}'
@@ -709,12 +724,12 @@ jobs:
           echo "::set-output name=passedVulnerabilitiesScan::${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
 
       - name: Scan result outputs
-        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         run: |
           echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
 
       - name: Annotate Job with current information
-        if: ${{ inputs.seceng_devsecops_prisma_project != '' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# :microscope: Scanned Docker Image " >> $GITHUB_STEP_SUMMARY
@@ -731,9 +746,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build]
-    runs-on: dind
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/docker:20.10.17-dind
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -750,10 +763,10 @@ jobs:
 
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
-          if [ -n "${{ inputs.docker_compose_file }}" ] && [ -f "${{ inputs.docker_compose_file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker_compose_file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+          if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker_compose_service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
@@ -865,9 +878,9 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build, deploy]
-    runs-on: dind
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    if: ${{ inputs.gitops_deploy_workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+    if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
@@ -934,7 +947,7 @@ jobs:
     name: 📢 notify
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    runs-on: self-hosted
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
     if: ${{ always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
