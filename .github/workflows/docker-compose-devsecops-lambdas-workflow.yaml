@@ -482,6 +482,8 @@ jobs:
           docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}
           echo "Running the test image."
           docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-test-file }} up --build --abort-on-container-exit ${{ inputs.docker-compose-test-service }}
+          ls -la
+          ls -la build
 
       - name: Set results to outputs
         id: test-values
