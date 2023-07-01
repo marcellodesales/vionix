@@ -433,6 +433,7 @@ jobs:
       defaultDockerService: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
       originalDockerImageTag: ${{steps.set_docker_image_settings.outputs.originalDockerImageTag}}
       githubRepoPaths: ${{steps.set_docker_image_settings.outputs.githubRepoPaths}}
+      dockerImageArtifactoryUrl: ${{steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl}}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -479,6 +480,14 @@ jobs:
           GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG} 
           echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
 
+          # Extract the first token, repository path, and image tag from the image string
+          ARTIFACTORY_REPO_TOKEN="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | cut -d '.' -f1)"
+          ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
+
+          # Construct the new artifactory URL
+          ARTIFACTORY_URL="https://artifactory.viasat.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
+          echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
+
       - id: set_docker_image_settings
         # The below outputs a JSON array of check tasks for each subproject
         #  and uses GitHub Actions magic (::set-output) to set an output
@@ -495,6 +504,7 @@ jobs:
           echo "::set-output name=defaultDockerRegistry::$DEFAULT_DOCKER_REGISTRY"
           echo "::set-output name=originalDockerImageTag::$ORIGINAL_DOCKER_IMAGE_TAG"
           echo "::set-output name=githubRepoPaths::$GITHUB_REPOSITORY_PATHS"
+          echo "::set-output name=dockerImageArtifactoryUrl::$ARTIFACTORY_URL"
 
       - name: Annotate Job with current information
         run: |
@@ -822,7 +832,7 @@ jobs:
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'tag' }}
         run: |
-          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
+          docker tag ${{needs.code.outputs.defaultDockerImageVersion}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
           echo "Current images"
           docker image ls -a
 
@@ -853,6 +863,7 @@ jobs:
           echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
+          echo "* Registry <a href="${{needs.build.outputs.dockerImageArtifactoryUrl}}>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Annotate Job with current information for PRD
@@ -944,7 +955,7 @@ jobs:
           echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> $GITHUB_STEP_SUMMARY
           echo "* :herb: Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> $GITHUB_STEP_SUMMARY
           echo "* :commit: Deploy repo SHA: <a href="${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}">${{ steps.auto-commit-action.outputs.commit_hash }}</a>" >> $GITHUB_STEP_SUMMARY
-          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_STEP_SUMMARY
+          echo "* :whale: Docker Image: <a href="${{needs.build.outputs.dockerImageArtifactoryUrl}}>${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}</a>" >> $GITHUB_STEP_SUMMARY
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
@@ -1020,7 +1031,7 @@ jobs:
                             },
                             {
                               "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "value": "<${{needs.build.outputs.dockerImageArtifactoryUrl}}|${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}>",
                               "short": true
                             },
                             {
@@ -1073,7 +1084,7 @@ jobs:
                             },
                             {
                               "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "value": "<${{needs.build.outputs.dockerImageArtifactoryUrl}}|${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
                               "short": true
                             },
                             {
