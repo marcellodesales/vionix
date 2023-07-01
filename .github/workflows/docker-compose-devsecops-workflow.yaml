@@ -216,7 +216,7 @@ jobs:
 
       # Execute for DEV and STG
       - name: Setup deployment properties for branch
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
@@ -279,7 +279,7 @@ jobs:
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
       - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
         run: |
           echo "```json" >> $GITHUB_STEP_SUMMARY
           for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
@@ -297,8 +297,18 @@ jobs:
           echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Annotate Job with current information
+        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'branch' }}
+        run: |
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
+      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
+      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+      - name: Annotate Job with current information
+        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
+        run: |
+          echo "* :bookmark: App Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
@@ -355,10 +365,6 @@ jobs:
     needs: [code]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
-    # Only run the builds when building either DEV or STG
-    if: ${{ github.ref_type == 'branch' }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -372,11 +378,13 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
+        if: ${{ github.ref_type == 'branch' }}
         uses: viarise/checkout@v2
         with:
           fetch-depth: 1
 
       - name: Annotate Job with current information
+        if: ${{ github.ref_type == 'branch' }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🛡️ check-code Summary" >> $GITHUB_STEP_SUMMARY
@@ -385,10 +393,10 @@ jobs:
       - name: Check dockerfile
         id: check-dockerfile-benchmark
         uses: viarise/benchmark-dockerfile@main
-        if: ${{ matrix.checkType == 'Dockerfile' }}
+        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Dockerfile' }}
 
       - name: Annotate Job with current information
-        if: ${{ matrix.checkType == 'Dockerfile' }}
+        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Dockerfile' }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :heavy_check_mark: Dockerfile Benchmark " >> $GITHUB_STEP_SUMMARY
@@ -401,7 +409,7 @@ jobs:
 #          echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Check Readme
-        if: ${{ matrix.checkType == 'Readme' }}
+        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Readme' }}
         run: |
           env
           echo "In order to associate the docker image to the repo, we need to associate the Dockerfile to the repo"
@@ -502,6 +510,7 @@ jobs:
       # https://github.com/docker/setup-buildx-action/issues/105#issuecomment-910928571
       # https://github.com/docker/buildx/issues/413#issuecomment-710656847
       - name: Set up Docker Context for Buildx
+        if: ${{ github.ref_type == 'branch' }}
         id: buildx-context
         run: |
           docker context create builders-context
@@ -562,6 +571,7 @@ jobs:
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
+        if: ${{ github.ref_type == 'branch' }}
         uses: seceng-devsecops-platform/docker-login-action@v1
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
@@ -569,6 +579,7 @@ jobs:
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
       - name: Annotate Job with current information
+        if: ${{ github.ref_type == 'branch' }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "* Logged to ${{ env.DEFAULT_DOCKER_REGISTRY }}" >> $GITHUB_STEP_SUMMARY
@@ -577,11 +588,11 @@ jobs:
       # TODO: since we are using self-hosted, the docker image is saved in the same host
       # https://docs.docker.com/engine/reference/commandline/buildx_bake/
       - name: Build Docker Image
-        id: docker-bake
-        uses: seceng-devsecops-platform/docker-bake-action@v2.2.0
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
+        id: docker-bake
+        uses: seceng-devsecops-platform/docker-bake-action@v2.2.0
         with:
           push: true
           # https://github.com/docker/bake-action/pull/76
@@ -880,7 +891,7 @@ jobs:
     needs: [code, build, deploy]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+    if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
