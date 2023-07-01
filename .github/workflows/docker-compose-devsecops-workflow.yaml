@@ -216,7 +216,7 @@ jobs:
 
       # Execute for DEV and STG
       - name: Setup deployment properties for branch
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
@@ -279,7 +279,7 @@ jobs:
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
       - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
         run: |
           echo "```json" >> $GITHUB_STEP_SUMMARY
           for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
@@ -297,8 +297,18 @@ jobs:
           echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Annotate Job with current information
+        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'branch' }}
+        run: |
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
+      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
+      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+      - name: Annotate Job with current information
+        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
+        run: |
+          echo "* :bookmark: App Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
@@ -355,10 +365,6 @@ jobs:
     needs: [code]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
-    # Only run the builds when building either DEV or STG
-    if: ${{ github.ref_type == 'branch' }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -372,11 +378,13 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
+        if: ${{ github.ref_type == 'branch' }}
         uses: viarise/checkout@v2
         with:
           fetch-depth: 1
 
       - name: Annotate Job with current information
+        if: ${{ github.ref_type == 'branch' }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🛡️ check-code Summary" >> $GITHUB_STEP_SUMMARY
@@ -385,10 +393,10 @@ jobs:
       - name: Check dockerfile
         id: check-dockerfile-benchmark
         uses: viarise/benchmark-dockerfile@main
-        if: ${{ matrix.checkType == 'Dockerfile' }}
+        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Dockerfile' }}
 
       - name: Annotate Job with current information
-        if: ${{ matrix.checkType == 'Dockerfile' }}
+        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Dockerfile' }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :heavy_check_mark: Dockerfile Benchmark " >> $GITHUB_STEP_SUMMARY
@@ -401,7 +409,7 @@ jobs:
 #          echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Check Readme
-        if: ${{ matrix.checkType == 'Readme' }}
+        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Readme' }}
         run: |
           env
           echo "In order to associate the docker image to the repo, we need to associate the Dockerfile to the repo"
@@ -425,6 +433,7 @@ jobs:
       defaultDockerService: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
       originalDockerImageTag: ${{steps.set_docker_image_settings.outputs.originalDockerImageTag}}
       githubRepoPaths: ${{steps.set_docker_image_settings.outputs.githubRepoPaths}}
+      dockerImageArtifactoryUrl: ${{steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl}}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -471,6 +480,14 @@ jobs:
           GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG} 
           echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
 
+          # Extract the first token, repository path, and image tag from the image string
+          ARTIFACTORY_REPO_TOKEN="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | cut -d '.' -f1)"
+          ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
+
+          # Construct the new artifactory URL
+          ARTIFACTORY_URL="https://artifactory.viasat.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
+          echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
+
       - id: set_docker_image_settings
         # The below outputs a JSON array of check tasks for each subproject
         #  and uses GitHub Actions magic (::set-output) to set an output
@@ -487,6 +504,7 @@ jobs:
           echo "::set-output name=defaultDockerRegistry::$DEFAULT_DOCKER_REGISTRY"
           echo "::set-output name=originalDockerImageTag::$ORIGINAL_DOCKER_IMAGE_TAG"
           echo "::set-output name=githubRepoPaths::$GITHUB_REPOSITORY_PATHS"
+          echo "::set-output name=dockerImageArtifactoryUrl::$ARTIFACTORY_URL"
 
       - name: Annotate Job with current information
         run: |
@@ -502,6 +520,7 @@ jobs:
       # https://github.com/docker/setup-buildx-action/issues/105#issuecomment-910928571
       # https://github.com/docker/buildx/issues/413#issuecomment-710656847
       - name: Set up Docker Context for Buildx
+        if: ${{ github.ref_type == 'branch' }}
         id: buildx-context
         run: |
           docker context create builders-context
@@ -562,6 +581,7 @@ jobs:
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
+        if: ${{ github.ref_type == 'branch' }}
         uses: seceng-devsecops-platform/docker-login-action@v1
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
@@ -569,6 +589,7 @@ jobs:
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
       - name: Annotate Job with current information
+        if: ${{ github.ref_type == 'branch' }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "* Logged to ${{ env.DEFAULT_DOCKER_REGISTRY }}" >> $GITHUB_STEP_SUMMARY
@@ -577,11 +598,11 @@ jobs:
       # TODO: since we are using self-hosted, the docker image is saved in the same host
       # https://docs.docker.com/engine/reference/commandline/buildx_bake/
       - name: Build Docker Image
-        id: docker-bake
-        uses: seceng-devsecops-platform/docker-bake-action@v2.2.0
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
+        id: docker-bake
+        uses: seceng-devsecops-platform/docker-bake-action@v2.2.0
         with:
           push: true
           # https://github.com/docker/bake-action/pull/76
@@ -811,7 +832,7 @@ jobs:
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'tag' }}
         run: |
-          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
+          docker tag ${{needs.code.outputs.defaultDockerImageVersion}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
           echo "Current images"
           docker image ls -a
 
@@ -832,7 +853,7 @@ jobs:
       - name: Push Docker Images tags built before for PRD
         if: ${{ github.ref_type == 'tag' }}
         run: |
-          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
+          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
 
       - name: Annotate Job with current information for DEV and STG
         if: ${{ github.ref_type == 'branch' }}
@@ -842,6 +863,7 @@ jobs:
           echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
+          echo "* Registry <a href="${{needs.build.outputs.dockerImageArtifactoryUrl}}>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Annotate Job with current information for PRD
@@ -850,28 +872,16 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
-          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - if: github.ref_type == 'tag'
         name: Push latest Docker Image for main branch for the image
         run: |
           # When there's an original tag (1.2.3 version), then we need to remove it
-          if [ -n "${{needs.build.outputs.originalDockerImageTag}}" ]; then
-            # Push original as defined by the user in the repo
-            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}
-            docker push ${{needs.build.outputs.defaultDockerImageRepo}}
-            # Remove the tag to produce the latest version
-            REPO="${{needs.build.outputs.defaultDockerImageRepo}}"
-            TAG="${{needs.build.outputs.originalDockerImageTag}}"
-            LATEST_IMAGE_REPO=${REPO/:$TAG/}
-            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${LATEST_IMAGE_REPO}
-            docker push ${LATEST_IMAGE_REPO}
-          else
-            # Just append the latest and push
-            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}
-            docker push ${{needs.build.outputs.defaultDockerImageRepo}}
-          fi
+          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
+          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }} ${{needs.build.outputs.defaultDockerImageRepo}}:latest
+          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:latest
 
   infra:
     name: "🏗️ gitops"
@@ -880,7 +890,7 @@ jobs:
     needs: [code, build, deploy]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+    if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
@@ -933,7 +943,7 @@ jobs:
           echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> $GITHUB_STEP_SUMMARY
           echo "* :herb: Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> $GITHUB_STEP_SUMMARY
           echo "* :commit: Deploy repo SHA: <a href="${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}">${{ steps.auto-commit-action.outputs.commit_hash }}</a>" >> $GITHUB_STEP_SUMMARY
-          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_STEP_SUMMARY
+          echo "* :whale: Docker Image: <a href="${{needs.build.outputs.dockerImageArtifactoryUrl}}>${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}</a>" >> $GITHUB_STEP_SUMMARY
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
@@ -1009,7 +1019,7 @@ jobs:
                             },
                             {
                               "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "value": "<${{needs.build.outputs.dockerImageArtifactoryUrl}}|${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}>",
                               "short": true
                             },
                             {
@@ -1062,7 +1072,7 @@ jobs:
                             },
                             {
                               "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "value": "<${{needs.build.outputs.dockerImageArtifactoryUrl}}|${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
                               "short": true
                             },
                             {
