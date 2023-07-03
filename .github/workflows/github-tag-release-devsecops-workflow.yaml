@@ -7,25 +7,25 @@
 
 name: create-github-tagged-release
 
-# Create a tag upon the closure of a PR
 on:
-  pull_request:
-    types:
-      - closed
+  # Manual workflow execution
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+  # https://github.com/actions/runner/issues/1483#issuecomment-969295757
+  # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
+  workflow_call:
+    inputs:
+      seceng-devsecops-dind-runner-label:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: devsecops
 
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
 # section #6: Saving Computation Time by Stopping Obsolete Workflows
 concurrency:
   group: github-tag-release-devsecops-${{ github.ref }}-1
   cancel-in-progress: true
-
-inputs:
-  seceng-devsecops-dind-runner-label:
-    description: "Docker-in-docker (dind) runner to use base label"
-    required: false
-    type: string
-    # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
-    default: devsecops
 
 jobs:
 
