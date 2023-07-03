@@ -863,7 +863,7 @@ jobs:
           echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
-          echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}>${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}></a>" >> $GITHUB_STEP_SUMMARY
+          echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Annotate Job with current information for PRD
@@ -873,7 +873,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}>${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}></a>" >> $GITHUB_STEP_SUMMARY
+          echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - if: github.ref_type == 'tag'
@@ -968,8 +968,8 @@ jobs:
           echo "# :building_construction: Deployment Executed" >> $GITHUB_STEP_SUMMARY
           echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> $GITHUB_STEP_SUMMARY
           echo "* :herb: Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> $GITHUB_STEP_SUMMARY
-          echo "* :commit: Deploy repo SHA: <a href="${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}">${{ steps.auto-commit-action.outputs.commit_hash }}</a>" >> $GITHUB_STEP_SUMMARY
-          echo "* :whale: Docker Image: <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}</a>" >> $GITHUB_STEP_SUMMARY
+          echo "* :commit: Deploy repo SHA: <a href='${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}'>${{ steps.auto-commit-action.outputs.commit_hash }}</a>" >> $GITHUB_STEP_SUMMARY
+          echo "* :whale: Docker Image: <a href='${{ needs.build.outputs.dockerImageArtifactoryUrl }}'>${{ needs.build.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.gitopsDeployVersion }}</a>" >> $GITHUB_STEP_SUMMARY
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
