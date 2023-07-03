@@ -991,13 +991,13 @@ jobs:
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
-    if: ${{ always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+    if: ${{ always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
 
 
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     #continue-on-error: true
 
-    needs: [code, build, check-build, deploy]
+    needs: [code, build, deploy]
 
     # providing permissions
     permissions:
