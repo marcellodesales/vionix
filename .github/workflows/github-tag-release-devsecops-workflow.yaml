@@ -217,8 +217,9 @@ jobs:
           EOF
 
           # Remove the body since it may contain anything that we can't parse
-          grep -v "body\":" response.json > response.json.tmp && mv response.json.tmp response.json
-          echo "Release"
+          grep -v "body\":" response.json > response.json.tmp
+          mv response.json.tmp response.json
+          echo "Release file fixed response.json"
           cat response.json
           PREVIOUS_TAG=$(echo response.json | jq -r '.tag_name')
           echo "::set-output name=previousReleaseTag::$PREVIOUS_TAG"
