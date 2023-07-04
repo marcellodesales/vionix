@@ -289,7 +289,7 @@ jobs:
         with:
           route: POST /repos/${{ github.repository }}/releases
           # Body params for the API are just defined as params
-          name: ${{ needs.code.outputs.nextReleaseTag }},
+          name: ${{ needs.code.outputs.nextReleaseTag }}
           tag_name: ${{ needs.code.outputs.nextReleaseTag }}
           body: ${{ steps.generated_release_notes.outputs.releaseBody }}
 
