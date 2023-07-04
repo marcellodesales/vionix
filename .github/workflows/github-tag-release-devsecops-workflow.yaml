@@ -291,7 +291,7 @@ jobs:
         run: |
           # As this is a new release, we just dont need to provide the previous tag
           echo "RELEASE_TAG=v1.0.0-RC1" >> $GITHUB_ENV
-          echo "PREVIOUS_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
+          echo "PREVIOUS_TAG=v1.0.0-RC1" >> $GITHUB_ENV
 
       - name: Increment Tag
         if: steps.release_check.outputs.exists == 'true'
