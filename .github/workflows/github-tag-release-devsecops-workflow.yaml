@@ -265,8 +265,9 @@ jobs:
       - name: Fetch Latest Release information
         id: latest_release
         uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
         with:
-          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
           route: GET /repos/${{ github.repository }}/releases/latest
 
       - name: Check if Latest Release Exists
