@@ -201,7 +201,6 @@ jobs:
       - name: Create initial Tag as v1.0.0-RC1
         if: steps.release_check.outputs.exists == 'false'
         run: |
-          # As this is a new release, we just dont need to provide the previous tag
           echo "RELEASE_TAG=v1.0.0-RC1" >> $GITHUB_ENV
           echo "PREVIOUS_TAG=v1.0.0-RC1" >> $GITHUB_ENV
 
