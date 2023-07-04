@@ -378,11 +378,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
         with:
           route: POST /repos/${{ github.repository }}/releases
+          # Body params for the API are just defined as params
           name: ${{ needs.code.outputs.nextReleaseTag }},
           tag_name: ${{ needs.code.outputs.nextReleaseTag }}
           body: ${{ steps.generated_release_notes.outputs.releaseBody }}
-          draft: false,
-          prerelease: false
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
