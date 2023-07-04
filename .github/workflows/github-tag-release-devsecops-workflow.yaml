@@ -21,6 +21,17 @@ on:
         # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
         default: devsecops
 
+    # We need to declare the intent of secrets. The pipelines reusing this must declare them!
+    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+    secrets:
+      SLACK_CHANNEL_AUTOMATION_ID:
+        description: "The Slack Automation ID"
+        required: false
+
+      SLACK_CHANNEL_AUTOMATION_TOKEN:
+        description: "The token for the given Slack channel ID"
+        required: false
+
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
 # section #6: Saving Computation Time by Stopping Obsolete Workflows
 concurrency:
