@@ -47,8 +47,6 @@ jobs:
   code:
     name: 🔧 code
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
-    container:
-      image: dockerhub.docker.artifactory.viasat.com/node:14
 
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
@@ -290,21 +288,18 @@ jobs:
       - name: Create initial Tag as v1.0.0-RC1
         if: steps.release_check.outputs.exists == 'false'
         run: |
-          const initialTag = "v1.0.0-RC1"
-          console.log("::set-env name=RELEASE_TAG::" + initialTag);
+          echo "RELEASE_TAG=v1.0.0-RC1" >> $GITHUB_ENV
 
       - name: Increment Tag
         if: steps.release_check.outputs.exists == 'true'
         run: |
-          const release = JSON.parse('${{ steps.latest_release.outputs.data }}');
-          const tag = release.tag_name;
-          const regex = /(\d+)$/;
-          const match = regex.exec(tag);
-          if (match) {
-            const number = parseInt(match[1]);
-            const incrementedTag = tag.replace(regex, String(number + 1));
-            console.log("::set-env name=RELEASE_TAG::" + incrementedTag);
-          }
+          release=$(echo "${{ steps.latest_release.outputs.data }}" | jq -r '.tag_name')
+          regex='([0-9]+)$'
+          if [[ $release =~ $regex ]]; then
+            number=${BASH_REMATCH[1]}
+            incrementedTag="${release//$number/$((number+1))}"
+            echo "::set-env name=RELEASE_TAG::${incrementedTag}"
+          fi
 
       - name: Save Tag as Output
         id: set-release-tag
