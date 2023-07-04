@@ -189,10 +189,6 @@ jobs:
         with:
           route: GET /repos/${{ github.repository }}/releases/latest
 
-      - name: Print info for debugging
-        run: |
-          echo "latest-release=${{ toJSON(steps.latest_release) }}"
-
       - name: Check if Latest Release Exists
         id: release_check
         run: |
