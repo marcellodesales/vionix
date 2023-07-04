@@ -267,6 +267,8 @@ jobs:
         uses: octokit/request-action@v2.x
         env:
           GITHUB_TOKEN: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+        # Since this action might fail with 404 when there's no releases, we just allow the workflow continue its execution
+        continue-on-error: true
         with:
           route: GET /repos/${{ github.repository }}/releases/latest
 
