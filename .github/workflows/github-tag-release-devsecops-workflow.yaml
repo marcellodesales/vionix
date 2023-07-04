@@ -80,6 +80,7 @@ jobs:
       gitopsDeployTargetType: ${{steps.set_base_values.outputs.gitopsDeployTargetType}}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
       nextReleaseTag: ${{steps.set-release-tag.outputs.nextReleaseTag}}
+      previousReleaseTag: ${{steps.set-release-tag.outputs.previousReleaseTag}}
 
     steps:
       - name: Provided input to the app
@@ -274,7 +275,7 @@ jobs:
 
       - name: Print info for debugging
         run: |
-          echo "Inputs=${{ toJSON(steps.latest_release) }}"
+          echo "latest-release=${{ toJSON(steps.latest_release) }}"
 
       - name: Check if Latest Release Exists
         id: release_check
@@ -288,12 +289,15 @@ jobs:
       - name: Create initial Tag as v1.0.0-RC1
         if: steps.release_check.outputs.exists == 'false'
         run: |
+          # As this is a new release, we just dont need to provide the previous tag
           echo "RELEASE_TAG=v1.0.0-RC1" >> $GITHUB_ENV
+          echo "PREVIOUS_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
 
       - name: Increment Tag
         if: steps.release_check.outputs.exists == 'true'
         run: |
           release=$(echo "${{ steps.latest_release.outputs.data }}" | jq -r '.tag_name')
+          echo "PREVIOUS_TAG=${release}" >> $GITHUB_ENV
           regex='([0-9]+)$'
           if [[ $release =~ $regex ]]; then
             number=${BASH_REMATCH[1]}
@@ -304,21 +308,74 @@ jobs:
       - name: Save Tag as Output
         id: set-release-tag
         run: |
+          echo "{previousReleaseTag}=${{ env.PREVIOUS_TAG }}" >> $GITHUB_OUTPUT
           echo "{nextReleaseTag}=${{ env.RELEASE_TAG }}" >> $GITHUB_OUTPUT
-          echo "* 🔢 Next Release=${{ env.RELEASE_TAG }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Annotate Job with notification status
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :loudspeaker: notify" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* 🔢 Previous Release=${{ steps.set-release-tag.outputs.previousReleaseTag }}" >> $GITHUB_STEP_SUMMARY
+          echo "* 🔢 Next Release=${{ steps.set-release-tag.outputs.nextReleaseTag }}" >> $GITHUB_STEP_SUMMARY
+
+  tag:
+    name: 🔖 tag
+    needs: [code]
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'master'
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
+      contents: write
+      # To declare deployments updates
+      deployments: write
+    steps:
+      - name: Generate Release Notes
+        id: release_notes
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+        with:
+          route: GET /repos/${{ github.repository }}/releases/notes
+          query: |
+            commitish=${{needs.code.outputs.defaultDockerImageBranchTag}}
+            tag_name=${{ needs.code.outputs.nextReleaseTag }}
+            previous_tag_name=${{ needs.code.outputs.previousReleaseTag }}
+
+#      - name: Create Release Tag
+#        run: |
+#          git config --local user.email "${{ needs.code.outputs.committerEmail }}"
+#          git config --local user.name "${{ needs.code.outputs.committerName }}"
+#          git tag -a ${{ github.event.pull_request.head.sha }} -m "${{ steps.release_details.outputs.body }}"
+#          git push origin ${{ github.event.pull_request.head.sha }}
+      - name: Create Release tag
+        id: create_release
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/${{ github.repository }}/releases
+          headers: |
+            Authorization: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            {
+              "tag_name": "${{ needs.code.outputs.nextReleaseTag }}",
+              "name": "${{ needs.code.outputs.nextReleaseTag }}",
+              "body": "${{ steps.release_notes.outputs.body }}",
+              "draft": false,
+              "prerelease": false
+            }
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
         #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
         id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
-        if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
           payload: >-
             {
-                "text": "🔖 Workflow Release Creation at \n <https://git.viasat.com/${{ github.repository }}/releases|${{ github.repository }}/releases>",
+                "text": "🔖 Workflow Release Creation at \n <https://git.viasat.com/${{ github.repository }}/releases/tag/|${{ github.repository }}/releases/tag/${{steps.set-release-tag.nextReleaseTag}}>",
                 "attachments": [
                     {
                         "color": "#B6B6B6",
@@ -345,63 +402,11 @@ jobs:
                             },
                             {
                               "title": "🔢 Next Release",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/releases/${{steps.set-release-tag.nextReleaseTag}}|${{steps.set-release-tag.nextReleaseTag}}>",
+                              "value": "<https://git.viasat.com/${{ github.repository }}/releases/tag/${{steps.set-release-tag.nextReleaseTag}}|${{steps.set-release-tag.nextReleaseTag}}>",
                               "short": true
                             }
                         ],
                         "footer": "<${{steps.set_base_values.outputs.githubActionJobUrl}}>"
                     }
                 ]
-            }
-
-      - name: Annotate Job with notification status
-        run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "## :loudspeaker: notify" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo * Successfully notified Slack Channel >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-  tag:
-    name: 🔖 tag
-    needs: [code]
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'master'
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
-    # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
-    permissions:
-      # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
-      contents: write
-      # To declare deployments updates
-      deployments: write
-    steps:
-      - name: Generate Release Notes
-        id: release_notes
-        uses: octokit/request-action@v2.x
-        with:
-          route: GET /repos/${{ github.repository }}/releases/notes
-          query: |
-            commitish=${{needs.code.outputs.defaultDockerImageBranchTag}}
-            tag_name=${{ needs.code.outputs.nextReleaseTag }}
-            previous_tag_name=${{ needs.code.outputs.nextReleaseTag }}
-
-#      - name: Create Release Tag
-#        run: |
-#          git config --local user.email "${{ needs.code.outputs.committerEmail }}"
-#          git config --local user.name "${{ needs.code.outputs.committerName }}"
-#          git tag -a ${{ github.event.pull_request.head.sha }} -m "${{ steps.release_details.outputs.body }}"
-#          git push origin ${{ github.event.pull_request.head.sha }}
-      - name: Create Release tag
-        id: create_release
-        uses: octokit/request-action@v2.x
-        with:
-          route: POST /repos/${{ github.repository }}/releases
-          headers: |
-            Authorization: ${{ secrets.GITHUB_TOKEN }}
-          body: |
-            {
-              "tag_name": "${{ needs.code.outputs.nextReleaseTag }}",
-              "name": "${{ needs.code.outputs.nextReleaseTag }}",
-              "body": "${{ steps.release_notes.outputs.body }}",
-              "draft": false,
-              "prerelease": false
             }
