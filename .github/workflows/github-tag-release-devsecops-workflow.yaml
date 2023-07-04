@@ -264,7 +264,23 @@ jobs:
         with:
           route: GET /repos/${{ github.repository }}/releases/latest
 
+      - name: Check if Latest Release Exists
+        id: release_check
+        run: |
+          if [ "${{ steps.latest_release.status }}" == "404" ]; then
+            echo "::set-output name=exists::false"
+          else
+            echo "::set-output name=exists::true"
+          fi
+
+      - name: Create initial Tag as v1.0.0-RC1
+        if: steps.release_check.outputs.exists == 'false'
+        run: |
+          const initialTag = "v1.0.0-RC1"
+          console.log("::set-env name=RELEASE_TAG::" + initialTag);
+
       - name: Increment Tag
+        if: steps.release_check.outputs.exists == 'true'
         run: |
           const release = JSON.parse('${{ steps.latest_release.outputs.data }}');
           const tag = release.tag_name;
@@ -273,14 +289,14 @@ jobs:
           if (match) {
             const number = parseInt(match[1]);
             const incrementedTag = tag.replace(regex, String(number + 1));
-            console.log("::set-env name=TAG::" + incrementedTag);
+            console.log("::set-env name=RELEASE_TAG::" + incrementedTag);
           }
 
       - name: Save Tag as Output
         id: set-release-tag
         run: |
-          echo "{nextReleaseTag}=${{ env.TAG }}" >> $GITHUB_OUTPUT
-          echo "* 🔢 Next Release=${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "{nextReleaseTag}=${{ env.RELEASE_TAG }}" >> $GITHUB_OUTPUT
+          echo "* 🔢 Next Release=${{ env.RELEASE_TAG }}" >> $GITHUB_STEP_SUMMARY
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
