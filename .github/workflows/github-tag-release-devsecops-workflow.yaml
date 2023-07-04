@@ -382,7 +382,7 @@ jobs:
             {
               "tag_name": "${{ needs.code.outputs.nextReleaseTag }}",
               "name": "${{ needs.code.outputs.nextReleaseTag }}",
-              "body": "${{ steps.generated_release_notes.releaseBody }}",
+              "body": "${{ steps.generated_release_notes.outputs.releaseBody }}",
               "draft": false,
               "prerelease": false
             }
