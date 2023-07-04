@@ -836,7 +836,7 @@ jobs:
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'tag' }}
         run: |
-          docker tag ${{needs.code.outputs.defaultDockerImageVersion}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
+          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
           echo "Current images"
           docker image ls -a
 
