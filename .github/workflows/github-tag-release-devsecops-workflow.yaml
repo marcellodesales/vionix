@@ -209,14 +209,9 @@ jobs:
         id: existing_release_tags
         if: steps.release_check.outputs.exists == 'true'
         run: |
-          # https://stackoverflow.com/questions/61576308/how-do-i-have-quotes-inside-of-a-echo/61588193#61588193
-          # https://www.baeldung.com/linux/delete-lines-containing-string-from-file
-          # Create the response.json, remove the body property that can't be parsed
           cat >> response.json <<EOF
           ${{ steps.latest_release.outputs.data }}
           EOF
-
-          # Remove the body since it may contain anything that we can't parse
           grep -v "body\":" response.json > response.json.tmp
           mv response.json.tmp response.json
           echo "Release file fixed response.json"
