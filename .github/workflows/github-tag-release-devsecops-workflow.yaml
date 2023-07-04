@@ -205,10 +205,10 @@ jobs:
           echo "RELEASE_TAG=v1.0.0-RC1" >> $GITHUB_ENV
           echo "PREVIOUS_TAG=v1.0.0-RC1" >> $GITHUB_ENV
 
-      - name: Capture
+      - name: Capture existing release tags
         id: existing_release_tags
         if: steps.release_check.outputs.exists == 'true'
-        run:
+        run: |
           # https://stackoverflow.com/questions/61576308/how-do-i-have-quotes-inside-of-a-echo/61588193#61588193
           # https://www.baeldung.com/linux/delete-lines-containing-string-from-file
           # Create the response.json, remove the body property that can't be parsed
