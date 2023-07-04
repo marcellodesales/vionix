@@ -206,6 +206,7 @@ jobs:
           echo "PREVIOUS_TAG=v1.0.0-RC1" >> $GITHUB_ENV
 
       - name: Capture existing release tags
+        id: existing_release_tags
         if: steps.release_check.outputs.exists == 'true'
         run: |
           cat >> response.json <<EOF
@@ -213,13 +214,8 @@ jobs:
           EOF
           grep -v "body\":" response.json > response.json.tmp
           mv response.json.tmp response.json
-
-      - name: Show created file
-        id: existing_release_tags
-        if: steps.release_check.outputs.exists == 'true'
-        run: |
           cat response.json
-          PREVIOUS_TAG=$(echo response.json | jq -r '.tag_name')
+          PREVIOUS_TAG=$(cat response.json | jq -r '.tag_name')
           echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
           echo "::set-output name=previousReleaseTag::$PREVIOUS_TAG"
 
