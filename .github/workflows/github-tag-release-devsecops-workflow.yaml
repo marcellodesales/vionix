@@ -208,7 +208,7 @@ jobs:
       - name: Increment Tag
         if: steps.release_check.outputs.exists == 'true'
         run: |
-          release=$(echo "${{ steps.latest_release.outputs.data }}" | jq -r '.tag_name')
+          release=$(echo '${{ steps.latest_release.outputs.data }}' | jq -r '.tag_name')
           echo "PREVIOUS_TAG=${release}" >> $GITHUB_ENV
           regex='([0-9]+)$'
           if [[ $release =~ $regex ]]; then
