@@ -351,9 +351,19 @@ jobs:
         with:
           route: GET /repos/${{ github.repository }}/releases/notes
           query: |
-            commitish=${{needs.code.outputs.defaultDockerImageBranchTag}}
+            commitish=${{ needs.code.outputs.defaultDockerImageBranchTag }}
             tag_name=${{ needs.code.outputs.nextReleaseTag }}
             previous_tag_name=${{ needs.code.outputs.previousReleaseTag }}
+
+      - name: Check if Latest Release Exists
+        id: generated_release_notes
+        run: |
+          if [ "${{ steps.release_notes.outputs.status }}" == "404" ]; then
+            RELEASE_BODY="New release notes..."
+          else
+            RELEASE_BODY="${{steps.release_notes.outputs.body}}"
+          fi
+          echo "::set-output name=releaseBody::$RELEASE_BODY"
 
 #      - name: Create Release Tag
 #        run: |
@@ -367,12 +377,12 @@ jobs:
         with:
           route: POST /repos/${{ github.repository }}/releases
           headers: |
-            Authorization: ${{ secrets.GITHUB_TOKEN }}
+            Authorization: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
           body: |
             {
               "tag_name": "${{ needs.code.outputs.nextReleaseTag }}",
               "name": "${{ needs.code.outputs.nextReleaseTag }}",
-              "body": "${{ steps.release_notes.outputs.body }}",
+              "body": "${{ steps.generated_release_notes.releaseBody }}",
               "draft": false,
               "prerelease": false
             }
