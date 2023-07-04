@@ -217,17 +217,20 @@ jobs:
           cat response.json
           PREVIOUS_TAG=$(cat response.json | jq -r '.tag_name')
           echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
-          echo "::set-output name=previousReleaseTag::$PREVIOUS_TAG"
 
       - name: Increment Tag
         if: steps.release_check.outputs.exists == 'true'
         run: |
-          previousRelease=${{ steps.existing_release_tags.outputs.previousReleaseTag }}
+          previousRelease=${PREVIOUS_TAG}
           regex='([0-9]+)$'
-          if [[ $release =~ $regex ]]; then
-            number=${BASH_REMATCH[1]}
-            incrementedTag="${release//$number/$((number+1))}"
-            echo "::set-env name=RELEASE_TAG::${incrementedTag}"
+          if [[ $previousRelease =~ $regex ]]; then
+            current_number=${BASH_REMATCH[1]}
+            echo "Current number: ${current_number}"
+
+            incrementedTag="${previousRelease//$current_number/$((current_number+1))}"
+            echo "Incremented Release tag: ${incrementedTag}"
+
+            echo "RELEASE_TAG=${incrementedTag}" >> $GITHUB_ENV
           fi
 
       - name: Save Release and Previous tags as Output
