@@ -330,10 +330,17 @@ jobs:
       contents: write
       # To declare deployments updates
       deployments: write
+
     steps:
-      - name: Generate Release Notes
+      - name: Provided input to the app
+        run: |
+          echo "code-outputs=${{ toJSON(needs.code.outputs) }}"
+
+      - name: Fetch generated release notes
         id: release_notes
         uses: octokit/request-action@v2.x
+        # Since this action might fail with 404 when there's no releases, we just allow the workflow continue its execution
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
         with:
