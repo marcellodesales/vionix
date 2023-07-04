@@ -163,6 +163,10 @@ jobs:
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
           REMOVE="refs/heads/"
           BRANCH_TAG=${GITHUB_REF/$REMOVE/}
+
+          REMOVE="refs/tags/"
+          BRANCH_TAG=${GITHUB_REF/$REMOVE/}
+
           echo "BRANCH_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
           # Remove the / from topic branches for versions, etc:
           BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG} | sed -e 's/\//-/g')
