@@ -205,9 +205,10 @@ jobs:
           echo "RELEASE_TAG=v1.0.0-RC1" >> $GITHUB_ENV
           echo "PREVIOUS_TAG=v1.0.0-RC1" >> $GITHUB_ENV
 
-      - name: Increment Tag
+      - name: Capture
+        id: existing_release_tags
         if: steps.release_check.outputs.exists == 'true'
-        run: |
+        run:
           # https://stackoverflow.com/questions/61576308/how-do-i-have-quotes-inside-of-a-echo/61588193#61588193
           # https://www.baeldung.com/linux/delete-lines-containing-string-from-file
           # Create the response.json, remove the body property that can't be parsed
@@ -219,10 +220,16 @@ jobs:
           grep -v "body\":" response.json > response.json.tmp && mv response.json.tmp response.json
           echo "Release"
           cat response.json
+          PREVIOUS_TAG=$(echo response.json | jq -r '.tag_name')
+          echo "::set-output name=previousReleaseTag::$PREVIOUS_TAG"
 
-          release=$(echo response.json | jq -r '.tag_name')
-          echo "PREVIOUS_TAG=${release}" >> $GITHUB_ENV
-          echo "Previous Tag is PREVIOUS_TAG=${release}"
+          echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
+          echo "Previous Tag is PREVIOUS_TAG=${PREVIOUS_TAG}"
+
+      - name: Increment Tag
+        if: steps.release_check.outputs.exists == 'true'
+        run: |
+          previousRelease=${PREVIOUS_TAG}
           regex='([0-9]+)$'
           if [[ $release =~ $regex ]]; then
             number=${BASH_REMATCH[1]}
