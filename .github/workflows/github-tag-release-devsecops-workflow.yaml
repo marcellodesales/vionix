@@ -279,7 +279,7 @@ jobs:
       - name: Check if Latest Release Exists
         id: release_check
         run: |
-          if [ "${{ steps.latest_release.status }}" == "404" ]; then
+          if [ "${{ steps.latest_release.outputs.status }}" == "404" ]; then
             echo "::set-output name=exists::false"
           else
             echo "::set-output name=exists::true"
