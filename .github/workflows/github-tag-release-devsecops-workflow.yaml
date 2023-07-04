@@ -374,10 +374,10 @@ jobs:
       - name: Create Release tag
         id: create_release
         uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
         with:
           route: POST /repos/${{ github.repository }}/releases
-          headers: |
-            Authorization: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
           body: |
             {
               "tag_name": "${{ needs.code.outputs.nextReleaseTag }}",
