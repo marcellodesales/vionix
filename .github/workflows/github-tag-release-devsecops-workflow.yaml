@@ -21,13 +21,14 @@ on:
         # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
         default: devsecops
 
+      slack-channel-id:
+        description: "The id of the slack channel to send messages to"
+        required: false
+        type: string
+
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
-      SLACK_CHANNEL_AUTOMATION_ID:
-        description: "The Slack Automation ID"
-        required: false
-
       SLACK_CHANNEL_AUTOMATION_TOKEN:
         description: "The token for the given Slack channel ID"
         required: false
@@ -142,61 +143,6 @@ jobs:
 
           env
 
-      # Override the version with the tag name since it's available on github.ref_name
-      - name: Set version as Tag=${{ github.ref_name }} as it is a production release
-        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
-        run: |
-          echo "NEXT_PUBLIC_APP_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
-
-      # only setup deployment when the deployment object is provided
-      - name: Setup default deployment properties for all releases
-        if: ${{ inputs.gitops-deploy-workflow != '' }}
-        run: |
-          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
-          echo "deploy_workflow=${GITOPS_WORKFLOW}"
-
-          GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
-          GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.ref')
-          GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
-          GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.region')
-          GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.type')
-
-          echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
-
-      # Execute for DEV and STG
-      - name: Setup deployment properties for branch
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
-        run: |
-          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
-          echo "deploy_workflow=${GITOPS_WORKFLOW}"
-
-          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
-          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
-          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].url')
-
-          echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
-
-      # Execute for the PRD TAGs
-      - name: Setup deployment properties for branch
-        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
-        run: |
-          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
-          echo "deploy_workflow=${GITOPS_WORKFLOW}"
-
-          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.env')
-          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.segment')
-          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.url')
-
-          echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
-
       - name: Setting values
         id: set_base_values
         run: |
@@ -228,40 +174,6 @@ jobs:
           echo "::set-output name=gitopsDeployTargetRegion::$GITOPS_TARGET_REGION"
           echo "::set-output name=gitopsDeployTargetType::$GITOPS_TARGET_TYPE"
           echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION" 
-
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
-        run: |
-          echo "```json" >> $GITHUB_STEP_SUMMARY
-          for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
-            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-          done
-          echo "```" >> $GITHUB_STEP_SUMMARY
-          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-
-          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
-          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
-          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
-          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
-          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
-          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
-          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
-          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'branch' }}
-        run: |
-          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
-
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
-        run: |
-          echo "* :bookmark: App Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Fetch Latest Release information
         id: latest_release
@@ -365,12 +277,6 @@ jobs:
           fi
           echo "::set-output name=releaseBody::$RELEASE_BODY"
 
-#      - name: Create Release Tag
-#        run: |
-#          git config --local user.email "${{ needs.code.outputs.committerEmail }}"
-#          git config --local user.name "${{ needs.code.outputs.committerName }}"
-#          git tag -a ${{ github.event.pull_request.head.sha }} -m "${{ steps.release_details.outputs.body }}"
-#          git push origin ${{ github.event.pull_request.head.sha }}
       - name: Create Release tag
         id: create_release
         uses: octokit/request-action@v2.x
@@ -385,12 +291,12 @@ jobs:
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
-        if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
+        if: ${{ inputs.lack-channel-id != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
         id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-          channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
+          channel_id: ${{ inputs.slack-channel-id }}
           payload: >-
             {
                 "text": "🔖 Workflow Release Creation at \n <https://git.viasat.com/${{ github.repository }}/releases/tag/|${{ github.repository }}/releases/tag/${{needs.code.outputs.nextReleaseTag}}>",
