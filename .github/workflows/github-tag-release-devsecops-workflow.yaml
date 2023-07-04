@@ -224,10 +224,10 @@ jobs:
           previousRelease=${PREVIOUS_TAG}
 
           # Extract version number by removing RC and everything after
-          version="${previousRelease%-RC*}"
+          version=${previousRelease%-RC*}
 
           # Extract RC part by removing version number and hyphen
-          rcPart="${previousRelease#*-RC}"
+          rcPart=RC${previousRelease#*-RC}
 
           if [[ $rcPart =~ ^RC([0-9]+)$ ]]; then
             current_number=${BASH_REMATCH[1]}
