@@ -47,6 +47,8 @@ jobs:
   code:
     name: 🔧 code
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    container:
+      image: dockerhub.docker.artifactory.viasat.com/node:14
 
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
@@ -287,14 +289,12 @@ jobs:
 
       - name: Create initial Tag as v1.0.0-RC1
         if: steps.release_check.outputs.exists == 'false'
-        container: dockerhub.docker.artifactory.viasat.com/node:14
         run: |
           const initialTag = "v1.0.0-RC1"
           console.log("::set-env name=RELEASE_TAG::" + initialTag);
 
       - name: Increment Tag
         if: steps.release_check.outputs.exists == 'true'
-        container: dockerhub.docker.artifactory.viasat.com/node:14
         run: |
           const release = JSON.parse('${{ steps.latest_release.outputs.data }}');
           const tag = release.tag_name;
