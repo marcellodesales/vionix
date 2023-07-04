@@ -214,8 +214,8 @@ jobs:
           EOF
           grep -v "body\":" response.json > response.json.tmp
           mv response.json.tmp response.json
-#          echo "Release file fixed response.json"
-#          cat response.json
+          echo "Release file fixed response.json"
+          cat response.json
 #          PREVIOUS_TAG=$(echo response.json | jq -r '.tag_name')
 #          echo "::set-output name=previousReleaseTag::$PREVIOUS_TAG"
 #
