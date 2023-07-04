@@ -32,6 +32,10 @@ on:
         description: "The token for the given Slack channel ID"
         required: false
 
+      GITOPS_GITHUB_DEPLOY_PAT:
+        description: "The token to push tagged releases to the executing github workflow"
+        required: false
+
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
 # section #6: Saving Computation Time by Stopping Obsolete Workflows
 concurrency:
@@ -262,6 +266,7 @@ jobs:
         id: latest_release
         uses: octokit/request-action@v2.x
         with:
+          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
           route: GET /repos/${{ github.repository }}/releases/latest
 
       - name: Check if Latest Release Exists
