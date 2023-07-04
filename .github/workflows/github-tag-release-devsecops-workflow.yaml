@@ -215,17 +215,14 @@ jobs:
           grep -v "body\":" response.json > response.json.tmp
           mv response.json.tmp response.json
           echo "Release file fixed response.json"
-          cat response.json
-#          PREVIOUS_TAG=$(echo response.json | jq -r '.tag_name')
-#          echo "::set-output name=previousReleaseTag::$PREVIOUS_TAG"
-#
-#          echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
-#          echo "Previous Tag is PREVIOUS_TAG=${PREVIOUS_TAG}"
+          PREVIOUS_TAG=$(echo response.json | jq -r '.tag_name')
+          echo "::set-output name=previousReleaseTag::$PREVIOUS_TAG"
+          echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
 
       - name: Increment Tag
         if: steps.release_check.outputs.exists == 'true'
         run: |
-          previousRelease=${PREVIOUS_TAG}
+          previousRelease=${{ steps.existing_release_tags.outputs.previousReleaseTag }}
           regex='([0-9]+)$'
           if [[ $release =~ $regex ]]; then
             number=${BASH_REMATCH[1]}
