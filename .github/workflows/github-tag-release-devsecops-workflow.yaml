@@ -305,19 +305,24 @@ jobs:
             echo "::set-env name=RELEASE_TAG::${incrementedTag}"
           fi
 
-      - name: Save Tag as Output
+      - name: Save Release and Previous tags as Output
         id: set-release-tag
         run: |
-          echo "{previousReleaseTag}=${{ env.PREVIOUS_TAG }}" >> $GITHUB_OUTPUT
-          echo "{nextReleaseTag}=${{ env.RELEASE_TAG }}" >> $GITHUB_OUTPUT
+          # https://github.blog/changelog/2022-10-11-github-actions-deprecating-save-state-and-set-output-commands/#examples
+          echo "{previousReleaseTag}=${PREVIOUS_TAG}" >> $GITHUB_OUTPUT
+          echo "{nextReleaseTag}=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Print outputs for debugging
+        run: |
+          echo "latest-release=${{ toJSON(steps.code) }}"
 
       - name: Annotate Job with notification status
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :loudspeaker: notify" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "* 🔢 Previous Release=${{ steps.set-release-tag.outputs.previousReleaseTag }}" >> $GITHUB_STEP_SUMMARY
-          echo "* 🔢 Next Release=${{ steps.set-release-tag.outputs.nextReleaseTag }}" >> $GITHUB_STEP_SUMMARY
+          echo "* 🔢 Previous Release=${PREVIOUS_TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "* 🔢 Next Release=${RELEASE_TAG}" >> $GITHUB_STEP_SUMMARY
 
   tag:
     name: 🔖 tag
