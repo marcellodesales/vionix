@@ -287,12 +287,14 @@ jobs:
 
       - name: Create initial Tag as v1.0.0-RC1
         if: steps.release_check.outputs.exists == 'false'
+        container: dockerhub.docker.artifactory.viasat.com/node:14
         run: |
           const initialTag = "v1.0.0-RC1"
           console.log("::set-env name=RELEASE_TAG::" + initialTag);
 
       - name: Increment Tag
         if: steps.release_check.outputs.exists == 'true'
+        container: dockerhub.docker.artifactory.viasat.com/node:14
         run: |
           const release = JSON.parse('${{ steps.latest_release.outputs.data }}');
           const tag = release.tag_name;
