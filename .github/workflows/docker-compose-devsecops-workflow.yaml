@@ -165,7 +165,7 @@ jobs:
           BRANCH_TAG=${GITHUB_REF/$REMOVE/}
 
           REMOVE="refs/tags/"
-          BRANCH_TAG=${GITHUB_REF/$REMOVE/}
+          BRANCH_TAG=${BRANCH_TAG/$REMOVE/}
 
           echo "BRANCH_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
           # Remove the / from topic branches for versions, etc:
@@ -234,7 +234,7 @@ jobs:
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
 
       # Execute for the PRD TAGs
-      - name: Setup deployment properties for branch
+      - name: Setup deployment properties for tag
         if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
