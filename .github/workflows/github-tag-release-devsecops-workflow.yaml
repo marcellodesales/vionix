@@ -29,6 +29,10 @@ on:
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
+      SLACK_CHANNEL_AUTOMATION_ID:
+        description: "The Slack channel ID"
+        required: false
+
       SLACK_CHANNEL_AUTOMATION_TOKEN:
         description: "The token for the given Slack channel ID"
         required: false
@@ -291,12 +295,12 @@ jobs:
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
-        if: ${{ inputs.lack-channel-id != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
+        if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
         id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-          channel_id: ${{ inputs.slack-channel-id }}
+          channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
           payload: >-
             {
                 "text": "🔖 Workflow Release Creation at \n <https://git.viasat.com/${{ github.repository }}/releases/tag/|${{ github.repository }}/releases/tag/${{needs.code.outputs.nextReleaseTag}}>",
