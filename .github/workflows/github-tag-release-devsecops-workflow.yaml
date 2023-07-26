@@ -296,10 +296,11 @@ jobs:
 
       - name: Release Notes Messages
         id: formated_release_notes
-        # Escape the new lines since it's required by the HTTP POST API body
+        # Escape the new lines since it's required by the HTTP POST API body, replacing ":" with "-" to avoid yaml formatting issues
         run: |
           echo "Message: ${{ fromJson(steps.release_notes.outputs.data).body }}"
           FORMATTED_PAYLOAD=$(echo -e "${{ fromJson(steps.release_notes.outputs.data).body }}" | awk '{printf "%s\\n", $0}')
+          FORMATTED_PAYLOAD=$(echo "$FORMATTED_PAYLOAD" | sed 's/:/\-/g')
           echo "::set-output name=textPayload::$FORMATTED_PAYLOAD"
 
       - name: Create Release tag
