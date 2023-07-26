@@ -296,10 +296,7 @@ jobs:
 
       - name: Release Notes Messages
         run: |
-          echo "FIrst: ${{ toJSON(steps.release_notes.outputs.data) }}
-          echo "Second: ${{ toJSON(steps.release_notes.outputs.data.body) }}"
-          echo "Third: ${{ steps.release_notes.outputs.data.body }}"
-          echo "Fourth: ${{ steps.release_notes.outputs.data }}"
+          echo "Message: ${{ fromJson(steps.release_notes.outputs.data).body }}"
 
       - name: Check if Latest Release Exists
         id: generated_release_notes
@@ -307,7 +304,7 @@ jobs:
           if [ "${{ steps.release_notes.outputs.status }}" == "404" ]; then
             RELEASE_BODY="New release notes..."
           else
-            RELEASE_BODY="${{ toJSON(steps.release_notes.outputs.data).body }}"
+            RELEASE_BODY="${{ fromJson(steps.release_notes.outputs.data).body }}"
           fi
           echo "::set-output name=releaseBody::$RELEASE_BODY"
 
@@ -332,7 +329,7 @@ jobs:
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
           payload: >-
             {
-                "text": "🔖 Workflow Release Creation at \n <https://git.viasat.com/${{ github.repository }}/releases/tag/|${{ github.repository }}/releases/tag/${{needs.code.outputs.nextReleaseTag}}>",
+                "text": "🔢 Workflow Release Creation at \n <https://git.viasat.com/${{ github.repository }}/releases/tag/|${{ github.repository }}/releases/tag/${{needs.code.outputs.nextReleaseTag}}>",
                 "attachments": [
                     {
                         "color": "#B6B6B6",
@@ -353,12 +350,12 @@ jobs:
                               "short": true
                             },
                             {
-                              "title": "🔧 code Job",
+                              "title": "🔀 Workflow",
                               "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
                               "short": true
                             },
                             {
-                              "title": "🔢 Next Release",
+                              "title": "🔖 Tag",
                               "value": "<https://git.viasat.com/${{ github.repository }}/releases/tag/${{needs.code.outputs.nextReleaseTag}}|${{needs.code.outputs.nextReleaseTag}}>",
                               "short": true
                             }
