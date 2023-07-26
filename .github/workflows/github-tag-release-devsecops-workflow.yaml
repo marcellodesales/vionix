@@ -296,7 +296,7 @@ jobs:
 
       - name: Release Notes Messages
         run: |
-          echo "${{ toJSON(steps.release_notes.outputs) }}"
+          echo ${{ toJSON(steps.release_notes.outputs.data).body }}
 
       - name: Check if Latest Release Exists
         id: generated_release_notes
@@ -304,7 +304,7 @@ jobs:
           if [ "${{ steps.release_notes.outputs.status }}" == "404" ]; then
             RELEASE_BODY="New release notes..."
           else
-            RELEASE_BODY="${{steps.release_notes.outputs.body}}"
+            RELEASE_BODY="${{ toJSON(steps.release_notes.outputs.data).body }}"
           fi
           echo "::set-output name=releaseBody::$RELEASE_BODY"
 
