@@ -295,8 +295,16 @@ jobs:
           previous_tag_name: ""
 
       - name: Release Notes Messages
+        id: formated_release_notes
         run: |
           echo "Message: ${{ fromJson(steps.release_notes.outputs.data).body }}"
+          FORMATTED_MESSAGE=$(echo -e "${{ fromJson(steps.release_notes.outputs.data).body }}" | awk '{printf "%s\\n", $0}')
+          echo "::set-output name=textMsg::$FORMATTED_MESSAGE"
+
+      # Escape the new lines since it's required by the HTTP POST API body
+      - name: Debug Release Notes
+        run: |
+          echo "Message: "${{ steps.formated_release_notes.outputs.textMsg }}"
 
       - name: Create Release tag
         id: create_release
@@ -308,7 +316,7 @@ jobs:
           # Body params for the API are just defined as params
           name: ${{ needs.code.outputs.nextReleaseTag }}
           tag_name: ${{ needs.code.outputs.nextReleaseTag }}
-          body: "${{ fromJson(steps.release_notes.outputs.data).body }}"
+          body: "${{ steps.formated_release_notes.outputs.textPayload }}"
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
