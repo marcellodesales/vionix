@@ -286,13 +286,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
         with:
-          route: GET /repos/${{ github.repository }}/releases/notes
+          # https://docs.github.com/en/enterprise-server@3.8/rest/releases/releases#generate-release-notes-content-for-a-release
+          route: POST /repos/${{ github.repository }}/releases/generate-notes
           # The way it works in the browser, just let previous to be discovered
           # releases/notes?commitish=v1.0.0-RC9&tag_name=v1.0.0-RC9&previous_tag_name="
-          query: |
-            commitish=${{ needs.code.outputs.nextReleaseTag }}
-            tag_name=${{ needs.code.outputs.nextReleaseTag }}
-            previous_tag_name=
+          commitish: ${{ needs.code.outputs.nextReleaseTag }}
+          tag_name: ${{ needs.code.outputs.nextReleaseTag }}
+          previous_tag_name: ""
 
       - name: Check if Latest Release Exists
         id: generated_release_notes
