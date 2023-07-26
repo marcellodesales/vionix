@@ -278,7 +278,7 @@ jobs:
         run: |
           echo "code-outputs=${{ toJSON(needs.code.outputs) }}"
 
-      - name: Fetch generated release notes
+      - name: Generated release notes
         id: release_notes
         uses: octokit/request-action@v2.x
         # Since this action might fail with 404 when there's no releases, we just allow the workflow continue its execution
@@ -287,10 +287,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
         with:
           route: GET /repos/${{ github.repository }}/releases/notes
+          # The way it works in the browser, just let previous to be discovered
+          # releases/notes?commitish=v1.0.0-RC9&tag_name=v1.0.0-RC9&previous_tag_name="
           query: |
-            commitish=${{ needs.code.outputs.defaultDockerImageBranchTag }}
+            commitish=${{ needs.code.outputs.nextReleaseTag }}
             tag_name=${{ needs.code.outputs.nextReleaseTag }}
-            previous_tag_name=${{ needs.code.outputs.previousReleaseTag }}
+            previous_tag_name=
 
       - name: Check if Latest Release Exists
         id: generated_release_notes
