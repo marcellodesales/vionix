@@ -293,9 +293,10 @@ jobs:
           commitish: ${{ needs.code.outputs.nextReleaseTag }}
           tag_name: ${{ needs.code.outputs.nextReleaseTag }}
           previous_tag_name: ""
+
       - name: Release Notes Messages
         run: |
-          echo "${{ steps.release_notes.outputs }}"
+          echo "${{ toJSON(steps.release_notes.outputs) }}"
 
       - name: Check if Latest Release Exists
         id: generated_release_notes
