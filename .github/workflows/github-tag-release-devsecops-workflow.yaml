@@ -298,16 +298,6 @@ jobs:
         run: |
           echo "Message: ${{ fromJson(steps.release_notes.outputs.data).body }}"
 
-      - name: Check if Latest Release Exists
-        id: generated_release_notes
-        run: |
-          if [ "${{ steps.release_notes.outputs.status }}" == "404" ]; then
-            RELEASE_BODY="New release notes..."
-          else
-            RELEASE_BODY="${{ fromJson(steps.release_notes.outputs.data).body }}"
-          fi
-          echo "::set-output name=releaseBody::$RELEASE_BODY"
-
       - name: Create Release tag
         id: create_release
         uses: octokit/request-action@v2.x
@@ -318,7 +308,7 @@ jobs:
           # Body params for the API are just defined as params
           name: ${{ needs.code.outputs.nextReleaseTag }}
           tag_name: ${{ needs.code.outputs.nextReleaseTag }}
-          body: ${{ fromJson(steps.release_notes.outputs.data).body }}
+          body: "${{ fromJson(steps.release_notes.outputs.data).body }}"
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
