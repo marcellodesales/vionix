@@ -920,6 +920,7 @@ jobs:
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
       - name: Update kustomization version with the image version
+        if: ${{ github.ref_type == 'branch' }}
         env:
           GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
         working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
@@ -930,7 +931,38 @@ jobs:
           docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
           git diff
 
+
+      - name: Update kustomization version with the image version for TAG
+        if: ${{ github.ref_type == 'tag' }}
+        env:
+          GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
+        working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
+        run: |
+          ls -la
+          echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
+          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
+          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
+          git diff
+
       - name: Create commit message with details
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          echo ":building_construction: deploy ${GITHUB_REPOSITORY}@version=${{ github.ref_name }} to ${{ needs.code.outputs.gitopsDeployEnv }}" >> commitmessage.txt
+          echo "# :building_construction: Deployment Executed" >> commitmessage.txt
+          echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
+          echo "* :herb: Deploy repo tag: ${{ github.ref_name }}" >> commitmessage.txt
+          echo "* :1234: Version SHA URL: ${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
+          echo "* :1234: Version SHA: ${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
+          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> commitmessage.txt
+          echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
+          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
+          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> commitmessage.txt
+          echo "* :bookmark: App Version: ${{ github.ref_name }}" >> commitmessage.txt
+          echo "Commit message body"
+          cat commitmessage.txt
+
+      - name: Create commit message with details
+        if: ${{ github.ref_type == 'branch' }}
         run: |
           echo ":building_construction: deploy ${GITHUB_REPOSITORY}@version=${{ needs.code.outputs.gitopsDeployVersion }} to ${{ needs.code.outputs.gitopsDeployEnv }}" >> commitmessage.txt
           echo "# :building_construction: Deployment Executed" >> commitmessage.txt
