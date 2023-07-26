@@ -312,7 +312,7 @@ jobs:
           # Body params for the API are just defined as params
           name: ${{ needs.code.outputs.nextReleaseTag }}
           tag_name: ${{ needs.code.outputs.nextReleaseTag }}
-          body: ${{ steps.formated_release_notes.outputs.textPayload }}
+          body: "${{ steps.formated_release_notes.outputs.textPayload }}"
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
