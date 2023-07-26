@@ -296,7 +296,10 @@ jobs:
 
       - name: Release Notes Messages
         run: |
-          echo ${{ toJSON(steps.release_notes.outputs.data).body }}
+          echo "FIrst: ${{ toJSON(steps.release_notes.outputs.data) }}
+          echo "Second: ${{ toJSON(steps.release_notes.outputs.data.body) }}"
+          echo "Third: ${{ steps.release_notes.outputs.data.body }}"
+          echo "Fourth: ${{ steps.release_notes.outputs.data }}"
 
       - name: Check if Latest Release Exists
         id: generated_release_notes
