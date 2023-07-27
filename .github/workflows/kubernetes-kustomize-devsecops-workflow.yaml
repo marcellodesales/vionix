@@ -212,6 +212,40 @@ jobs:
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
 
+      - uses: seceng-devsecops-platform/8BitJonny-gh-get-current-pr-action@2.1.2
+        id: PR
+        with:
+          # Authetication token to access GitHub APIs. (Can be omitted by default.)
+          github-token: ${{ github.token }}
+          # Verbose setting SHA when using Pull_Request event trigger to fix #16. (For push even trigger this is not necessary.)
+          sha: ${{ github.event.pull_request.head.sha }}
+          # Only return if PR is still open. (By default it returns PRs in any state.)
+          filterOutClosed: true
+
+      - id: set-base-values
+        # The below outputs a JSON array of check tasks for each subproject
+        #  and uses GitHub Actions magic (::set-output) to set an output
+        #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
+        # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+        run: |
+          env
+          echo "Branch tag to use: ${BRANCH_TAG} and ${BRANCH_SHA_TAG}"
+          echo "::set-output name=githubActionJobName::${BUILD_JOB_NAME}"
+          echo "::set-output name=githubActionJobUrl::${BUILD_JOB_URL}"
+          echo "::set-output name=dockerContextPath::$DOCKER_CONTEXT_PATH"
+          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
+          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
+          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
+          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
+          echo "::set-output name=committerName::$COMMITTER_NAME"
+          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
+          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
+          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
+          PR_NUMBER="${{ steps.PR.outputs.number }}"
+          echo "::set-output name=prNumber::$PR_NUMBER"
+          PR_TITLE="${{ steps.PR.outputs.pr_title }}"
+          echo "::set-output name=prTitle::$PR_TITLE"
+
 #       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
 #       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
 #         #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
@@ -381,7 +415,7 @@ jobs:
 
       - name: Add comment to PR
         if: env.PR_COMMENT != ''
-        uses: peter-evans/create-or-update-comment@v1
+        uses: seceng-devsecops-platform/peter-evans-create-or-update-comment-action@v3.0.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.number }}
