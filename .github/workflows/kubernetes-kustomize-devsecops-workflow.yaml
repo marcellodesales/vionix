@@ -328,7 +328,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Setup kubernetes credentials
-        if: ${{ secrets.KUBERNETES_KUBECONFIG != '' && matrix.checkType == 'K8s' }} 
+        if: ${{ matrix.checkType == 'K8s' }} 
         run: |
           mkdir ${HOME}/.kube
           echo ${{ secrets.KUBERNETES_KUBECONFIG }} | base64 -d > ${HOME}/.kube/config
@@ -336,7 +336,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Get kubectl
-        if: ${{ secrets.KUBERNETES_KUBECONFIG != '' && matrix.checkType == 'K8s' }} 
+        if: ${{ matrix.checkType == 'K8s' }} 
         run: | 
           echo ${PATH}
           curl -LO https://dl.k8s.io/release/${{ inputs.kubectl-version }}/bin/linux/amd64/kubectl -o kubectl
@@ -344,7 +344,7 @@ jobs:
           sudo mv kubectl /usr/local/bin/
 
       - name: Check connectivity
-        if: ${{ secrets.KUBERNETES_KUBECONFIG != '' && matrix.checkType == 'K8s' }} 
+        if: ${{ matrix.checkType == 'K8s' }} 
         run: |
           echo "kubectl version"
           kubectl version
