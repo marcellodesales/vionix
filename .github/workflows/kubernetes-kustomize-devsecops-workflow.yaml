@@ -35,14 +35,9 @@ on:
 
       argocd-server:
         description: "The ArgoCD server to use"
-        required: true
-        type: string
-
-      argocd-project:
-        description: "The ArgoCD project to verify"
         required: false
         type: string
-        default: twistlock.infosec.viasat.io
+        default: https://argo-cd.viarise.viasat.io
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
