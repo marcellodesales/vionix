@@ -70,10 +70,13 @@ jobs:
     name: 🔧 code
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    # Maybe to get twistlock action to run we need permission to read
-    # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
     permissions:
+      # Maybe to get twistlock action to run we need permission to read
+      # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
       contents: read  # <--- allows to read repo
+      # Enable pull request reads for 8BitJonny/gh-get-current-pr, avoid error "Resource not accessible by integration"
+      # https://github.com/actions/first-interaction/issues/10#issuecomment-1232740076
+      pull-requests: read
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
