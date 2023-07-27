@@ -48,15 +48,15 @@ on:
 
       SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD:
         description: "The password associated with the CI user from SecEng Prisma Cloud / Twistlock"
-        required: true
+        required: false
 
       ARTIFACTORY_SVC_USER:
         description: "The username of the service account for Artifactory Docker registry Repository"
-        required: true
+        required: false
 
       ARTIFACTORY_SVC_PASS:
         description: "The password associated with the username of the service account for Artifactory Docker registry Repository"
-        required: true
+        required: false
 
       SLACK_CHANNEL_AUTOMATION_ID:
         description: "The Slack Automation ID"
