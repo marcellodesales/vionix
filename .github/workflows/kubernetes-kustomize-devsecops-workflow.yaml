@@ -46,10 +46,6 @@ on:
         description: "The base64 value of HOME/.kube/config to access the cluster"
         required: false
 
-      SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD:
-        description: "The password associated with the CI user from SecEng Prisma Cloud / Twistlock"
-        required: false
-
       ARTIFACTORY_SVC_USER:
         description: "The username of the service account for Artifactory Docker registry Repository"
         required: false
