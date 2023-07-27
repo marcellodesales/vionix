@@ -364,14 +364,11 @@ jobs:
     needs: [code, check]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-#     # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
-#     environment:
-#       name: ${{ needs.code.outputs.gitopsDeployEnv }}
-#       url: ${{ needs.code.outputs.gitopsDeployUrl }}
-
     steps:
       - name: Checkout deploy repository for all ENVs if the workflow is defined
         uses: viarise/checkout@v3
+
+      - name: Create comment for PR ${{ github.event.number }}
         if: github.event_name == 'pull_request'
         run: |
           comment=""
@@ -382,14 +379,14 @@ jobs:
           done
           echo "PR_COMMENT=$comment" >> $GITHUB_ENV
 
-    - name: Add comment to PR
-      if: env.PR_COMMENT != ''
-      uses: peter-evans/create-or-update-comment@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        issue-number: ${{ github.event.number }}
-        body: ${{ env.PR_COMMENT }}
-        edit-mode: replace
+      - name: Add comment to PR
+        if: env.PR_COMMENT != ''
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.number }}
+          body: ${{ env.PR_COMMENT }}
+          edit-mode: replace
 
 #   report:
 #     name: 📢 notify
