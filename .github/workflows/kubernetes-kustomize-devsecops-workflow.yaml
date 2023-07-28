@@ -367,7 +367,7 @@ jobs:
 
       - name: Lint yaml files from the project
         if: ${{ matrix.checkType == 'Yamls' }}
-        uses: seceng-devsecops-platform/ikarancode-yamllint-github-action@master
+        uses: seceng-devsecops-platform/karancode-yamllint-github-action@v2.1.1
         id: yaml-lint
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
