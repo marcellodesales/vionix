@@ -326,14 +326,15 @@ jobs:
         run: |
           mkdir ${HOME}/.kube
           echo ${{ secrets.KUBERNETES_KUBECONFIG }} | base64 -d > ${HOME}/.kube/config
+
           echo "## :heavy_check_mark: Kubernetes credentials " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
           if [ -f "${HOME}/.kube/config" ] && [ -s "${HOME}/.kube/config" ]; then
               echo "hasKubeconfig=true" >> $GITHUB_ENV
           else
               echo "hasKubeconfig=false" >> $GITHUB_ENV
           fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Get kubectl
         if: ${{ matrix.checkType == 'K8s' }} 
@@ -366,23 +367,29 @@ jobs:
 
       - name: Annotate Job with current information
         if: ${{ matrix.checkType == 'Yamls' }}
-        run: |
-
-      - name: Setup Python
-        if: ${{ matrix.checkType == 'Yamls' }}
-        uses: actions/setup-python@v2
+        id: yaml-lint
+        uses: seceng-devsecops-platform/ibiqlik-action-yamllint-action@v3.1.1
         with:
-          python-version: '3.x'
+          # Multi line
+          config_data: |
+            extends: default
+            rules:
+              new-line-at-end-of-file:
+                level: warning
+              trailing-spaces:
+                level: warning
 
-      - name: Install yamllint
+      - run: |
+          echo ${{ steps.yaml-lint.outputs.logfile }}
+          echo "* Yaml lint: ${{ steps.yaml-lint.outputs.logfile }}" >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v2
         if: ${{ matrix.checkType == 'Yamls' }}
-        run: pip install yamllint
+        with:
+          name: yamllint-logfile
+          path: ${{ steps.yaml-lint.outputs.logfile }}
 
-      - name: Lint YAML files
-        if: ${{ matrix.checkType == 'Yamls' }}
-        run: yamllint -c yamllint.config.yml .
-
-      - name: Check Readme
+      - name: Check Kustomization state
         if: ${{ matrix.checkType == 'Kustomize' }}
         run: |
           env
@@ -392,7 +399,7 @@ jobs:
           done
 
   state:
-    name: "🏗️ gitops"
+    name: "🏗️ state"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, check]
