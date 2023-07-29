@@ -408,8 +408,10 @@ jobs:
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     steps:
-      - name: Checkout deploy repository for all ENVs if the workflow is defined
-        uses: viarise/checkout@v3
+      - name: Checkout history with tags so to get information
+        uses: viarise/checkout@v3.0.2
+        with:
+          fetch-depth: 0
 
       - name: Create comment for PR ${{ github.event.number }}
         if: github.event_name == 'pull_request'
