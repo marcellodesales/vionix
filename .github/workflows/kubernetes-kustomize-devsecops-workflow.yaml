@@ -104,6 +104,7 @@ jobs:
       gitopsDeployTargetRegion: ${{steps.set_base_values.outputs.gitopsDeployTargetRegion}}
       gitopsDeployTargetType: ${{steps.set_base_values.outputs.gitopsDeployTargetType}}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
+      hasKubeconfig: ${{steps.kconfig-connection.outputs.hasKubeconfig}}
 
     steps:
       - name: Provided input to the app
@@ -216,6 +217,23 @@ jobs:
           # Only return if PR is still open. (By default it returns PRs in any state.)
           filterOutClosed: true
 
+
+      # Runs a single command using the runners shell
+      - name: Setup kubernetes credentials
+        id: kconfig-connection
+        run: |
+          mkdir ${HOME}/.kube
+          echo ${{ secrets.KUBERNETES_KUBECONFIG }} | base64 -d > ${HOME}/.kube/config
+
+          echo "## :heavy_check_mark: Kubernetes credentials " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "${HOME}/.kube/config" ] && [ -s "${HOME}/.kube/config" ]; then
+              echo "HAS_KUBECONFIG=true" >> $GITHUB_ENV
+          else
+              echo "HAS_KUBECONFIG=false" >> $GITHUB_ENV
+          fi
+
       - id: set-base-values
         # The below outputs a JSON array of check tasks for each subproject
         #  and uses GitHub Actions magic (::set-output) to set an output
@@ -239,6 +257,7 @@ jobs:
           echo "::set-output name=prNumber::$PR_NUMBER"
           PR_TITLE="${{ steps.PR.outputs.pr_title }}"
           echo "::set-output name=prTitle::$PR_TITLE"
+          echo "hasKubeconfig=${HAS_KUBECONFIG}" >> "$GITHUB_OUTPUT"
 
 #       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
 #       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
@@ -291,7 +310,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Annotate Next job with current information
-        if: ${{ github.ref_type == 'branch' }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🛡️ check-code Summary" >> $GITHUB_STEP_SUMMARY
@@ -321,24 +339,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      # Runs a single command using the runners shell
-      - name: Setup kubernetes credentials
-        if: ${{ matrix.checkType == 'K8s' }} 
-        run: |
-          mkdir ${HOME}/.kube
-          echo ${{ secrets.KUBERNETES_KUBECONFIG }} | base64 -d > ${HOME}/.kube/config
-
-          echo "## :heavy_check_mark: Kubernetes credentials " >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ -f "${HOME}/.kube/config" ] && [ -s "${HOME}/.kube/config" ]; then
-              echo "hasKubeconfig=true" >> $GITHUB_ENV
-          else
-              echo "hasKubeconfig=false" >> $GITHUB_ENV
-          fi
-
       - name: Get kubectl
-        if: ${{ matrix.checkType == 'K8s' }} 
+        if: ${{ matrix.checkType == 'K8s' && needs.code.outputs.hasKubeconfig == 'true' }} 
         run: | 
           echo ${PATH}
           curl -LO https://dl.k8s.io/release/${{ inputs.kubectl-version }}/bin/linux/amd64/kubectl -o kubectl
@@ -346,7 +348,7 @@ jobs:
           sudo mv kubectl /usr/local/bin/
 
       - name: Check connectivity
-        if: ${{ matrix.checkType == 'K8s' && env.hasKubeconfig == 'true' }} 
+        if: ${{ matrix.checkType == 'K8s' && needs.code.outputs.hasKubeconfig == 'true' }} 
         run: |
           echo "kubectl version"
           kubectl version
