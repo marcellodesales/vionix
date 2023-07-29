@@ -382,14 +382,7 @@ jobs:
         run: |
           echo "Yaml lint report"
           echo ${{ steps.yaml-lint.outputs.yamllint_output }}
-          echo ${{ steps.yaml-lint.outputs.yamllint_output }} >> yamllint.out
           echo "* Yaml lint: ${{ steps.yaml-lint.outputs.yamllint_output }}" >> $GITHUB_STEP_SUMMARY
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.checkType == 'Yamls' }}
-        with:
-          name: yamllint-logfile
-          path: yamllint.out
 
       - name: Check Kustomization state
         if: ${{ matrix.checkType == 'Kustomize' }}
