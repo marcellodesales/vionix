@@ -26,6 +26,19 @@ on:
         required: false
         type: string
         default: v1.22.0
+      
+      yamllint-config:
+        description: "The configuration for yamllint"
+        required: false
+        type: string
+        default: |
+          extends: default
+          rules:
+            line-length: disable
+            new-line-at-end-of-file:
+              level: warning
+            trailing-spaces:
+              level: warning
 
       kustomize-version:
         description: "The version of kustomization to use"
@@ -367,6 +380,10 @@ jobs:
           echo "* kubectl config view: $(kubectl config current-context)" >> $GITHUB_STEP_SUMMARY
 
           echo "" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Set Yamllint configuration
+        run: |
+          echo "${{ inputs.yamllint-config }}" > .yamllint
 
       - name: Lint yaml files from the project
         if: ${{ matrix.checkType == 'Yamls' }}
@@ -378,6 +395,10 @@ jobs:
           yamllint_strict: false
           yamllint_format: auto
           yamllint_comment: true
+          yamllint_config_filepath: .yamllint
+      
+      - name: Remove yamllint config
+        run: rm -f .yamllint
 
       - name: Debug information on Yaml Lint information
         if: ${{ matrix.checkType == 'Yamls' }}
