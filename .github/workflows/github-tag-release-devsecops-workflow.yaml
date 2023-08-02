@@ -213,14 +213,8 @@ jobs:
         if: steps.release_check.outputs.exists == 'true'
         run: |
           echo "Response from the service" 
-          echo "${{ steps.latest_release.outputs.data }}"
-          echo "Changing response"
 
-          cat >> response.json <<EOF
-          ${{ steps.latest_release.outputs.data }}
-          EOF
-
-          PREVIOUS_TAG=$(cat response.json | jq -r ".tag_name")
+          PREVIOUS_TAG=${{ fromJSON(steps.latest_release.outputs.data).tag_name }}
           echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
 
       - name: Increment Tag
