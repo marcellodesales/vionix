@@ -213,7 +213,7 @@ jobs:
         if: steps.release_check.outputs.exists == 'true'
         run: |
           echo "Response from the service" 
-          cat response.json
+          echo "${{ steps.latest_release.outputs.data }}"
           echo "Changing response"
 
           cat >> response.json <<EOF
