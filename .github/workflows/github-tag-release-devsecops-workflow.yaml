@@ -219,10 +219,8 @@ jobs:
           cat >> response.json <<EOF
           ${{ steps.latest_release.outputs.data }}
           EOF
-          grep -v "body\":" response.json > response.json.tmp
-          mv response.json.tmp response.json
-          cat response.json
-          PREVIOUS_TAG=$(cat response.json | jq -r '.tag_name')
+
+          PREVIOUS_TAG=$(cat response.json | jq -r ".tag_name")
           echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_ENV
 
       - name: Increment Tag
