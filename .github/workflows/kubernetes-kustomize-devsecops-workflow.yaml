@@ -41,6 +41,9 @@ on:
           extends: default
           rules:
             line-length: disable
+            document-start: disable
+            empty-lines:
+              level: warning
             new-line-at-end-of-file:
               level: warning
             trailing-spaces:
