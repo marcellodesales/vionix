@@ -212,6 +212,10 @@ jobs:
         id: existing_release_tags
         if: steps.release_check.outputs.exists == 'true'
         run: |
+          echo "Response from the service" 
+          cat response.json
+          echo "Changing response"
+
           cat >> response.json <<EOF
           ${{ steps.latest_release.outputs.data }}
           EOF
