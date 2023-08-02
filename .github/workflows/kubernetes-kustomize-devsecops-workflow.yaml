@@ -102,7 +102,7 @@ jobs:
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
-      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      # >> $GITHUB_OUTPUT in each of the steps[name].outputs is defined is where these are defined for the job
       githubActionJobName: ${{steps.set_base_values.outputs.githubActionJobName}}
       githubActionJobUrl: ${{steps.set_base_values.outputs.githubActionJobUrl}}
       githubActionRunId: ${{steps.set_base_values.outputs.githubActionRunId}}
@@ -189,24 +189,20 @@ jobs:
       - name: Setting values
         id: set_base_values
         run: |
-          # The below outputs a JSON array of check tasks for each subproject
-          #  and uses GitHub Actions magic (::set-output) to set an output
-          #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
-          # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-          echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
-          echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
-          echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
-          echo "::set-output name=dockerContextPath::${{ inputs.docker-compose-context }}"
-          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
-          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
-          echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
-          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
-          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
-          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
-          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
-          echo "::set-output name=committerName::$COMMITTER_NAME"
-          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
-          echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
+          echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
+          echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
+          echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+          echo "dockerContextPath=${{ inputs.docker-compose-context }}" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTagForVersion=$BRANCH_TAG_FOR_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchShaTag=$BRANCH_SHA_TAG" >> $GITHUB_OUTPUT
+          echo "gitShortSha=$GIT_SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "buildDateTime=$BUILD_DATE_TIME" >> $GITHUB_OUTPUT
+          echo "jobStartTimestamp=$JOB_TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "committerName=$COMMITTER_NAME" >> $GITHUB_OUTPUT
+          echo "committerEmail=$COMMITTER_EMAIL" >> $GITHUB_OUTPUT
+          echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -258,27 +254,24 @@ jobs:
 
       - id: set-base-values
         # The below outputs a JSON array of check tasks for each subproject
-        #  and uses GitHub Actions magic (::set-output) to set an output
-        #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
-        # https://github.community/t/sharing-a-variable-between-jobs/16967/14
         run: |
           env
           echo "Branch tag to use: ${BRANCH_TAG} and ${BRANCH_SHA_TAG}"
-          echo "::set-output name=githubActionJobName::${BUILD_JOB_NAME}"
-          echo "::set-output name=githubActionJobUrl::${BUILD_JOB_URL}"
-          echo "::set-output name=dockerContextPath::$DOCKER_CONTEXT_PATH"
-          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
-          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
-          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
-          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
-          echo "::set-output name=committerName::$COMMITTER_NAME"
-          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
-          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
-          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
+          echo "githubActionJobName=${BUILD_JOB_NAME}" >> $GITHUB_OUTPUT
+          echo "githubActionJobUrl=${BUILD_JOB_URL}" >> $GITHUB_OUTPUT
+          echo "dockerContextPath=$DOCKER_CONTEXT_PATH" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchShaTag=$BRANCH_SHA_TAG" >> $GITHUB_OUTPUT
+          echo "gitShortSha=$GIT_SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "committerName=$COMMITTER_NAME" >> $GITHUB_OUTPUT
+          echo "committerEmail=$COMMITTER_EMAIL" >> $GITHUB_OUTPUT
+          echo "buildDateTime=$BUILD_DATE_TIME" >> $GITHUB_OUTPUT
+          echo "jobStartTimestamp=$JOB_TIMESTAMP" >> $GITHUB_OUTPUT
           PR_NUMBER="${{ steps.PR.outputs.number }}"
-          echo "::set-output name=prNumber::$PR_NUMBER"
+          echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
           PR_TITLE="${{ steps.PR.outputs.pr_title }}"
-          echo "::set-output name=prTitle::$PR_TITLE"
+          echo "prTitle=$PR_TITLE" >> $GITHUB_OUTPUT
           echo "hasKubeconfig=${HAS_KUBECONFIG}" >> "$GITHUB_OUTPUT"
 
 #       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
