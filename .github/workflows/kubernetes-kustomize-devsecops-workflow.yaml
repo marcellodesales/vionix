@@ -384,6 +384,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
       
       - name: Set Yamllint configuration
+        if: ${{ matrix.checkType == 'Yamls' }}
         run: |
           echo "${{ inputs.yamllint-config }}" > .yamllint
 
@@ -403,14 +404,17 @@ jobs:
           yamllint_config_filepath: .yamllint
       
       - name: Remove yamllint config
+        if: ${{ matrix.checkType == 'Yamls' }}
         run: rm -f .yamllint
 
-      - name: Debug information on Yaml Lint information
+      - name: Yaml lint report
         if: ${{ matrix.checkType == 'Yamls' }}
         run: |
           echo "Yaml lint report"
-          echo ${{ steps.yaml-lint.outputs.yamllint_output }}
-          echo "* Yaml lint: ${{ steps.yaml-lint.outputs.yamllint_output }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.yaml-lint.outputs.yamllint_output }}"
+          echo "## 🦺 YAML Lint Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.yaml-lint.outputs.yamllint_output }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Check Kustomization state
         if: ${{ matrix.checkType == 'Kustomize' }}
