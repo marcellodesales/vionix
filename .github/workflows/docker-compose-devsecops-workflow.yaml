@@ -888,7 +888,7 @@ jobs:
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }} ${{needs.build.outputs.defaultDockerImageRepo}}:latest
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:latest
 
-  infra:
+  gitops:
     name: "🏗️ gitops"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
@@ -1035,7 +1035,7 @@ jobs:
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     #continue-on-error: true
 
-    needs: [code, build, deploy]
+    needs: [code, build, deploy, gitops]
 
     # providing permissions
     permissions:
