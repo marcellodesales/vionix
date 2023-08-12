@@ -621,11 +621,12 @@ jobs:
           # https://github.com/docker/buildx/blob/master/docs/reference/buildx_bake.md#set
           # https://github.com/docker/buildx/issues/872#issuecomment-1014891886
           # # ${{steps.set-docker-image-settings.outputs.defaultDockerService}} could be used in addition to ${{ inputs.docker-compose-service }}
-          # Adding gha cache for GHE 3.8+ https://docs.docker.com/build/cache/backends/gha/#using-dockerbuild-push-action
+          # Adding gha cache for GHE 3.8+ https://docs.docker.com/build/cache/backends/gha/#using-dockerbuild-push-action: This fails with 
+          #    the followinghttps://gist.git.viasat.com/mdesales/9868f314c971eead6aae5c2b85539eaa
           set: |
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
-            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-from=type=gha
-            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-to=type=gha,mode=max
+            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-from=type=registry
+            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-to=type=registry,mode=max,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
 
       - name: Annotate Job with current information
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
