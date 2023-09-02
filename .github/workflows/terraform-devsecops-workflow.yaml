@@ -172,8 +172,8 @@ jobs:
           IFS=' '
 
           for SECRET_PAIR in ${SECRET_FILES_TO_LOAD}; do
-              GITHUB_SECRET_NAME="${SECRET_PAIR%=*}"    # Extract key by removing everything after the first =
-              GITHUB_SECRET_FILE="${SECRET_PAIR#*=}"  # Extract value by removing everything before the first =
+              GITHUB_SECRET_NAME="${SECRET_PAIR%=*}" 
+              GITHUB_SECRET_FILE="${SECRET_PAIR#*=}" 
               
               echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
 
@@ -264,9 +264,10 @@ jobs:
           # https://stackoverflow.com/questions/61255989/dynamically-retrieve-github-actions-secret/61272209#61272209
         run: |
           IFS=' '
+
           for SECRET_PAIR in ${SECRET_FILES_TO_LOAD}; do
-              GITHUB_SECRET_NAME="${SECRET_PAIR%=*}"    # Extract key by removing everything after the first =
-              GITHUB_SECRET_FILE="${SECRET_PAIR#*=}"  # Extract value by removing everything before the first =
+              GITHUB_SECRET_NAME="${SECRET_PAIR%=*}" 
+              GITHUB_SECRET_FILE="${SECRET_PAIR#*=}" 
               
               echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
 
