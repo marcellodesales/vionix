@@ -21,7 +21,7 @@ on:
   workflow_call:
     inputs:
       secret-files-to-load:
-        description: "The list of files to load"
+        description: "The list of files to load in the format GITHUB_SECRET_KEY_1=path/to/save/value1 GITHUB_SECRET_KEY_2=path/to/save/value2"
         required: false
         type: string
         default: ""
@@ -249,15 +249,21 @@ jobs:
       - name: Fetch all commits from the repo
         uses: viarise/checkout@v3.0.2
 
-      - name: Load the secret files
-        id: check-values
+      - name: Load the secret files defined by ${{ inputs.secret-files-to-load }}
+        if: inputs.secret-files-to-load != ""
         env:
-          CERT_FILES_NAMES: "dev.api.ea.viasat.io.pem dev.api.ea.viasat.io.crt api.viasat.com.pem api.viasat.com.crt"
+          SECRET_FILES_TO_LOAD: ${{ inputs.secret-files-to-load }}
         run: |
-          echo "${{ secrets.APIGEE_DEV_PEM }}" | base64 -d > certs/dev.api.ea.viasat.io.pem
-          echo "${{ secrets.APIGEE_DEV_CRT }}" | base64 -d > certs/dev.api.ea.viasat.io.crt
-          echo "${{ secrets.APIGEE_PRD_PEM }}" | base64 -d > certs/api.viasat.com.pem
-          echo "${{ secrets.APIGEE_PRD_CRT }}" | base64 -d > certs/api.viasat.com.crt
+          IFS=' '
+
+          for SECRET_PAIR in ${SECRET_FILES_TO_LOAD}; do
+              GITHUB_SECRET_NAME="${SECRET_PAIR%=*}"    # Extract key by removing everything after the first =
+              GITHUB_SECRET_FILE="${SECRET_PAIR#*=}"  # Extract value by removing everything before the first =
+
+              echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'
+              echo "${{ secrets.$GITHUB_SECRET_NAME }}" | base64 -d > ${GITHUB_SECRET_FILE}
+              ls -la ${GITHUB_SECRET_FILE}
+          done
 
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download google.creds secret from code step
