@@ -177,7 +177,7 @@ jobs:
               
               echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
 
-              echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'
+              echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'"
               echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
               ls -la ${GITHUB_SECRET_FILE}
           done
@@ -271,7 +271,7 @@ jobs:
               
               echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
 
-              echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'
+              echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'"
               echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
               ls -la ${GITHUB_SECRET_FILE}
           done
