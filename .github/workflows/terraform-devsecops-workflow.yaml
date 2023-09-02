@@ -91,7 +91,7 @@ jobs:
       - name: List of downloaded secret files
         id: tfsec-check-values
         run: |
-          ls -laR
+          ls -laR --ignore=.git
 
       - name: Execute the check terraform
         id: terraform-validate
@@ -178,7 +178,7 @@ jobs:
 
       - name: List of downloaded secret files
         run: |
-          ls -laR
+          ls -laR --ignore=.git
 
       - name: Terraform plan in container
         id: plan
@@ -256,7 +256,7 @@ jobs:
 
       - name: List of downloaded secret files
         run: |
-          ls -laR
+          ls -laR --ignore=.git
 
       - name: Terraform Apply
         run: docker compose run terraform-apply
