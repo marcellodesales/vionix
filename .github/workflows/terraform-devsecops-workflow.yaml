@@ -61,7 +61,7 @@ on:
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
 
-  check:
+  lint:
     name: 🚨 lint
     runs-on: devsecops
     strategy:
@@ -98,7 +98,7 @@ jobs:
           docker compose run terraform-validate
 
   check:
-    name: 🛡️️ check-sec
+    name: 🛡️️ check
     needs: [lint]
     runs-on: devsecops
     strategy:
