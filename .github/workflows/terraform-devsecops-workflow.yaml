@@ -20,24 +20,11 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-      seceng-devsecops-dind-runner-label:
-        description: "Docker-in-docker (dind) runner to use base label"
+      secret-files-to-load:
+        description: "The list of files to load"
         required: false
         type: string
-        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
-        default: devsecops
-
-      docker-compose-file:
-        description: "Docker Compose File to use"
-        required: false
-        type: string
-        default: docker-compose.yaml
-
-      docker-compose-context:
-        description: "Directory containing the given docker-compose-file"
-        required: false
-        type: string
-        default: "."
+        default: "dev.api.ea.viasat.io.pem dev.api.ea.viasat.io.crt api.viasat.com.pem api.viasat.com.crt"
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
@@ -90,7 +77,6 @@ jobs:
           path: .
 
       - name: Execute the check terraform
-        if: ${{ matrix.checkType == 'terraform' }}
         id: terraform-validate
         env:
           CURRENT_DIR: ${{ github.workspace }}
@@ -156,8 +142,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TF_IN_AUTOMATION: true
-      # https://github.com/robburger/terraform-pr-commenter
-      EXPAND_SUMMARY_DETAILS: 'false' # All steps will have this environment variable
+
     steps:
       # Checkout visibility from action https://github.com/actions/runner/issues/1300#issuecomment-990373768
       # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
@@ -168,7 +153,7 @@ jobs:
       - name: Load the secret files
         id: check-values
         env:
-          CERT_FILES_NAMES: "dev.api.ea.viasat.io.pem dev.api.ea.viasat.io.crt api.viasat.com.pem api.viasat.com.crt"
+          CERT_FILES_NAMES: ${{ inputs.secret_files_to_load }}
         run: |
           echo "${{ secrets.APIGEE_DEV_PEM }}" | base64 -d > certs/dev.api.ea.viasat.io.pem
           echo "${{ secrets.APIGEE_DEV_CRT }}" | base64 -d > certs/dev.api.ea.viasat.io.crt
