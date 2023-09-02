@@ -174,9 +174,11 @@ jobs:
           for SECRET_PAIR in ${SECRET_FILES_TO_LOAD}; do
               GITHUB_SECRET_NAME="${SECRET_PAIR%=*}"    # Extract key by removing everything after the first =
               GITHUB_SECRET_FILE="${SECRET_PAIR#*=}"  # Extract value by removing everything before the first =
+              
+              echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
 
               echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'
-              echo "${{ secrets[${GITHUB_SECRET_NAME}] }}" | base64 -d > ${GITHUB_SECRET_FILE}
+              echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
               ls -la ${GITHUB_SECRET_FILE}
           done
 
@@ -259,15 +261,17 @@ jobs:
         if: inputs.secret-files-to-load != ""
         env:
           SECRET_FILES_TO_LOAD: ${{ inputs.secret-files-to-load }}
+          # https://stackoverflow.com/questions/61255989/dynamically-retrieve-github-actions-secret/61272209#61272209
         run: |
           IFS=' '
-
           for SECRET_PAIR in ${SECRET_FILES_TO_LOAD}; do
               GITHUB_SECRET_NAME="${SECRET_PAIR%=*}"    # Extract key by removing everything after the first =
               GITHUB_SECRET_FILE="${SECRET_PAIR#*=}"  # Extract value by removing everything before the first =
+              
+              echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
 
               echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'
-              echo "${{ secrets[${GITHUB_SECRET_NAME}] }}" | base64 -d > ${GITHUB_SECRET_FILE}
+              echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
               ls -la ${GITHUB_SECRET_FILE}
           done
 
