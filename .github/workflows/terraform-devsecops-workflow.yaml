@@ -211,9 +211,15 @@ jobs:
           version: v0.0.7
 
       - name: convert plan to md
+        # NOTE: This is reusing the terraform binary provided by the terraform docker image of the docker-compose from the contract
         run: |
           which terraform-j2md
           ./terraform show -json plan.tfplan | terraform-j2md > terraform-plan.md
+
+          echo "📝️ Terraform plan" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat terraform-plan.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Add plan to PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
