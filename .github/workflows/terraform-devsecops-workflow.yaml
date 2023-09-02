@@ -84,6 +84,7 @@ jobs:
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download google.creds secret from code step
         uses: seceng-devsecops-platform/actions-download-artifact@v2
+        if: ${{ inputs.secret-files-to-download != '' }}
         with:
           name: ${{ inputs.secret-files-to-download }}
           path: .
@@ -172,6 +173,7 @@ jobs:
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download google.creds secret from code step
         uses: seceng-devsecops-platform/actions-download-artifact@v2
+        if: ${{ inputs.secret-files-to-download != '' }}
         with:
           name: ${{ inputs.secret-files-to-download }}
           path: .
@@ -250,6 +252,7 @@ jobs:
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download google.creds secret from code step
         uses: seceng-devsecops-platform/actions-download-artifact@v2
+        if: ${{ inputs.secret-files-to-download != '' }}
         with:
           name: ${{ inputs.secret-files-to-download }}
           path: .
