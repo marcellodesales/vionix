@@ -81,12 +81,23 @@ jobs:
       - name: Checkout Current Repository
         uses: viarise/checkout@v2
 
-      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
-      - name: Download google.creds secret from code step
-        uses: seceng-devsecops-platform/actions-download-artifact@v2
-        with:
-          name: google-credentials
-          path: .
+      - name: Load the secret files defined by the inputs
+        # if: ${{ inputs.secret-files-to-load != "" }}
+        env:
+          SECRET_FILES_TO_LOAD: ${{ inputs.secret-files-to-load }}
+        run: |
+          IFS=' '
+
+          for SECRET_PAIR in ${SECRET_FILES_TO_LOAD}; do
+              GITHUB_SECRET_NAME="${SECRET_PAIR%=*}" 
+              GITHUB_SECRET_FILE="${SECRET_PAIR#*=}" 
+              
+              echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
+
+              echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'"
+              echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
+              ls -la ${GITHUB_SECRET_FILE}
+          done
 
       - name: Execute the check terraform
         id: terraform-validate
@@ -182,20 +193,6 @@ jobs:
               ls -la ${GITHUB_SECRET_FILE}
           done
 
-      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
-      - name: Download google.creds secret from code step
-        uses: seceng-devsecops-platform/actions-download-artifact@v2
-        with:
-          name: google-credentials
-          path: .
-
-      - name: Terraform init in container
-        id: init
-        env:
-          CURRENT_DIR: ${{ github.workspace }}
-        run: |
-          docker compose run terraform-init
-
       - name: Terraform plan in container
         id: plan
         env:
@@ -260,7 +257,7 @@ jobs:
       # Checkout visibility from action https://github.com/actions/runner/issues/1300#issuecomment-990373768
       # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
       # Fixed on GHES 3.5 from June 6, 2022 https://github.com/github/roadmap/issues/74#issuecomment-1147906530
-      - name: Fetch all commits from the repo
+      - name: Fetch top commit from the repo
         uses: viarise/checkout@v3.0.2
 
       - name: Load the secret files defined by ${{ inputs.secret-files-to-load }}
@@ -274,20 +271,13 @@ jobs:
           for SECRET_PAIR in ${SECRET_FILES_TO_LOAD}; do
               GITHUB_SECRET_NAME="${SECRET_PAIR%=*}" 
               GITHUB_SECRET_FILE="${SECRET_PAIR#*=}" 
-              
+
               echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
 
               echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'"
               echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
               ls -la ${GITHUB_SECRET_FILE}
           done
-
-      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
-      - name: Download google.creds secret from code step
-        uses: seceng-devsecops-platform/actions-download-artifact@v2
-        with:
-          name: google-credentials
-          path: .
 
       - name: Terraform Apply
         run: docker compose run terraform-apply
