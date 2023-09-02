@@ -24,7 +24,7 @@ on:
         description: "The list of files to load"
         required: false
         type: string
-        default: "dev.api.ea.viasat.io.pem dev.api.ea.viasat.io.crt api.viasat.com.pem api.viasat.com.crt"
+        default: ""
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
