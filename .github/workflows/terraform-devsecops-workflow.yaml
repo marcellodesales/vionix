@@ -1,0 +1,265 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# Executes Terraform workflows using Viasat's Artifactory Repository for State/Cache 
+# https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
+# Base Workflow: https://git.viasat.com/S2E2/scanners_onboarding_framework/blob/feature/SSEE-8699/automated-deployments-with-containerized-terraform/.github/workflows/ops-deploy-lambdas.yaml
+
+name: terraform-devsecops-workflow
+
+# Avoid multiple CI jobs to execute for multiple commits in a given branch
+# section #6: Saving Computation Time by Stopping Obsolete Workflows
+concurrency:
+  group: terraform-cd-devsecops-${{ github.ref }}-1
+  cancel-in-progress: true
+
+on:
+  # Manual workflow execution
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+  # https://github.com/actions/runner/issues/1483#issuecomment-969295757
+  # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
+  workflow_call:
+    inputs:
+      secret-files-to-download:
+        description: "The name of the artifacts upload object that executed and uploaded files to be downloaded"
+        required: false
+        type: string
+        default: ""
+
+      terraform-environment-name:
+        description: "The name of the environment to deploy to, associated with the Github environment to be defined. Go to Settings -> Environments"
+        required: false
+        type: string
+        default: default
+
+      terraform-environment-url:
+        description: "The URL to be placed as a link when the Github UI shows the deployment success and take developers to."
+        required: false
+        type: string
+        default: https://git.viasat.com
+
+    # We need to declare the intent of secrets. The pipelines reusing this must declare them!
+    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+    secrets:
+      ARTIFACTORY_SVC_USER:
+        description: "The username of the service account for Artifactory Docker registry Repository"
+        required: true
+
+      ARTIFACTORY_SVC_PASS:
+        description: "The password associated with the username of the service account for Artifactory Docker registry Repository"
+        required: true
+
+      SLACK_CHANNEL_AUTOMATION_ID:
+        description: "The Slack Automation ID"
+        required: false
+
+      SLACK_CHANNEL_AUTOMATION_TOKEN:
+        description: "The token for the given Slack channel ID"
+        required: false
+
+# https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
+jobs:
+
+  lint:
+    name: 🚨 lint
+    runs-on: devsecops
+    strategy:
+      fail-fast: false
+
+    # Maybe to get twistlock action to run we need permission to read
+    # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
+    permissions:
+      contents: read  # <--- allows to read repo
+      # Enable pull request reads for 8BitJonny/gh-get-current-pr, avoid error "Resource not accessible by integration"
+      # https://github.com/actions/first-interaction/issues/10#issuecomment-1232740076
+      pull-requests: write
+
+    steps:
+      # Checkout visibility from action https://github.com/actions/runner/issues/1300#issuecomment-990373768
+      # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
+      # Fixed on GHES 3.5 from June 6, 2022 https://github.com/github/roadmap/issues/74#issuecomment-1147906530
+      - name: Checkout Current Repository
+        uses: viarise/checkout@v2
+
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download google.creds secret from code step
+        uses: seceng-devsecops-platform/actions-download-artifact@v2
+        if: ${{ inputs.secret-files-to-download != '' }}
+        with:
+          name: ${{ inputs.secret-files-to-download }}
+          path: .
+
+      - name: List of downloaded secret files
+        id: tfsec-check-values
+        run: |
+          ls -laR --ignore=.git
+
+      - name: Execute the check terraform
+        id: terraform-validate
+        env:
+          CURRENT_DIR: ${{ github.workspace }}
+        run: |
+          docker compose run terraform-validate
+
+  check:
+    name: 🛡️️ check
+    needs: [lint]
+    runs-on: devsecops
+    strategy:
+      fail-fast: false
+
+    # Maybe to get twistlock action to run we need permission to read
+    # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
+    permissions:
+      contents: read  # <--- allows to read repo
+      # Enable pull request reads for 8BitJonny/gh-get-current-pr, avoid error "Resource not accessible by integration"
+      # https://github.com/actions/first-interaction/issues/10#issuecomment-1232740076
+      pull-requests: write
+
+    steps:
+      # Checkout visibility from action https://github.com/actions/runner/issues/1300#issuecomment-990373768
+      # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
+      # Fixed on GHES 3.5 from June 6, 2022 https://github.com/github/roadmap/issues/74#issuecomment-1147906530
+      - name: Checkout Current Repository
+        uses: viarise/checkout@v2
+
+      - name: Execute the lint container
+        id: tfsec-check-values
+        env:
+          CURRENT_DIR: ${{ github.workspace }}
+        run: |
+          docker compose run terraform-tfsec
+          echo "Generated the file terraform-check.text"
+          cat terraform-check.text
+          echo "Generated the file terraform-check.markdown"
+          cat terraform-check.markdown >> $GITHUB_STEP_SUMMARY
+     
+      # Add the tfsec comments to the PR
+      - name: tfsec
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
+        with:
+          github_token: ${{ github.token }}
+
+  plan:
+    name: 📝️ plan
+    needs: [check]
+    runs-on: devsecops
+
+    strategy:
+      fail-fast: true
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      numberOfCoveredClasses: ${{steps.test-values.outputs.numberOfCoveredClasses}}
+      coverageRate: ${{steps.test-values.outputs.coverageRate}}
+      numberOfTestErrors: ${{steps.test-values.outputs.numberOfTestErrors}}
+      numberOfTestFailures: ${{steps.test-values.outputs.numberOfTestFailures}}
+      numberOfTestsSkipped: ${{steps.test-values.outputs.numberOfTestsSkipped}}
+      numberOfTestsExecuted: ${{steps.test-values.outputs.numberOfTestsExecuted}}
+      testsExecutionTime: ${{steps.test-values.outputs.testsExecutionTime}}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TF_IN_AUTOMATION: true
+
+    steps:
+      # Checkout visibility from action https://github.com/actions/runner/issues/1300#issuecomment-990373768
+      # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
+      # Fixed on GHES 3.5 from June 6, 2022 https://github.com/github/roadmap/issues/74#issuecomment-1147906530
+      - name: Fetch all commits from the repo
+        uses: viarise/checkout@v3.0.2
+
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download google.creds secret from code step
+        uses: seceng-devsecops-platform/actions-download-artifact@v2
+        if: ${{ inputs.secret-files-to-download != '' }}
+        with:
+          name: ${{ inputs.secret-files-to-download }}
+          path: .
+
+      - name: List of downloaded secret files
+        run: |
+          ls -laR --ignore=.git
+
+      - name: Terraform plan in container
+        id: plan
+        env:
+          CURRENT_DIR: ${{ github.workspace }}
+        run: |
+          # This now writes the plan and the terraform binary for the j2md conversion
+          docker compose run terraform-plan
+
+      - name: Install j2md - Plan to md
+        if: always() && github.ref != 'refs/heads/main' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
+        uses: seceng-devsecops-platform/reproio-terraform-j2md-action@v0.0.7
+        with:
+          version: v0.0.7
+
+      - name: convert plan to md
+        # NOTE: This is reusing the terraform binary provided by the terraform docker image of the docker-compose from the contract
+        run: |
+          which terraform-j2md
+          ./terraform show -json plan.tfplan | terraform-j2md > terraform-plan.md
+
+          echo "📝️ Terraform plan" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat terraform-plan.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Add plan to PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: terraform-plan.md
+
+  deploy:
+    name:  🚀 deploy
+    needs: [plan]
+    runs-on: devsecops
+
+    # TODO: turn this on when we have 2 envs
+    # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'master'
+
+    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
+    environment:
+      name: ${{ inputs.terraform-environment-name }}
+      url: ${{ inputs.terraform-environment-url }}
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      numberOfCoveredClasses: ${{steps.test-values.outputs.numberOfCoveredClasses}}
+      coverageRate: ${{steps.test-values.outputs.coverageRate}}
+      numberOfTestErrors: ${{steps.test-values.outputs.numberOfTestErrors}}
+      numberOfTestFailures: ${{steps.test-values.outputs.numberOfTestFailures}}
+      numberOfTestsSkipped: ${{steps.test-values.outputs.numberOfTestsSkipped}}
+      numberOfTestsExecuted: ${{steps.test-values.outputs.numberOfTestsExecuted}}
+      testsExecutionTime: ${{steps.test-values.outputs.testsExecutionTime}}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TF_IN_AUTOMATION: true
+
+    steps:
+      # Checkout visibility from action https://github.com/actions/runner/issues/1300#issuecomment-990373768
+      # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
+      # Fixed on GHES 3.5 from June 6, 2022 https://github.com/github/roadmap/issues/74#issuecomment-1147906530
+      - name: Fetch top commit from the repo
+        uses: viarise/checkout@v3.0.2
+
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download google.creds secret from code step
+        uses: seceng-devsecops-platform/actions-download-artifact@v2
+        if: ${{ inputs.secret-files-to-download != '' }}
+        with:
+          name: ${{ inputs.secret-files-to-download }}
+          path: .
+
+      - name: List of downloaded secret files
+        run: |
+          ls -laR --ignore=.git
+
+      - name: Terraform Apply
+        run: docker compose run terraform-apply
