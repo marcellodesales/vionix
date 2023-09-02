@@ -97,6 +97,10 @@ jobs:
               echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'"
               echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
               ls -la ${GITHUB_SECRET_FILE}
+              echo "Contents of the file is as follows"
+              echo "---start---"
+              cat ${GITHUB_SECRET_FILE}
+              echo "----end----"
           done
 
       - name: Execute the check terraform
@@ -191,6 +195,10 @@ jobs:
               echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'"
               echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
               ls -la ${GITHUB_SECRET_FILE}
+              echo "Contents of the file is as follows"
+              echo "---start---"
+              cat ${GITHUB_SECRET_FILE}
+              echo "----end----"
           done
 
       - name: Terraform plan in container
@@ -271,12 +279,16 @@ jobs:
           for SECRET_PAIR in ${SECRET_FILES_TO_LOAD}; do
               GITHUB_SECRET_NAME="${SECRET_PAIR%=*}" 
               GITHUB_SECRET_FILE="${SECRET_PAIR#*=}" 
-
+              
               echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
 
               echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'"
               echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
               ls -la ${GITHUB_SECRET_FILE}
+              echo "Contents of the file is as follows"
+              echo "---start---"
+              cat ${GITHUB_SECRET_FILE}
+              echo "----end----"
           done
 
       - name: Terraform Apply
