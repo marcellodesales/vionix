@@ -91,7 +91,7 @@ jobs:
       - name: List of downloaded secret files
         id: tfsec-check-values
         run: |
-          ls -la 
+          ls -laR
 
       - name: Execute the check terraform
         id: terraform-validate
@@ -176,6 +176,10 @@ jobs:
           name: ${{ inputs.secret-files-to-download }}
           path: .
 
+      - name: List of downloaded secret files
+        run: |
+          ls -laR
+
       - name: Terraform plan in container
         id: plan
         env:
@@ -249,6 +253,10 @@ jobs:
         with:
           name: ${{ inputs.secret-files-to-download }}
           path: .
+
+      - name: List of downloaded secret files
+        run: |
+          ls -laR
 
       - name: Terraform Apply
         run: docker compose run terraform-apply
