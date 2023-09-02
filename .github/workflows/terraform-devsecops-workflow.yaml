@@ -20,8 +20,8 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-      secret-files-to-load:
-        description: "The list of files to load in the format GITHUB_SECRET_KEY_1=path/to/save/value1 GITHUB_SECRET_KEY_2=path/to/save/value2"
+      secret-files-to-download:
+        description: "The name of the artifacts upload object that executed and uploaded files to be downloaded"
         required: false
         type: string
         default: ""
@@ -85,7 +85,7 @@ jobs:
       - name: Download google.creds secret from code step
         uses: seceng-devsecops-platform/actions-download-artifact@v2
         with:
-          name: terraform-secret-files
+          name: ${{ inputs.secret-files-to-download }}
           path: .
 
       - name: List of downloaded secret files
@@ -140,7 +140,7 @@ jobs:
           github_token: ${{ github.token }}
 
   plan:
-    name:  📝️ plan
+    name: 📝️ plan
     needs: [check]
     runs-on: devsecops
 
@@ -173,7 +173,7 @@ jobs:
       - name: Download google.creds secret from code step
         uses: seceng-devsecops-platform/actions-download-artifact@v2
         with:
-          name: terraform-secret-files
+          name: ${{ inputs.secret-files-to-download }}
           path: .
 
       - name: Terraform plan in container
@@ -247,7 +247,7 @@ jobs:
       - name: Download google.creds secret from code step
         uses: seceng-devsecops-platform/actions-download-artifact@v2
         with:
-          name: terraform-secret-files
+          name: ${{ inputs.secret-files-to-download }}
           path: .
 
       - name: Terraform Apply
