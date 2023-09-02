@@ -5,7 +5,7 @@
 # https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
 # Base Workflow: https://git.viasat.com/S2E2/scanners_onboarding_framework/blob/feature/SSEE-8699/automated-deployments-with-containerized-terraform/.github/workflows/ops-deploy-lambdas.yaml
 
-name: terraform-devsecops-cd-workflow
+name: terraform-devsecops-workflow
 
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
 # section #6: Saving Computation Time by Stopping Obsolete Workflows
