@@ -26,6 +26,18 @@ on:
         type: string
         default: ""
 
+      terraform-environment-name:
+        description: "The name of the environment to deploy to, associated with the Github environment to be defined. Go to Settings -> Environments"
+        required: false
+        type: string
+        default: default
+
+      terraform-environment-url:
+        description: "The URL to be placed as a link when the Github UI shows the deployment success and take developers to."
+        required: false
+        type: string
+        default: https://git.viasat.com
+
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
@@ -212,8 +224,8 @@ jobs:
 
     # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
     environment:
-      name: default
-      url: https://api.viasat.com
+      name: ${{ inputs.terraform-environment-name }}
+      url: ${{ inputs.terraform-environment-url }}
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
