@@ -81,27 +81,17 @@ jobs:
       - name: Checkout Current Repository
         uses: viarise/checkout@v2
 
-      - name: Load the secret files defined by the inputs
-        # if: ${{ inputs.secret-files-to-load != "" }}
-        env:
-          SECRET_FILES_TO_LOAD: ${{ inputs.secret-files-to-load }}
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download google.creds secret from code step
+        uses: seceng-devsecops-platform/actions-download-artifact@v2
+        with:
+          name: terraform-secret-files
+          path: .
+
+      - name: List of downloaded secret files
+        id: tfsec-check-values
         run: |
-          IFS=' '
-
-          for SECRET_PAIR in ${SECRET_FILES_TO_LOAD}; do
-              GITHUB_SECRET_NAME="${SECRET_PAIR%=*}" 
-              GITHUB_SECRET_FILE="${SECRET_PAIR#*=}" 
-              
-              echo "GITHUB_SECRET_NAME=${GITHUB_SECRET_NAME}" >> $GITHUB_ENV
-
-              echo "Loading GIthub Secret '${GITHUB_SECRET_NAME}' to store it at file '${GITHUB_SECRET_FILE}'"
-              echo "${{ secrets[env.GITHUB_SECRET_NAME] }}" | base64 -d > ${GITHUB_SECRET_FILE}
-              ls -la ${GITHUB_SECRET_FILE}
-              echo "Contents of the file is as follows"
-              echo "---start---"
-              cat ${GITHUB_SECRET_FILE}
-              echo "----end----"
-          done
+          ls -la 
 
       - name: Execute the check terraform
         id: terraform-validate
