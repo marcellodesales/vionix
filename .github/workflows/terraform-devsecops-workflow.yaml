@@ -164,8 +164,8 @@ jobs:
       - name: Fetch all commits from the repo
         uses: viarise/checkout@v3.0.2
 
-      - name: Load the secret files defined by ${{ inputs.secret-files-to-load }}
-        if: ${{ inputs.secret-files-to-load != "" }}
+      - name: Load the secret files defined by the inputs
+        # if: ${{ inputs.secret-files-to-load != "" }}
         env:
           SECRET_FILES_TO_LOAD: ${{ inputs.secret-files-to-load }}
         run: |
@@ -258,7 +258,7 @@ jobs:
         uses: viarise/checkout@v3.0.2
 
       - name: Load the secret files defined by ${{ inputs.secret-files-to-load }}
-        if: ${{ inputs.secret-files-to-load != "" }}
+        # if: ${{ inputs.secret-files-to-load != "" }}
         env:
           SECRET_FILES_TO_LOAD: ${{ inputs.secret-files-to-load }}
           # https://stackoverflow.com/questions/61255989/dynamically-retrieve-github-actions-secret/61272209#61272209
