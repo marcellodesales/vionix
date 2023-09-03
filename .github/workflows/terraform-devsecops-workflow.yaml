@@ -38,12 +38,6 @@ on:
         type: string
         default: https://git.viasat.com
 
-      security-github-token:
-        description: "The The token to comment on PRs."
-        required: false
-        type: string
-        default: ${{ github.token }} # this may not work as it's a composable
-
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
@@ -154,8 +148,8 @@ jobs:
         with:
         # tfsec_args: --soft-fail
           soft_fail_commenter: true
-          tfsec_formats: sarif,csv,json,gif
-          github_token: ${{ inputs.security-github-token }}
+          tfsec_formats: sarif,json,gif
+          github_token: ${{ github.token }}
 
       - name: Upload SARIF file for tfsec
         if: ${{ matrix.checkType == 'tfsec' }}
