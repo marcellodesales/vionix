@@ -114,8 +114,10 @@ jobs:
       contents: read  # <--- allows to read repo
       # Enable pull request reads for 8BitJonny/gh-get-current-pr, avoid error "Resource not accessible by integration"
       # https://github.com/actions/first-interaction/issues/10#issuecomment-1232740076
+      # only required for workflows in private repositories
       pull-requests: write
-      # required for all workflows
+      # https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github#uploading-a-code-scanning-analysis-with-github-actions
+      actions: read
       security-events: write
 
     steps:
