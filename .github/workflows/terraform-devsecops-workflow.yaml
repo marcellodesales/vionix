@@ -38,6 +38,12 @@ on:
         type: string
         default: https://git.viasat.com
 
+      security-github-token:
+        description: "The The token to comment on PRs."
+        required: false
+        type: string
+        default: ${{ github.token }} # this may not work as it's a composable
+
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
@@ -107,6 +113,8 @@ jobs:
     runs-on: devsecops
     strategy:
       fail-fast: false
+      matrix:
+        checkType: [terrascan,tfsec]
 
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
@@ -127,7 +135,8 @@ jobs:
       - name: Checkout Current Repository
         uses: viarise/checkout@v2
 
-      - name: Execute the lint container
+      - name: Execute the security linter tfsec
+        if: ${{ matrix.checkType == 'tfsec' }}
         id: tfsec-check-values
         env:
           CURRENT_DIR: ${{ github.workspace }}
@@ -138,7 +147,28 @@ jobs:
           echo "Generated the file terraform-check.markdown"
           cat terraform-check.markdown >> $GITHUB_STEP_SUMMARY
 
+      # Add the tfsec comments to the PR
+      - name: Add tfsec comments to PR
+        if: ${{ matrix.checkType == 'tfsec' }}
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
+        with:
+        # tfsec_args: --soft-fail
+          soft_fail_commenter: true
+          tfsec_formats: sarif,csv,json,gif
+          github_token: ${{ inputs.security-github-token }}
+
+      - name: Upload SARIF file for tfsec
+        if: ${{ matrix.checkType == 'tfsec' }}
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          # Path to SARIF file relative to the root of the repository
+          sarif_file: terraform-check.sarif.json
+          # Optional category for the results
+          # Used to differentiate multiple results for one commit
+          category: tfsec
+
       - name: Run Terrascan
+        if: ${{ matrix.checkType == 'terrascan' }}
         id: terrascan
         uses: seceng-devsecops-platform/tenable-terrascan-action@v1.4.1
         # https://github.com/tenable/terrascan-action/blob/main/README.md
@@ -159,7 +189,8 @@ jobs:
           #webhook_url:
           #webhook_token:
 
-      - name: Upload SARIF file
+      - name: Upload SARIF file for terrascan
+        if: ${{ matrix.checkType == 'terrascan' }}
         uses: github/codeql-action/upload-sarif@v2
         with:
           # Path to SARIF file relative to the root of the repository
@@ -167,12 +198,6 @@ jobs:
           # Optional category for the results
           # Used to differentiate multiple results for one commit
           category: terrascan
-
-      # Add the tfsec comments to the PR
-      - name: tfsec
-        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
-        with:
-          github_token: ${{ github.token }}
 
   plan:
     name: 📝️ plan
