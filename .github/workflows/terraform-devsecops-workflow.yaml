@@ -115,6 +115,8 @@ jobs:
       # Enable pull request reads for 8BitJonny/gh-get-current-pr, avoid error "Resource not accessible by integration"
       # https://github.com/actions/first-interaction/issues/10#issuecomment-1232740076
       pull-requests: write
+      # required for all workflows
+      security-events: write
 
     steps:
       # Checkout visibility from action https://github.com/actions/runner/issues/1300#issuecomment-990373768
@@ -154,6 +156,15 @@ jobs:
           #find_vulnerabilities:
           #webhook_url:
           #webhook_token:
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          # Path to SARIF file relative to the root of the repository
+          sarif_file: terrascan.sarif
+          # Optional category for the results
+          # Used to differentiate multiple results for one commit
+          category: terrascan
 
       # Add the tfsec comments to the PR
       - name: tfsec
