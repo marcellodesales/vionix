@@ -133,7 +133,28 @@ jobs:
           cat terraform-check.text
           echo "Generated the file terraform-check.markdown"
           cat terraform-check.markdown >> $GITHUB_STEP_SUMMARY
-     
+
+      - name: Run Terrascan
+        id: terrascan
+        uses: seceng-devsecops-platform/tenable-terrascan-action@v1.4.1
+        # https://github.com/tenable/terrascan-action/blob/main/README.md
+        with:
+          iac_type: 'terraform'
+          # iac_version: 'v14'
+          policy_type: 'gcp'
+          only_warn: true
+          #scm_token: ${{ secrets.ACCESS_TOKEN }}
+          #verbose: true
+          sarif_upload: true
+          #non_recursive:
+          #iac_dir:
+          #policy_path:
+          #skip_rules:
+          config_path: terrascan-config.toml
+          #find_vulnerabilities:
+          #webhook_url:
+          #webhook_token:
+
       # Add the tfsec comments to the PR
       - name: tfsec
         uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
