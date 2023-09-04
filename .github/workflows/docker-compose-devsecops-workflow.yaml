@@ -594,10 +594,10 @@ jobs:
           echo "Using Version: NEXT_PUBLIC_APP_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}"
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file}}" ]; then
             echo "Specifying the buildx bake by the service compose file."
-            docker-compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }};
+            docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }};
             docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }} --print;
           else
-            docker-compose config ${{ inputs.docker-compose-service }}
+            docker compose config ${{ inputs.docker-compose-service }}
             docker buildx bake ${{ inputs.docker-compose-service }} --print
           fi
 
