@@ -44,11 +44,23 @@ on:
         required: true
         type: string
       
-      docker-compose-platforms:
+      docker-build-platforms:
         description: "The list of docker platforms to build using buildx"
         required: false
         type: string
         default: "linux/amd64"
+
+      docker-build-mode:
+        description: "Whether to run in parallel or sequencial with DOCKER_BUILDKIT=0"
+        required: false
+        type: string
+        default: "parallel"
+
+      docker-build-file-path:
+        description: "The path to Dockerfile when sequencial is provided"
+        required: false
+        type: string
+        default: Dockerfile
 
       seceng-devsecops-prisma-domain:
         description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
@@ -530,7 +542,7 @@ jobs:
       # https://github.com/docker/setup-buildx-action/issues/105#issuecomment-910928571
       # https://github.com/docker/buildx/issues/413#issuecomment-710656847
       - name: Set up Docker Context for Buildx
-        if: ${{ github.ref_type == 'branch' }}
+        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == "parallel" }}
         id: buildx-context
         run: |
           docker context create builders-context
@@ -542,7 +554,7 @@ jobs:
         id: buildx
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ github.ref_type == 'branch' }}
+        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == "parallel" }}
         uses: seceng-devsecops-platform/docker-setup-buildx-action@master
         with:
           endpoint: builders-context
@@ -607,10 +619,10 @@ jobs:
 
       # TODO: since we are using self-hosted, the docker image is saved in the same host
       # https://docs.docker.com/engine/reference/commandline/buildx_bake/
-      - name: Build Docker Image
+      - name: Build Docker Image in Parallel mode using bake
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ github.ref_type == 'branch' }}
+        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == "parallel" }}
         id: docker-bake
         uses: seceng-devsecops-platform/docker-bake-action@v2.2.0
         with:
@@ -633,7 +645,19 @@ jobs:
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-from=type=registry,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-to=type=registry,mode=max,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
-            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.platform=${{ inputs.docker-compose-platforms }}
+            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.platform=${{ inputs.docker-build-platforms }}
+
+      # TODO: since we are using self-hosted, the docker image is saved in the same host
+      # https://docs.docker.com/engine/reference/commandline/buildx_bake/
+      - name: Build Docker Image in mode ${{ inputs.inputs.docker-build-mode }}
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode != "parallel" }}
+        id: docker-compose
+        run: |
+          DOCKER_BUILDKIT=0 docker compose build
+          docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
       - name: Annotate Job with current information
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
