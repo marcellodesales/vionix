@@ -43,6 +43,12 @@ on:
         description: "Docker Compose service to build"
         required: true
         type: string
+      
+      docker-compose-platforms:
+        description: "The list of docker platforms to build using buildx"
+        required: false
+        type: string
+        default: "linux/amd64"
 
       seceng-devsecops-prisma-domain:
         description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
@@ -627,6 +633,7 @@ jobs:
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-from=type=registry,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-to=type=registry,mode=max,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
+            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.platform=${{ inputs.docker-compose-platforms }}
 
       - name: Annotate Job with current information
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
