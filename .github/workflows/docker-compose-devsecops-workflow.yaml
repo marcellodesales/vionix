@@ -542,7 +542,7 @@ jobs:
       # https://github.com/docker/setup-buildx-action/issues/105#issuecomment-910928571
       # https://github.com/docker/buildx/issues/413#issuecomment-710656847
       - name: Set up Docker Context for Buildx
-        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == "parallel" }}
+        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == 'parallel' }}
         id: buildx-context
         run: |
           docker context create builders-context
@@ -554,7 +554,7 @@ jobs:
         id: buildx
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == "parallel" }}
+        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == 'parallel' }}
         uses: seceng-devsecops-platform/docker-setup-buildx-action@master
         with:
           endpoint: builders-context
@@ -622,7 +622,7 @@ jobs:
       - name: Build Docker Image in Parallel mode using bake
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == "parallel" }}
+        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == 'parallel' }}
         id: docker-bake
         uses: seceng-devsecops-platform/docker-bake-action@v2.2.0
         with:
@@ -652,7 +652,7 @@ jobs:
       - name: Build Docker Image in mode ${{ inputs.inputs.docker-build-mode }}
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode != "parallel" }}
+        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode != 'parallel' }}
         id: docker-compose
         run: |
           DOCKER_BUILDKIT=0 docker compose build
