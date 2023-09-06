@@ -655,7 +655,7 @@ jobs:
         if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode != 'parallel' }}
         id: docker-compose
         run: |
-          DOCKER_BUILDKIT=0 docker compose build
+          DOCKER_BUILDKIT=0 docker compose -f ${{ inputs.docker-compose-file }} build
           docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
