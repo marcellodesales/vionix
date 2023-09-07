@@ -20,6 +20,13 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
+      seceng-devsecops-dind-runner-label:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: devsecops
+
       secret-files-to-download:
         description: "The name of the artifacts upload object that executed and uploaded files to be downloaded"
         required: false
