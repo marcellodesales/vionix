@@ -27,6 +27,13 @@ on:
         # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
         default: devsecops
 
+      ghasEnabled:
+        description: "Status of the GHAS onboarding"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: "false"
+
       secret-files-to-download:
         description: "The name of the artifacts upload object that executed and uploaded files to be downloaded"
         required: false
@@ -110,6 +117,7 @@ jobs:
 
   check:
     name: 🛡️️ check
+    if: ${{ inputs.ghasEnabled == 'true' }}
     needs: [lint]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
     strategy:
