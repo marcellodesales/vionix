@@ -213,11 +213,6 @@ jobs:
     needs: [lint]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
-    environment:
-      name: ${{ inputs.terraform-environment-name }}
-      url: ${{ inputs.terraform-environment-url }}
-
     strategy:
       fail-fast: true
 
@@ -294,6 +289,11 @@ jobs:
 
     # TODO: turn this on when we have 2 envs
     # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'master'
+
+    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
+    environment:
+      name: ${{ inputs.terraform-environment-name }}
+      url: ${{ inputs.terraform-environment-url }}
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
