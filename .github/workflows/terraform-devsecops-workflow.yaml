@@ -69,7 +69,7 @@ jobs:
 
   lint:
     name: 🚨 lint
-    runs-on: devsecops
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
     strategy:
       fail-fast: false
 
@@ -111,7 +111,7 @@ jobs:
   check:
     name: 🛡️️ check
     needs: [lint]
-    runs-on: devsecops
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
     strategy:
       fail-fast: false
       matrix:
@@ -203,7 +203,7 @@ jobs:
   plan:
     name: 📝️ plan
     needs: [check]
-    runs-on: devsecops
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     strategy:
       fail-fast: true
@@ -277,7 +277,7 @@ jobs:
   deploy:
     name:  🚀 deploy
     needs: [plan]
-    runs-on: devsecops
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # TODO: turn this on when we have 2 envs
     # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'master'
