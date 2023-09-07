@@ -210,7 +210,7 @@ jobs:
 
   plan:
     name: 📝️ plan
-    #needs: [check]
+    needs: [lint]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     strategy:
