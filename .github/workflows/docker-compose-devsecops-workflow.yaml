@@ -1093,7 +1093,7 @@ jobs:
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
+          message_id: ${{ needs.code.slack.outputs.message_id }} # Updates existing message from the first step.
           payload: >-
             {
                 "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
@@ -1146,7 +1146,7 @@ jobs:
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
+          message_id: ${{ needs.code.slack.outputs.message_id }} # Updates existing message from the first step.
           payload: >-
             {
                 "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
