@@ -330,4 +330,9 @@ jobs:
           ls -laR --ignore=.git
 
       - name: Terraform Apply
-        run: docker compose run terraform-apply
+        run: |
+          echo "Generating the workflow plan file"
+          docker compose run terraform-plan
+          
+          echo "Deploying with apply"
+          docker compose run terraform-apply
