@@ -257,9 +257,9 @@ jobs:
 
     if: inputs.docker-compose-lint != '' && github.ref_type == 'branch'
 
-#     defaults:
-#       run:
-#         working-directory: ${{ inputs.docker-compose-lint-context }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.docker-compose-lint-context }}
     steps:
 
       - name: Checkout Current Repository
@@ -288,14 +288,6 @@ jobs:
             cat ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
 
             echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
-
-            function remove_matcher
-            {
-              echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}::"
-              echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}-warnings::"
-            }
-
-            trap remove_matcher EXIT
           fi
 
       - name: lint
