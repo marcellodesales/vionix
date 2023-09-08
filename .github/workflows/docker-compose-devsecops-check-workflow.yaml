@@ -267,7 +267,7 @@ jobs:
         with:
           path: .
 
-      - name: lint
+      - name: mkdir ./platform-actions for the workflow
         run: mkdir ./platform-actions
 
       - name: Checkout deploy repository for all ENVs if the workflow is defined
@@ -282,16 +282,20 @@ jobs:
         # setting up the problem matcher https://github.com/facebookresearch/fairseq2/blob/main/.github/workflows/_lint_py.yaml
       - name: Install the problem matchers for ${{ inputs.github-problem-matcher-name }}
         run: |
-          ls -laR ./platform-actions
-          echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
+          ls -laR ./platform-actions/.github
+          if [ -f ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
+            echo "Will use the problem matcher ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
 
-          function remove_matcher
-          {
-            echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}::"
-            echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}-warnings::"
-          }
+            echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
 
-          trap remove_matcher EXIT
+            function remove_matcher
+            {
+              echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}::"
+              echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}-warnings::"
+            }
+
+            trap remove_matcher EXIT
+          fi
 
       - name: lint
         id: lint
