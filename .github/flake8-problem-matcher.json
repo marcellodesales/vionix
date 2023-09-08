@@ -1,22 +1,31 @@
 {
-  "problemMatcher": [
-    {
-      "owner": "devsecops-platform-check-workflow-python",
-      "pattern": [
+    "problemMatcher": [
         {
-          "regexp": "^(?:([^\s#]+)|\\^)\n?",
-          "file": 1
+            "owner": "flake8",
+            "pattern": [
+                {
+                    "regexp": "^(.+):(\\d+):(\\d+): ([EF]\\d+) (.+)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "code": 4,
+                    "message": 5
+                }
+            ]
         },
         {
-          "regexp": "(?:\\^)?(?![:])(([^\n]+?:\\d+:\\d+(?=:\\s+[A-Z]{1}\\d{3})?:\\s+[A-Z]{1}\\d{3}\\s+.*)\n?)",
-          "line": 2,
-          "column": 3,
-          "severity": 4,
-          "code": 5,
-          "message": 6,
-          "loop": true
+            "owner": "flake8-warnings",
+            "severity": "warning",
+            "pattern": [
+                {
+                    "regexp": "^(.+):(\\d+):(\\d+): (W\\d+) (.+)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "code": 4,
+                    "message": 5
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ]
 }
