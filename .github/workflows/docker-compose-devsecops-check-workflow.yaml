@@ -283,7 +283,7 @@ jobs:
       - name: Install the problem matchers for ${{ inputs.github-problem-matcher-name }}
         run: |
           ls -laR ./platform-actions
-          echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}.json"
+          echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
 
           function remove_matcher
           {
