@@ -1,0 +1,22 @@
+{
+  "problemMatcher": [
+    {
+      "owner": "devsecops-platform-check-workflow-python",
+      "pattern": [
+        {
+          "regexp": "^(?:([^\s#]+)|\\^)\n?",
+          "file": 1
+        },
+        {
+          "regexp": "(?:\\^)?(?![:])(([^\n]+?:\\d+:\\d+(?=:\\s+[A-Z]{1}\\d{3})?:\\s+[A-Z]{1}\\d{3}\\s+.*)\n?)",
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6,
+          "loop": true
+        }
+      ]
+    }
+  ]
+}
