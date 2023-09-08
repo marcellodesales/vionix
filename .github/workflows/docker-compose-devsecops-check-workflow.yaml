@@ -256,14 +256,14 @@ jobs:
           docker --version
           ls -la 
           echo "CURRENT_DIR=${{ github.workspace }}" > .env
-          ls -la
-          ls -la build
           cat .env
           docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
           docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-lint-file }} run ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
           TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
           echo "Total number of lint files: ${TOTAL_LINT_FILES}"
           echo "numberOfLintFiles=$TOTAL_LINT_FILES" >> $GITHUB_OUTPUT
+          ls -la
+          ls -la build
 
       - name: Outputs for notification
         run: |
