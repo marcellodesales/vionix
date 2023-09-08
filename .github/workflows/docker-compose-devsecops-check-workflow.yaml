@@ -95,7 +95,11 @@ on:
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
-#     secrets:
+    secrets:
+      GITOPS_GITHUB_DEPLOY_PAT:
+        description: "The token to clone and push changes to the GitOps Deploy repo"
+        required: false
+
 #       SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
 #         description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
 #         required: true
@@ -254,6 +258,18 @@ jobs:
           path: .
 
       - name: lint
+        run: mkdir ./platform-actions
+
+      - name: Checkout deploy repository for all ENVs if the workflow is defined
+        uses: viarise/checkout@v3
+        with:
+          repository: seceng-devsecops-platform/devsecops-platform-github-workflows
+          ref: master
+          path: ./platform-actions
+          # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
+          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+
+      - name: lint
         id: lint
         run: |
           ls -laR ../
@@ -270,7 +286,7 @@ jobs:
           ls -la build
           ls -la .github/
           ls -la ../
-          echo "::add-matcher::../flake8-problem-matcher.json"  
+          echo "::add-matcher::./platform-actions/.github/flake8-problem-matcher.json"  
 
       - name: Outputs for notification
         run: |
