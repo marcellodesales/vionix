@@ -257,8 +257,8 @@ jobs:
           ls -la 
           echo "CURRENT_DIR=${{ github.workspace }}" > .env
           cat .env
-          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
-          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-lint-file }} run ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
+          docker compose -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
+          docker compose -f ${{ inputs.docker-compose-lint-file }} run ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
           TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
           echo "Total number of lint files: ${TOTAL_LINT_FILES}"
           echo "numberOfLintFiles=$TOTAL_LINT_FILES" >> $GITHUB_OUTPUT
@@ -299,9 +299,9 @@ jobs:
           ls -la
           cat .env
           echo "Building the test image."
-          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}
+          docker compose -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}
           echo "Running the test image."
-          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-test-file }} run ${{ inputs.docker-compose-test-service }}
+          docker compose -f ${{ inputs.docker-compose-test-file }} run ${{ inputs.docker-compose-test-service }}
           ls -la
           ls -la build
 
