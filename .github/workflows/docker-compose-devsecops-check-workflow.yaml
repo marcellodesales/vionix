@@ -282,6 +282,7 @@ jobs:
         # setting up the problem matcher https://github.com/facebookresearch/fairseq2/blob/main/.github/workflows/_lint_py.yaml
       - name: Install the problem matchers for ${{ inputs.github-problem-matcher-name }}
         run: |
+          ls -laR ./platform-actions
           echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}.json"
 
           function remove_matcher
