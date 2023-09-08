@@ -303,6 +303,7 @@ jobs:
           echo "CURRENT_DIR=${{ github.workspace }}" > .env
           ls -la
           cat .env
+          ls -lar /
           echo "Building the test image."
           docker compose -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}
           echo "Running the test image."
