@@ -92,6 +92,12 @@ on:
         required: false
         type: boolean
         default: false
+        
+      github-problem-matcher-name:
+        description: "The name of the problem matcher from the DevSecOps Platform to use"
+        required: false
+        type: string
+        default: flake8
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
@@ -273,12 +279,22 @@ jobs:
           # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
+        # setting up the problem matcher https://github.com/facebookresearch/fairseq2/blob/main/.github/workflows/_lint_py.yaml
+      - name: Install the problem matchers for ${{ inputs.github-problem-matcher-name }}
+        run: |
+          echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}.json"
+
+          function remove_matcher
+          {
+            echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}::"
+            echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}-warnings::"
+          }
+
+          trap remove_matcher EXIT
+
       - name: lint
         id: lint
         run: |
-          ls -laR ../
-          docker --version
-          ls -la 
           echo "CURRENT_DIR=${{ github.workspace }}" > .env
           cat .env
           docker compose -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
@@ -287,10 +303,6 @@ jobs:
           echo "Total number of lint files: ${TOTAL_LINT_FILES}"
           echo "numberOfLintFiles=$TOTAL_LINT_FILES" >> $GITHUB_OUTPUT
           ls -la
-          ls -la build
-          ls -la .github/
-          ls -la ../
-          echo "::add-matcher::./platform-actions/.github/flake8-problem-matcher.json"  
 
       - name: Outputs for notification
         run: |
