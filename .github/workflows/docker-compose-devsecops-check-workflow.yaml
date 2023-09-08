@@ -96,6 +96,7 @@ on:
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
+
       GITOPS_GITHUB_DEPLOY_PAT:
         description: "The token to clone and push changes to the GitOps Deploy repo"
         required: false
@@ -244,6 +245,11 @@ jobs:
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     needs: [code]
+
+    # Maybe to get twistlock action to run we need permission to read
+    # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
+    permissions:
+      contents: read-all # <--- allows to read repo
 
     if: inputs.docker-compose-lint != '' && github.ref_type == 'branch'
 
