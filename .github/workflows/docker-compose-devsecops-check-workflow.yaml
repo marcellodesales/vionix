@@ -213,6 +213,7 @@ jobs:
           echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
           echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
           echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION"
+
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
       - name: Annotate Job with current information
@@ -245,6 +246,7 @@ jobs:
       run:
         working-directory: ${{ inputs.docker-compose-lint-context }}
     steps:
+
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
         with:
@@ -265,7 +267,8 @@ jobs:
           ls -la
           ls -la build
           ls -la .github/
-          echo "::add-matcher::flake8-problem-matcher.json"  
+          ls -la ../
+          echo "::add-matcher::../flake8-problem-matcher.json"  
 
       - name: Outputs for notification
         run: |
