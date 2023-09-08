@@ -247,11 +247,7 @@ jobs:
     needs: [code]
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
-    permissions:
-      # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
-      contents: write
-      # To declare deployments updates
-      deployments: write
+    permissions: write-all
 
     if: inputs.docker-compose-lint != '' && github.ref_type == 'branch'
 
