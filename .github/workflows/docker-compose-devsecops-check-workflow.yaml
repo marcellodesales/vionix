@@ -285,6 +285,7 @@ jobs:
           ls -laR ./platform-actions/.github
           if [ -f ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
             echo "Will use the problem matcher ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
+            cat ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
 
             echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
 
@@ -302,6 +303,20 @@ jobs:
         run: |
           echo "CURRENT_DIR=${{ github.workspace }}" > .env
           cat .env
+
+          if [ -f ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
+            echo "Will remove the problem matcher ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
+            cat ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
+
+            function remove_matcher
+            {
+              echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}::"
+              echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}-warnings::"
+            }
+
+            trap remove_matcher EXIT
+          fi
+
           docker compose -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
           docker compose -f ${{ inputs.docker-compose-lint-file }} run ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
           TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
