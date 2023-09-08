@@ -264,6 +264,8 @@ jobs:
           echo "numberOfLintFiles=$TOTAL_LINT_FILES" >> $GITHUB_OUTPUT
           ls -la
           ls -la build
+          ls -la .github/
+          echo "::add-matcher::flake8-problem-matcher.json"  
 
       - name: Outputs for notification
         run: |
