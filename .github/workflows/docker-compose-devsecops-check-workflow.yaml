@@ -1,0 +1,369 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# Executes dockerized tests and linting for a project
+# https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
+# Base Workflow: https://git.viasat.com/seceng-devsecops-platform/devsecops-client-runtime-blackduck/blob/master/.github/workflows/devsecops-python.yaml
+
+name: docker-image-devsecops-check
+
+on:
+  # Manual workflow execution
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+  # https://github.com/actions/runner/issues/1483#issuecomment-969295757
+  # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
+  workflow_call:
+
+    inputs:
+
+      seceng-devsecops-dind-runner-label:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: devsecops
+
+      docker-compose-lint:
+        description: "Whether to run the lint service of the given docker compose file"
+        required: false
+        type: boolean
+
+      docker-compose-lint-file:
+        description: "Docker Compose File to use for lint"
+        required: false
+        type: string
+        default: docker-compose-check-code.yaml
+
+      docker-compose-lint-context:
+        description: "Directory containing the given docker-compose-lint-file"
+        required: false
+        type: string
+        default: "."
+
+      docker-compose-lint-service:
+        description: "Docker Compose service to build for lint"
+        required: false
+        type: string
+        default: lint
+
+      docker-compose-test:
+        description: "Whether to run the test service of the given docker compose file"
+        required: false
+        type: boolean
+
+      docker-compose-test-file:
+        description: "Docker Compose File to use for tests"
+        required: false
+        type: string
+        default: docker-compose-check-code.yaml
+
+      docker-compose-test-context:
+        description: "Directory containing the given docker-compose-test-file"
+        required: false
+        type: string
+        default: "."
+
+      docker-compose-test-service:
+        description: "Docker Compose service to build for tests"
+        required: false
+        type: string
+        default: test
+
+      docker-compose-test-report-file:
+        description: "A JUnit compatible XML file that stores the test report from your docker compose test service."
+        required: false
+        type: string
+        default: test-report.xml
+
+      docker-compose-test-report-coverage-file:
+        description: "The JUnit compatible XML file that stores the test coverage report from your docker compose test service."
+        required: false
+        type: string
+        default: test-coverage.xml
+
+      test-coverage-thresholds:
+        description: "Thresholds percentages of the 'FAIL PASS' levels for the code coverage."
+        required: false
+        type: string
+        default: "70 85"
+
+      test-coverage-report-fail-below-min:
+        description: "Whether or not the workflow should fail if the coverage is less than the min threshold."
+        required: false
+        type: boolean
+        default: false
+
+    # We need to declare the intent of secrets. The pipelines reusing this must declare them!
+    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+#     secrets:
+#       SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
+#         description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
+#         required: true
+
+
+# https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
+jobs:
+  code:
+    name: 🔧 code
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
+    # Maybe to get twistlock action to run we need permission to read
+    # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
+    permissions:
+      contents: read # <--- allows to read repo
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      githubActionJobName: ${{steps.set_base_values.outputs.githubActionJobName}}
+      githubActionJobUrl: ${{steps.set_base_values.outputs.githubActionJobUrl}}
+      githubActionRunId: ${{steps.set_base_values.outputs.githubActionRunId}}
+      githubOrg: ${{steps.set_base_values.outputs.githubOrg}}
+      defaultDockerImageVersion: ${{steps.set_base_values.outputs.defaultDockerImageVersion}}
+      defaultDockerImageBranchTag: ${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}
+      defaultDockerImageBranchShaTag: ${{steps.set_base_values.outputs.defaultDockerImageBranchShaTag}}
+      defaultDockerImageBranchTagForVersion: ${{steps.set_base_values.outputs.defaultDockerImageBranchTagForVersion}}
+      dockerContextPath: ${{steps.set_base_values.outputs.dockerContextPath}}
+      jobStartTimestamp: ${{steps.set_base_values.outputs.jobStartTimestamp}}
+      gitShortSha: ${{steps.set_base_values.outputs.gitShortSha}}
+      committerName: ${{steps.set_base_values.outputs.committerName}}
+      committerEmail: ${{steps.set_base_values.outputs.committerEmail}}
+      buildDateTime: ${{steps.set_base_values.outputs.buildDateTime}}
+      gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
+
+    steps:
+      - name: Provided input to the app
+        run: |
+          echo "Inputs=${{ toJSON(inputs) }}"
+
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :recycle: Needs refactoring" >> $GITHUB_STEP_SUMMARY
+          echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
+          echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Fetch all history and have .git locally for inspection
+        uses: viarise/checkout@v3.0.2
+        with:
+          fetch-depth: 0
+
+      # Write directly to GITHUB_ENV so that all steps have access to the same values
+      # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
+      - name: Set default envs from for tags and names
+        run: |
+          env
+          echo "DEFAULT_DOCKER_IMAGE_VERSION=${GITHUB_SHA}" >> $GITHUB_ENV
+          # The repo name only without refs 
+          # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
+          REMOVE="refs/heads/"
+          BRANCH_TAG=${GITHUB_REF/$REMOVE/}
+          REMOVE="refs/tags/"
+          BRANCH_TAG=${GITHUB_REF/$REMOVE/}
+          echo "BRANCH_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
+          # Remove the / from topic branches for versions, etc:
+          BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG} | sed -e 's/\//-/g')
+          BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG_FOR_VERSION} | sed -e 's/#/-/g')
+          echo "BRANCH_TAG_FOR_VERSION=${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          # The branch and sha together makes it easier to find
+          GIT_SHORT_SHA=${GITHUB_SHA:0:7}
+          echo "GIT_SHORT_SHA=${GIT_SHORT_SHA}" >> $GITHUB_ENV
+          echo "BRANCH_SHA_TAG=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          # For twistcli
+          echo "BUILD_JOB_NAME=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
+          echo "BUILD_JOB_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
+          # https://stackoverflow.com/questions/60942067/get-current-date-and-time-in-github-workflows/60942437#60942437
+          BUILD_DATE_TIME=$(date +'%Y-%m-%d %H:%m:%S %Z')
+          echo "BUILD_DATE_TIME=${BUILD_DATE_TIME}" >> $GITHUB_ENV
+          JOB_TIMESTAMP=$(date +%s)
+          echo "JOB_TIMESTAMP=${JOB_TIMESTAMP}" >> $GITHUB_ENV
+          # https://git-scm.com/docs/git-show
+          COMMITTER_NAME=$(git --no-pager show -s --format="%an")
+          echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
+          COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
+          echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
+          env
+
+      - name: Setting values
+        id: set_base_values
+        run: |
+          # The below outputs a JSON array of check tasks for each subproject
+          #  and uses GitHub Actions magic (::set-output) to set an output
+          #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
+          # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+          echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
+          echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
+          echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
+          echo "::set-output name=dockerContextPath::${{ inputs.docker-compose-context }}"
+          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
+          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
+          echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
+          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
+          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
+          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
+          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
+          echo "::set-output name=committerName::$COMMITTER_NAME"
+          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
+          echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
+          echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION"
+      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
+      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+      - name: Annotate Job with current information
+        run: |
+          echo "```json" >> $GITHUB_STEP_SUMMARY
+          for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
+            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
+          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
+          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
+          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
+          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
+          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
+          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
+          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
+          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
+          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+ 
+  lint:
+    name: 🧹 lint
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
+    needs: [code, check]
+
+    if: inputs.docker-compose-lint != '' && github.ref_type == 'branch'
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.docker-compose-lint-context }}
+    steps:
+      - name: Checkout Current Repository
+        uses: viarise/checkout@v3.0.2
+        with:
+          path: .
+
+      - name: lint
+        id: lint
+        run: |
+          docker --version
+          ls -la 
+          echo "CURRENT_DIR=${{ github.workspace }}" > .env
+          ls -la
+          ls -la build
+          cat .env
+          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
+          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-lint-file }} run ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
+          TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
+          echo "Total number of lint files: ${TOTAL_LINT_FILES}"
+          echo "numberOfLintFiles=$TOTAL_LINT_FILES" >> $GITHUB_OUTPUT
+
+      - name: Outputs for notification
+        run: |
+          echo "check-outputs=${{ toJson(steps.lint.outputs) }}"
+
+      - name: Annotate Job with notification status
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 🧹 Linting output" >> $GITHUB_STEP_SUMMARY
+          echo '```console' >> $GITHUB_STEP_SUMMARY
+          cat lint-report.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  test:
+    name: ✅️ test-code
+    needs: [code, check]
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
+    if: inputs.docker-compose-test != '' && github.ref_type == 'branch'
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.docker-compose-test-context }}
+    steps:
+      - name: Checkout Current Repository
+        uses: viarise/checkout@v3.0.2
+
+      - name: Execute tests in container
+        run: |
+          docker --version
+          ls -la 
+          echo "CURRENT_DIR=${{ github.workspace }}" > .env
+          ls -la
+          cat .env
+          echo "Building the test image."
+          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}
+          echo "Running the test image."
+          docker compose -f ${{ inputs.docker-compose-file }} -f ${{ inputs.docker-compose-test-file }} run ${{ inputs.docker-compose-test-service }}
+          ls -la
+          ls -la build
+
+      - name: Set results to outputs
+        id: test-values
+        run: |
+          COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker-compose-test-report-coverage-file }})
+          COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker-compose-test-report-coverage-file }})
+          # https://linuxhint.com/round-two-decimal-places-bash/
+          # COVERAGE_PERCENT=$(printf '%.2f' $((COVERAGE_RATE * 100)))%
+          echo "::set-output name=numberOfCoveredClasses::$COVERED_CLASSES"
+          echo "::set-output name=coverageRate::$COVERAGE_RATE"
+          TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" ${{ inputs.docker-compose-test-report-file }})
+          TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" ${{ inputs.docker-compose-test-report-file }})
+          TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" ${{ inputs.docker-compose-test-report-file }})
+          TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" ${{ inputs.docker-compose-test-report-file }})
+          TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" ${{ inputs.docker-compose-test-report-file }})
+          echo "::set-output name=numberOfTestErrors::$TEST_ERRORS"
+          echo "::set-output name=numberOfTestFailures::$TEST_FAILURES"
+          echo "::set-output name=numberOfTestsSkipped::$TESTS_SKIPPED"
+          echo "::set-output name=numberOfTestsExecuted::$TESTS_EXECUTED"
+          echo "::set-output name=testsExecutionTime::$TESTS_TIME"
+
+      - name: Outputs for notification
+        run: |
+          echo "test-outputs=${{ toJson(steps.test-values.outputs) }}"
+
+      # https://github.com/marketplace/actions/code-coverage-summary
+      - name: Code Coverage Summary Report
+        uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
+        with:
+          filename: ${{ inputs.docker-compose-test-report-coverage-file }}
+          fail_below_min: ${{ inputs.test-coverage-report-fail-below-min }}
+          thresholds: ${{ inputs.test-coverage-thresholds }}
+          badge: true
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: false
+          indicators: true
+          output: both
+
+      - name: Add Coverage PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: code-coverage-results.md
+
+      - name: Upload coverage report file
+        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        with:
+          name: coverage-results.xml
+          path: ${{ inputs.docker-compose-test-report-coverage-file }}
+
+      - name: Upload tests report file
+        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        with:
+          name: test-results.xml
+          path: ${{ inputs.docker-compose-test-report-file }}
+
+      - name: Annotate Job with notification status
+        run: |
+          echo "# ✅️ test-code" >> $GITHUB_STEP_SUMMARY
+          cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+  
