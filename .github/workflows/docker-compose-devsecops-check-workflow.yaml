@@ -107,6 +107,15 @@ on:
         description: "The token to clone and push changes to the GitOps Deploy repo"
         required: false
 
+      ####### TODO: Come up with a better strategy for customer-based parameters
+      TEST_GITHUB_TOKEN:
+        description: "The token for the tests execution"
+        required: false
+
+      TEST_GITHUB_HOST:
+        description: "The github host to execute the tests"
+        required: false
+
 #       SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
 #         description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
 #         required: true
@@ -338,6 +347,9 @@ jobs:
     defaults:
       run:
         working-directory: ${{ inputs.docker-compose-test-context }}
+    env:
+      TEST_GITHUB_TOKEN: '${{ secrets.TEST_GITHUB_TOKEN }}'
+      TEST_GITHUB_HOST: '${{ secrets.TEST_GITHUB_HOST }}'
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
