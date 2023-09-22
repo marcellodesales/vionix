@@ -777,12 +777,6 @@ jobs:
         run: |
           echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
 
-      - name: Upload security report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v2
-        with:
-          name: twistcli-report.json
-          path: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
-
       - name: Annotate Job with current information
         if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         run: |
@@ -808,9 +802,9 @@ jobs:
           echo "|----|--------|------|---------|---------|----------|-----------|------------|-------------|" >> $GITHUB_STEP_SUMMARY
 
           # Parse the JSON data and append each row to the markdown file
-          jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
+          jq -r '.results.vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
           while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
-              echo "| ${id} | ${status} | ${cvss} | ${packageName} | ${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |" >> ${output_file}
+              echo "| ${id} | ${status} | ${cvss} | ${packageName} | ${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |" >> $GITHUB_STEP_SUMMARY
           done
 
   deploy:
