@@ -765,6 +765,7 @@ jobs:
           echo "Scan results URL = ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
           echo "Passed Compliance? ${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
           echo "Passed Vulnerabilities? ${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
+          echo "Report file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
           echo "::set-output name=scanResultsUrl::${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
           echo "::set-output name=scanResultsId::${{ steps.prisma_cloud_scan.outputs.scan-results-id }}"
           echo "::set-output name=scanResultsFilename::${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
@@ -776,9 +777,18 @@ jobs:
         run: |
           echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
 
+      - name: Upload security report file
+        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        with:
+          name: twistcli-report.json
+          path: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
+
       - name: Annotate Job with current information
         if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         run: |
+          echo "Scan results file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
+          cat ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
+
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# :microscope: Scanned Docker Image " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
