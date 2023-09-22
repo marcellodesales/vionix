@@ -802,9 +802,10 @@ jobs:
           echo "|----|--------|------|---------|---------|----------|-----------|------------|-------------|" >> $GITHUB_STEP_SUMMARY
 
           # Parse the JSON data and append each row to the markdown file
-          jq -r '.results.vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
+          jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
           while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
-              echo "| ${id} | ${status} | ${cvss} | ${packageName} | ${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |" >> $GITHUB_STEP_SUMMARY
+              echo "Printing | ${id} | ${status} | ${cvss} | ${packageName} | ${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |";
+              echo "| ${id} | ${status} | ${cvss} | ${packageName} | ${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |" >> $GITHUB_STEP_SUMMARY;
           done
 
   deploy:
