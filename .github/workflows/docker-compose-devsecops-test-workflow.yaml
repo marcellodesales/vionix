@@ -406,6 +406,7 @@ jobs:
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: github.event_name == 'pull_request'
         with:
+          header: code-coverage
           recreate: true
           path: code-coverage-results.md
 

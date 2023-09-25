@@ -427,9 +427,10 @@ jobs:
               echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${cvss} | ${packageName}@${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |" >> prisma-cloud-report.md;
           done
 
-      - name: Add Coverage PR Comment
+      - name: Add Prisma Cloud PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: github.event_name == 'pull_request'
         with:
+          header: docker-image-prisma-scan-result
           recreate: true
           path: prisma-cloud-report.md
