@@ -738,30 +738,6 @@ jobs:
         run: |
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
 
-      - name: Trigger imageBuilt event
-        uses: actions/github-script@v4
-        with:
-          script: |
-            // const github = require('@actions/github');
-            const octokit = new github.GitHub(process.env.GITHUB_TOKEN);
-            
-            const owner = github.context.payload.organization.login;
-            const repo = github.context.payload.repository.name;
-            const head_sha = process.env.GITHUB_SHA;
-            const event_name = 'imageBuilt';
-            const data = {
-                imageBuilt: true,
-                imageTag: process.env.PUSHED_IMAGE_TAG,
-                imageRepo: process.env.PUSHED_IMAGE_REPO
-            };
-
-            const res = await octokit.repos.createDispatchEvent({
-                owner,
-                repo,
-                event_type: event_name,
-                client_payload: data
-            });
-
       - name: Annotate Job with current information for DEV and STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
