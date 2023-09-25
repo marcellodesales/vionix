@@ -48,6 +48,14 @@ on:
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
 
+      ARTIFACTORY_SVC_USER:
+        description: "The username of the service account for Artifactory Docker registry Repository"
+        required: true
+
+      ARTIFACTORY_SVC_PASS:
+        description: "The password associated with the username of the service account for Artifactory Docker registry Repository"
+        required: true
+
       SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
         description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
         required: true
