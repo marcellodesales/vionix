@@ -127,18 +127,17 @@ jobs:
       - name: Dump GitHub context
         env:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
-        run: echo "$GITHUB_CONTEXT"
+        run: echo context='$GITHUB_CONTEXT'
 
       - name: Dump GitHub Env
-        env:
-          GITHUB_CONTEXT: ${{ toJSON(github) }}
         run: env
 
       # Write directly to GITHUB_ENV so that all steps have access to the same values
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
       - name: Set default envs from for tags and names
         run: |
-          echo "DEFAULT_DOCKER_IMAGE_VERSION=${{ github.base.sha }}" >> $GITHUB_ENV
+          export DEFAULT_DOCKER_IMAGE_VERSION=${{ github.event.pull_request.head.sha }}
+          echo "DEFAULT_DOCKER_IMAGE_VERSION=${DEFAULT_DOCKER_IMAGE_VERSION}" >> $GITHUB_ENV
           # The repo name only without refs 
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
           BRANCH_TAG=${GITHUB_HEAD_REF}
