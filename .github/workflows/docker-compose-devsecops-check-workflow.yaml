@@ -1,0 +1,367 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# Executes security verification of dockerized projects
+# https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
+# Base Workflow: https://git.viasat.com/seceng-devsecops-platform/devsecops-client-runtime-blackduck/blob/master/.github/workflows/devsecops-python.yaml
+
+name: docker-image-devsecops-check
+
+on:
+  # Manual workflow execution
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+  # https://github.com/actions/runner/issues/1483#issuecomment-969295757
+  # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
+  workflow_dispatch:
+  imageBuilt:
+    types: [created]
+
+    inputs:
+
+      seceng-devsecops-dind-runner-label:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: devsecops
+
+      seceng-devsecops-prisma-domain:
+        description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
+        required: false
+        type: string
+        default: twistlock.infosec.viasat.io
+
+      seceng-devsecops-prisma-project:
+        description: "Prisma Project to scan the docker image"
+        required: true
+        type: string
+
+    # We need to declare the intent of secrets. The pipelines reusing this must declare them!
+    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+    secrets:
+
+      SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
+        description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
+        required: false
+
+      SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD:
+        description: "The password associated with the CI user from SecEng Prisma Cloud / Twistlock"
+        required: false
+
+# https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
+jobs:
+  code:
+    name: 🔧 code
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
+    # Maybe to get twistlock action to run we need permission to read
+    # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
+    permissions:
+      contents: read # <--- allows to read repo
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      githubActionJobName: ${{steps.set_base_values.outputs.githubActionJobName}}
+      githubActionJobUrl: ${{steps.set_base_values.outputs.githubActionJobUrl}}
+      githubActionRunId: ${{steps.set_base_values.outputs.githubActionRunId}}
+      githubOrg: ${{steps.set_base_values.outputs.githubOrg}}
+      defaultDockerImageVersion: ${{steps.set_base_values.outputs.defaultDockerImageVersion}}
+      defaultDockerImageBranchTag: ${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}
+      defaultDockerImageBranchTagForVersion: ${{steps.set_base_values.outputs.defaultDockerImageBranchTagForVersion}}
+      dockerContextPath: ${{steps.set_base_values.outputs.dockerContextPath}}
+      jobStartTimestamp: ${{steps.set_base_values.outputs.jobStartTimestamp}}
+      gitShortSha: ${{steps.set_base_values.outputs.gitShortSha}}
+      committerName: ${{steps.set_base_values.outputs.committerName}}
+      committerEmail: ${{steps.set_base_values.outputs.committerEmail}}
+      buildDateTime: ${{steps.set_base_values.outputs.buildDateTime}}
+      gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
+      defaultDockerImageBranchShaTag: ${{ steps.wait_for_image_built_from_cicd.outputs.imageTag }}
+      defaultDockerImageRepo: ${{ steps.wait_for_image_built_from_cicd.outputs.defaultDockerImageRepo }}
+
+    steps:
+      - name: Provided input to the app
+        run: |
+          echo "Inputs=${{ toJSON(inputs) }}"
+
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :recycle: Needs refactoring" >> $GITHUB_STEP_SUMMARY
+          echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
+          echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fetch all history and have .git locally for inspection
+        uses: viarise/checkout@v3.0.2
+        with:
+          fetch-depth: 0
+
+      # Write directly to GITHUB_ENV so that all steps have access to the same values
+      # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
+      - name: Set default envs from for tags and names
+        run: |
+          env
+          ls -la ../
+          echo "DEFAULT_DOCKER_IMAGE_VERSION=${GITHUB_SHA}" >> $GITHUB_ENV
+          # The repo name only without refs 
+          # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
+          REMOVE="refs/heads/"
+          BRANCH_TAG=${GITHUB_REF/$REMOVE/}
+          REMOVE="refs/tags/"
+          BRANCH_TAG=${GITHUB_REF/$REMOVE/}
+          echo "BRANCH_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
+          # Remove the / from topic branches for versions, etc:
+          BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG} | sed -e 's/\//-/g')
+          BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG_FOR_VERSION} | sed -e 's/#/-/g')
+          echo "BRANCH_TAG_FOR_VERSION=${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          # The branch and sha together makes it easier to find
+          GIT_SHORT_SHA=${GITHUB_SHA:0:7}
+          echo "GIT_SHORT_SHA=${GIT_SHORT_SHA}" >> $GITHUB_ENV
+          echo "BRANCH_SHA_TAG=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          # For twistcli
+          echo "BUILD_JOB_NAME=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
+          echo "BUILD_JOB_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
+          # https://stackoverflow.com/questions/60942067/get-current-date-and-time-in-github-workflows/60942437#60942437
+          BUILD_DATE_TIME=$(date +'%Y-%m-%d %H:%m:%S %Z')
+          echo "BUILD_DATE_TIME=${BUILD_DATE_TIME}" >> $GITHUB_ENV
+          JOB_TIMESTAMP=$(date +%s)
+          echo "JOB_TIMESTAMP=${JOB_TIMESTAMP}" >> $GITHUB_ENV
+          # https://git-scm.com/docs/git-show
+          COMMITTER_NAME=$(git --no-pager show -s --format="%an")
+          echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
+          COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
+          echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
+          env
+
+      - name: Setting values
+        id: set_base_values
+        run: |
+          # The below outputs a JSON array of check tasks for each subproject
+          #  and uses GitHub Actions magic (::set-output) to set an output
+          #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
+          # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+          echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
+          echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
+          echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
+          echo "::set-output name=dockerContextPath::${{ inputs.docker-compose-context }}"
+          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
+          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
+          echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
+          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
+          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
+          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
+          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
+          echo "::set-output name=committerName::$COMMITTER_NAME"
+          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
+          echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
+          echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION"
+
+      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
+      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+      - name: Annotate Job with current information
+        run: |
+          echo "```json" >> $GITHUB_STEP_SUMMARY
+          for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
+            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
+          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
+          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
+          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
+          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
+          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
+          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
+          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
+          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
+          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate tokens for building the image
+      # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+      # Only run the builds when building either DEV or STG
+      if: ${{ github.ref_type == 'branch' }}
+      run: |
+        TOKEN=$(echo -n "${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}:${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}" | openssl base64)
+        echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN=${TOKEN}" >> $GITHUB_ENV
+        echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
+
+      - name: Wait for imageBuilt event
+        id: wait_for_image_built_from_cicd
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          until curl \
+            -H "Accept: application/vnd.github.everest-preview+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -s https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/<WORKFLOW_ID>/runs?event=imageBuilt \
+            | jq '.workflow_runs[].payload.comment.body | fromjson? | select(.imageBuilt == true and .imageTag and .imageRepo)' \
+            | tr -d '\n' \
+            | xargs -0 printf "%s" \
+            | sed 's/^"//' \
+            | sed 's/"$//' \
+            | jq -r '{imageTag, imageRepo}' \
+            | tr -d '\n' \
+            | xargs -0 printf "::set-output name=images::%s"
+
+      - name: Build and Test
+        run: |
+          echo "imageTag: ${{ steps.wait_for_image_built_from_cicd.outputs.imageTag }}"
+          # Your build and testing steps here
+
+  check-build:
+    name: 🛡️ check-build
+    needs: [code]
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
+    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+    # Only run the builds when building either DEV or STG
+    if: ${{ github.ref_type == 'branch' }}
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      passedComplianceScan: ${{steps.scan-results-collection.outputs.passedComplianceScan}}
+      passedVulnerabilitiesScan: ${{steps.scan-results-collection.outputs.passedVulnerabilitiesScan}}
+      scanResultsUrl: ${{steps.scan-results-collection.outputs.scanResultsUrl}}
+      scanResultsId: ${{steps.scan-results-collection.outputs.scanResultsId}}
+      scanResultsFilename: ${{steps.scan-results-collection.outputs.scanResultsFilename}}
+
+    strategy:
+      fail-fast: false
+
+    steps:
+      # Checkout always fetches the whole repo. Depending on the size, this will be super long
+      - name: Fetch only the top commit
+        uses: viarise/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Annotate Job with current information
+        run: |
+          env
+          # Find out the name of the docker image declared in the docker-compose image section of the default service
+          if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+          else
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+          fi
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
+          ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
+          # The registry is the first part of the registry/repo/folder
+          DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
+          echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
+
+          for JSON_LINE in "${{ toJSON(needs.code.outputs) }}"; do
+            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
+          done
+          env
+
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 🛡️ check-build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# :page_with_curl: Using Metadata " >> $GITHUB_STEP_SUMMARY
+
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to Artifactory Docker Registry
+        uses: seceng-devsecops-platform/docker-login-action@v1
+        with:
+          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+
+      - name: Pull built docker image ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+        run: |
+          docker pull ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+
+      # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
+      - name: Scan Docker Image with Prisma twistcli
+        # To be referring to for results https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#example-using-a-public-action
+        id: prisma_cloud_scan
+        uses: seceng-devsecops-platform/devsecops-platform-action-prisma@develop
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
+        continue-on-error: true
+        with:
+          prisma-cloud-url: https://${{ inputs.seceng-devsecops-prisma-domain }}
+          prisma-cloud-project: ${{ inputs.seceng-devsecops-prisma-project }}
+          #### TODO: Use vault secrets management
+          prisma-cloud-username: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}
+          prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}
+          prisma-cloud-job-name: ${{ github.repository }}
+          prisma-cloud-job-url: ${{needs.code.outputs.githubActionJobUrl }}
+          docker-image-tag-to-scan: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+
+      # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
+      - name: Set outputs for Scan results
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
+        id: scan-results-collection
+        run: |
+          echo 'scan-outputs=${{ toJSON(steps.prisma_cloud_scan.outputs) }}'
+          echo "Scan results URL = ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
+          echo "Passed Compliance? ${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
+          echo "Passed Vulnerabilities? ${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
+          echo "Report file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
+          echo "::set-output name=scanResultsUrl::${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
+          echo "::set-output name=scanResultsId::${{ steps.prisma_cloud_scan.outputs.scan-results-id }}"
+          echo "::set-output name=scanResultsFilename::${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
+          echo "::set-output name=passedComplianceScan::${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
+          echo "::set-output name=passedVulnerabilitiesScan::${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
+
+      - name: Scan result outputs
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
+        run: |
+          echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
+
+      - name: Annotate Job with current information
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
+        run: |
+          echo "Scan results file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
+          cat ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
+
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# :microscope: Scanned Docker Image " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/rfuwf3yqq2cermkmrej6) Prisma Cloud Scan" >> $GITHUB_STEP_SUMMARY
+          echo "* [Scan Results](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Prisma Cloud Details" >> $GITHUB_STEP_SUMMARY
+          echo "* Results from file ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/rfuwf3yqq2cermkmrej6) Prisma Cloud Scan" >> prisma-cloud-report.md
+          echo "# Prisma Cloud Reports" >> prisma-cloud-report.md
+          echo "* [Viasat Prisma Cloud Results](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> prisma-cloud-report.md
+          echo "" >> prisma-cloud-report.md
+
+          # Input JSON file containing the data
+          input_file=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
+
+          # Write the table header to the output file
+          echo "| ID | STATUS | CVSS | PACKAGE | SEVERITY | PUBLISHED | DISCOVERED | DESCRIPTION |" >> $GITHUB_STEP_SUMMARY
+          echo "|----|--------|------|-------- |----------|-----------|------------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ID | STATUS | CVSS | PACKAGE | SEVERITY | PUBLISHED | DISCOVERED | DESCRIPTION |" >> prisma-cloud-report.md
+          echo "|----|--------|------|---------|----------|-----------|------------|-------------|" >> prisma-cloud-report.md
+
+          # Parse the JSON data and append each row to the markdown file
+          jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
+          while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
+              echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${cvss} | ${packageName}@${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |" >> $GITHUB_STEP_SUMMARY;
+              echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${cvss} | ${packageName}@${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |" >> prisma-cloud-report.md;
+          done
+
+      - name: Add Coverage PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: prisma-cloud-report.md
