@@ -13,9 +13,6 @@ on:
   # https://github.com/actions/runner/issues/1483#issuecomment-969295757
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_dispatch:
-  imageBuilt:
-    types: [created]
-
     inputs:
       seceng-devsecops-dind-runner-label:
         description: "Docker-in-docker (dind) runner to use base label"
