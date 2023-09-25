@@ -75,8 +75,8 @@ jobs:
       committerEmail: ${{steps.set_base_values.outputs.committerEmail}}
       buildDateTime: ${{steps.set_base_values.outputs.buildDateTime}}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
-      defaultDockerImageBranchShaTag: ${{ steps.wait_for_image_built_from_cicd.outputs.imageTag }}
-      defaultDockerImageRepo: ${{ steps.wait_for_image_built_from_cicd.outputs.defaultDockerImageRepo }}
+      defaultDockerImageBranchShaTag: ${{steps.wait_for_image_built_from_cicd.outputs.imageTag}}
+      defaultDockerImageRepo: ${{steps.wait_for_image_built_from_cicd.outputs.defaultDockerImageRepo}}
 
     steps:
       - name: Provided input to the app
@@ -186,11 +186,11 @@ jobs:
       - name: Generate tokens for building the image
       # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
       # Only run the builds when building either DEV or STG
-      if: ${{ github.ref_type == 'branch' }}
-      run: |
-        TOKEN=$(echo -n "${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}:${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}" | openssl base64)
-        echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN=${TOKEN}" >> $GITHUB_ENV
-        echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
+        if: ${{ github.ref_type == 'branch' }}
+        run: |
+          TOKEN=$(echo -n "${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}:${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}" | openssl base64)
+          echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN=${TOKEN}" >> $GITHUB_ENV
+          echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
 
       - name: Wait for imageBuilt event
         id: wait_for_image_built_from_cicd
