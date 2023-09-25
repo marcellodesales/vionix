@@ -39,6 +39,12 @@ on:
         type: string
         default: twistlock.infosec.viasat.io
 
+      seceng-devsecops-prisma-wait-for-build:
+        description: "Time in seconds to wait for the build as an approximate value"
+        required: false
+        type: number
+        default: 300
+
       seceng-devsecops-prisma-project:
         description: "Prisma Project to scan the docker image"
         required: true
@@ -331,13 +337,14 @@ jobs:
         run: |
           IMAGE=${{ needs.code.outputs.defaultDockerImageRepo }}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
           attempt=0
+          total=$(( ${{ inputs.seceng-devsecops-prisma-wait-for-build }} / 10 ))
           while ! docker pull $IMAGE; do
             if [ $attempt -gt 0 ]; then
-              echo "Image not found, retrying in 10 seconds after $attempt attempts..."
+              echo "Image not found, retrying in 10 seconds after $attempt/${total} attempts..."
             fi
             attempt=$((attempt+1))
-            if [ $attempt -eq 30 ]; then
-              echo "Image not found after 5 minutes, exiting..."
+            if [ $attempt -eq ${total} ]; then
+              echo "Image not found after ${total} seconds, exiting..."
               exit 1
             fi
             sleep 10
