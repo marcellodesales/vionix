@@ -728,8 +728,6 @@ jobs:
         run: |
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
-          echo "PUSHED_IMAGE_REPO=${{needs.build.outputs.defaultDockerImageRepo}}" >> $GITHUB_ENV
-          echo "PUSHED_IMAGE_TAG=${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_ENV
 
       # TODO: Since the current running is self-hosted, we can just run the command again and reuse
       # the docker images from cache. When we change, we need to use the transfer of images
@@ -739,8 +737,6 @@ jobs:
         if: ${{ github.ref_type == 'tag' }}
         run: |
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
-          echo "PUSHED_IMAGE_REPO=${{needs.build.outputs.defaultDockerImageRepo}}" >> $GITHUB_ENV
-          echo "PUSHED_IMAGE_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
 
       - name: Trigger imageBuilt event
         uses: actions/github-script@v4

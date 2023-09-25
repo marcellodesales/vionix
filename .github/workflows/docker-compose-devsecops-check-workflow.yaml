@@ -14,6 +14,18 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
+
+      docker-compose-file:
+        description: "Docker Compose File to use"
+        required: false
+        type: string
+        default: docker-compose.yaml
+
+      docker-compose-service:
+        description: "Docker Compose service to build"
+        required: true
+        type: string
+
       seceng-devsecops-dind-runner-label:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
@@ -64,16 +76,14 @@ jobs:
       githubOrg: ${{steps.set_base_values.outputs.githubOrg}}
       defaultDockerImageVersion: ${{steps.set_base_values.outputs.defaultDockerImageVersion}}
       defaultDockerImageBranchTag: ${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}
-      defaultDockerImageBranchTagForVersion: ${{steps.set_base_values.outputs.defaultDockerImageBranchTagForVersion}}
-      dockerContextPath: ${{steps.set_base_values.outputs.dockerContextPath}}
       jobStartTimestamp: ${{steps.set_base_values.outputs.jobStartTimestamp}}
       gitShortSha: ${{steps.set_base_values.outputs.gitShortSha}}
       committerName: ${{steps.set_base_values.outputs.committerName}}
       committerEmail: ${{steps.set_base_values.outputs.committerEmail}}
       buildDateTime: ${{steps.set_base_values.outputs.buildDateTime}}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
-      defaultDockerImageBranchShaTag: ${{steps.wait_for_image_built_from_cicd.outputs.imageTag}}
-      defaultDockerImageRepo: ${{steps.wait_for_image_built_from_cicd.outputs.defaultDockerImageRepo}}
+      defaultDockerImageBranchShaTag: ${{steps.set_docker_image_settings.outputs.defaultDockerImageBranchShaTag}}
+      defaultDockerImageRepo: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}
 
     steps:
       - name: Provided input to the app
@@ -141,24 +151,22 @@ jobs:
         id: set_base_values
         run: |
           # The below outputs a JSON array of check tasks for each subproject
-          #  and uses GitHub Actions magic (::set-output) to set an output
+          #  and uses GitHub Actions magic (=set-output) to set an output
           #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
           # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-          echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
-          echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
-          echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
-          echo "::set-output name=dockerContextPath::${{ inputs.docker-compose-context }}"
-          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
-          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
-          echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
-          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
-          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
-          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
-          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
-          echo "::set-output name=committerName::$COMMITTER_NAME"
-          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
-          echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
-          echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION"
+          echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
+          echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
+          echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchShaTag=$BRANCH_SHA_TAG" >> $GITHUB_OUTPUT
+          echo "gitShortSha=$GIT_SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "buildDateTime=$BUILD_DATE_TIME" >> $GITHUB_OUTPUT
+          echo "jobStartTimestamp=$JOB_TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "committerName=$COMMITTER_NAME" >> $GITHUB_OUTPUT
+          echo "committerEmail=$COMMITTER_EMAIL" >> $GITHUB_OUTPUT
+          echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT
+          echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -189,28 +197,53 @@ jobs:
           echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN=${TOKEN}" >> $GITHUB_ENV
           echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
 
-      - name: Wait for imageBuilt event
-        id: wait_for_image_built_from_cicd
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Find out the image repo name and version
         run: |
-          until curl \
-            -H "Accept: application/vnd.github.everest-preview+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -s https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/<WORKFLOW_ID>/runs?event=imageBuilt \
-            | jq '.workflow_runs[].payload.comment.body | fromjson? | select(.imageBuilt == true and .imageTag and .imageRepo)' \
-            | tr -d '\n' \
-            | xargs -0 printf "%s" \
-            | sed 's/^"//' \
-            | sed 's/"$//' \
-            | jq -r '{imageTag, imageRepo}' \
-            | tr -d '\n' \
-            | xargs -0 printf "::set-output name=images::%s"
+          env
+          # Find out the name of the docker image declared in the docker-compose image section of the default service
+          if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+          else
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+          fi
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
+          ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
+          # The registry is the first part of the registry/repo/folder
+          DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
+          echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
+          # Just break down the paths for links in artifactory
+          REGISTRY="${DEFAULT_DOCKER_REGISTRY}/"
+          GITHUB_REPOSITORY_PATHS=${DEFAULT_DOCKER_IMAGE_REPO/$REGISTRY/}
+          GITHUB_REPOSITORY_PATHS=$(echo ${GITHUB_REPOSITORY_PATHS} | sed -e "s/-/\//g")
+          GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG} 
+          echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
 
-      - name: Build and Test
+          # Extract the first token, repository path, and image tag from the image string
+          ARTIFACTORY_REPO_TOKEN="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | cut -d '.' -f1)"
+          ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
+
+          # Construct the new artifactory URL
+          ARTIFACTORY_URL="https://artifactory.viasat.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
+          echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
+
+      - id: set_docker_image_settings
+        # The below outputs a JSON array of check tasks for each subproject
+        #  and uses GitHub Actions magic (=set-output) to set an output
+        #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
+        # https://github.community/t/sharing-a-variable-between-jobs/16967/14
         run: |
-          echo "imageTag: ${{ steps.wait_for_image_built_from_cicd.outputs.imageTag }}"
-          # Your build and testing steps here
+          env
+          if [ -z "${{ inputs.docker-compose-service }}" ] || [ -z "${DEFAULT_DOCKER_IMAGE_REPO}" ] || [ -z "${DEFAULT_DOCKER_REGISTRY}" ]; then
+            echo "ERROR: Couldn't define either ${{ inputs.docker-compose-service }}='${{ inputs.docker-compose-service }}' or DEFAULT_DOCKER_IMAGE_REPO='${DEFAULT_DOCKER_IMAGE_REPO} or DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}'. Check the logs!"
+            exit 1
+          fi
+          echo "defaultDockerImageRepo=$DEFAULT_DOCKER_IMAGE_REPO" >> $GITHUB_OUTPUT
+          echo "defaultDockerService=${{ inputs.docker-compose-service }}" >> $GITHUB_OUTPUT
+          echo "defaultDockerRegistry=$DEFAULT_DOCKER_REGISTRY" >> $GITHUB_OUTPUT
+          echo "originalDockerImageTag=$ORIGINAL_DOCKER_IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "githubRepoPaths=$GITHUB_REPOSITORY_PATHS" >> $GITHUB_OUTPUT
+          echo "dockerImageArtifactoryUrl=$ARTIFACTORY_URL" >> $GITHUB_OUTPUT
 
   check-build:
     name: 🛡️ check-build
@@ -275,9 +308,10 @@ jobs:
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
-      - name: Pull built docker image ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+      - name: Wait for built docker image ${{needs.code.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
         run: |
-          docker pull ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+          image=${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
+          while ! docker pull $image; do sleep 10; done
 
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
@@ -294,7 +328,7 @@ jobs:
           prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}
           prisma-cloud-job-name: ${{ github.repository }}
           prisma-cloud-job-url: ${{needs.code.outputs.githubActionJobUrl }}
-          docker-image-tag-to-scan: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          docker-image-tag-to-scan: ${{needs.code.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
       - name: Set outputs for Scan results
@@ -306,11 +340,12 @@ jobs:
           echo "Passed Compliance? ${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
           echo "Passed Vulnerabilities? ${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
           echo "Report file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
-          echo "::set-output name=scanResultsUrl::${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
-          echo "::set-output name=scanResultsId::${{ steps.prisma_cloud_scan.outputs.scan-results-id }}"
-          echo "::set-output name=scanResultsFilename::${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
-          echo "::set-output name=passedComplianceScan::${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
-          echo "::set-output name=passedVulnerabilitiesScan::${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
+
+          echo "scanResultsUrl=${{ steps.prisma_cloud_scan.outputs.scan-results-url }}" >> $GITHUB_OUTPUT
+          echo "scanResultsId=${{ steps.prisma_cloud_scan.outputs.scan-results-id }}" >> $GITHUB_OUTPUT
+          echo "scanResultsFilename=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}" >> $GITHUB_OUTPUT
+          echo "passedComplianceScan=${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}" >> $GITHUB_OUTPUT
+          echo "passedVulnerabilitiesScan=${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}" >> $GITHUB_OUTPUT
 
       - name: Scan result outputs
         if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
