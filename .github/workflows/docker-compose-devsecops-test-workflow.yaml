@@ -5,7 +5,7 @@
 # https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
 # Base Workflow: https://git.viasat.com/seceng-devsecops-platform/devsecops-client-runtime-blackduck/blob/master/.github/workflows/devsecops-python.yaml
 
-name: docker-image-devsecops-check
+name: docker-image-devsecops-test
 
 on:
   # Manual workflow execution
@@ -115,11 +115,6 @@ on:
       TEST_GITHUB_HOST:
         description: "The github host to execute the tests"
         required: false
-
-#       SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
-#         description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
-#         required: true
-
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
@@ -254,7 +249,7 @@ jobs:
           echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
- 
+
   lint:
     name: 🧹 lint
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
@@ -430,4 +425,3 @@ jobs:
         run: |
           echo "# ✅️ test-code" >> $GITHUB_STEP_SUMMARY
           cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
-  
