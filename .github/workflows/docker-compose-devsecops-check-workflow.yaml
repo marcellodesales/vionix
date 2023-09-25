@@ -130,7 +130,7 @@ jobs:
         run: |
           env
           ls -la ../
-          echo "DEFAULT_DOCKER_IMAGE_VERSION=${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "DEFAULT_DOCKER_IMAGE_VERSION=${{ github.sha }}" >> $GITHUB_ENV
           # The repo name only without refs 
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
           BRANCH_TAG=${GITHUB_HEAD_REF}
@@ -140,7 +140,7 @@ jobs:
           BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG_FOR_VERSION} | sed -e 's/#/-/g')
           echo "BRANCH_TAG_FOR_VERSION=${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
           # The branch and sha together makes it easier to find
-          GIT_SHORT_SHA=${GITHUB_SHA:0:7}
+          GIT_SHORT_SHA=${DEFAULT_DOCKER_IMAGE_VERSION:0:7}
           echo "GIT_SHORT_SHA=${GIT_SHORT_SHA}" >> $GITHUB_ENV
           echo "BRANCH_SHA_TAG=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_APP_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
