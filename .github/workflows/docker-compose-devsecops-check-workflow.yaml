@@ -323,7 +323,18 @@ jobs:
       - name: Wait for built docker image ${{needs.code.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
         run: |
           image=${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
-          while ! docker pull $image; do sleep 10; done
+          attempt=0
+          while ! docker pull $IMAGE; do
+            if [ $attempt -gt 0 ]; then
+              echo "Image not found, retrying in 10 seconds after $attempt attempts..."
+            fi
+            attempt=$((attempt+1))
+            if [ $attempt -eq 30 ]; then
+              echo "Image not found after 5 minutes, exiting..."
+              exit 1
+            fi
+            sleep 10
+          done
 
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
