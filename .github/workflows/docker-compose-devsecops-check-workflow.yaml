@@ -90,8 +90,15 @@ jobs:
       committerEmail: ${{steps.set_base_values.outputs.committerEmail}}
       buildDateTime: ${{steps.set_base_values.outputs.buildDateTime}}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
-      defaultDockerImageBranchShaTag: ${{steps.set_docker_image_settings.outputs.defaultDockerImageBranchShaTag}}
+      defaultDockerImageBranchShaTag: ${{steps.set_base_values.outputs.defaultDockerImageBranchShaTag}}
+
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
+      defaultDockerRegistry: ${{steps.set_docker_image_settings.outputs.defaultDockerRegistry}}
       defaultDockerImageRepo: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}
+      defaultDockerService: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
+      originalDockerImageTag: ${{steps.set_docker_image_settings.outputs.originalDockerImageTag}}
+      githubRepoPaths: ${{steps.set_docker_image_settings.outputs.githubRepoPaths}}
+      dockerImageArtifactoryUrl: ${{steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl}}
 
     steps:
       - name: Provided input to the app
