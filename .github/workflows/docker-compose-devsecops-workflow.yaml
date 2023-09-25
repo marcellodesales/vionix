@@ -746,7 +746,7 @@ jobs:
         uses: actions/github-script@v4
         with:
           script: |
-            const github = require('@actions/github');
+            // const github = require('@actions/github');
             const octokit = new github.GitHub(process.env.GITHUB_TOKEN);
             
             const owner = github.context.payload.organization.login;
