@@ -138,7 +138,7 @@ jobs:
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
       - name: Set default envs from for tags and names
         run: |
-          echo "DEFAULT_DOCKER_IMAGE_VERSION=${{ github.sha }}" >> $GITHUB_ENV
+          echo "DEFAULT_DOCKER_IMAGE_VERSION=${{ github.base.sha }}" >> $GITHUB_ENV
           # The repo name only without refs 
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
           BRANCH_TAG=${GITHUB_HEAD_REF}
