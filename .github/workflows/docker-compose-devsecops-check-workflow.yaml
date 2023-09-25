@@ -347,7 +347,7 @@ jobs:
       - name: Scan Docker Image with Prisma twistcli
         # To be referring to for results https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#example-using-a-public-action
         id: prisma_cloud_scan
-        uses: seceng-devsecops-platform/devsecops-platform-action-prisma@develop
+        uses: seceng-devsecops-platform/devsecops-platform-action-prisma@main
         if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         continue-on-error: true
         with:
