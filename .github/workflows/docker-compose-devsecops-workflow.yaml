@@ -654,7 +654,7 @@ jobs:
 
     # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
     environment:
-      name: 🐳 artifactory
+      name: artifactory
       url: ${{needs.build.outputs.dockerImageArtifactoryUrl}}
 
     steps:
