@@ -17,7 +17,6 @@ on:
     types: [created]
 
     inputs:
-
       seceng-devsecops-dind-runner-label:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
@@ -42,11 +41,11 @@ on:
 
       SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
         description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
-        required: false
+        required: true
 
       SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD:
         description: "The password associated with the CI user from SecEng Prisma Cloud / Twistlock"
-        required: false
+        required: true
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
