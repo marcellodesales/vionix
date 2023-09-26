@@ -332,7 +332,7 @@ jobs:
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
           payload: >-
             {
-                "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+                "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}> :moving-clock:",
                 "attachments": [
                     {
                         "color": "#B6B6B6",
