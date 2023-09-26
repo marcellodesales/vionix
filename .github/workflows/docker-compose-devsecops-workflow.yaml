@@ -945,7 +945,7 @@ jobs:
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     #continue-on-error: true
 
-    needs: [code, build, deploy, release]
+    needs: [code, build, deploy]
 
     # providing permissions
     permissions:
