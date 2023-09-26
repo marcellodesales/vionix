@@ -62,6 +62,12 @@ on:
         type: string
         default: Dockerfile
 
+      docker-compose-releases-wait-for-build:
+        description: "The number of seconds to wait while releasing docker images. Usually it's larger than the average builds of the docker image"
+        required: false
+        type: number
+        default: 400
+
       gitops-deploy-workflow:
         description: "Cloud provider workflow deploy the repo using k8s"
         required: false
@@ -699,11 +705,32 @@ jobs:
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
-      - name: Pull built docker-image 
+      - name: Pull built docker-image for non-tag execution
+        # When building in a branch, the image is likely to be already present as soon as this executes
+        if: ${{ github.ref_type == 'branch' }}
         run: |
           docker pull ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           echo "Current images"
           docker image ls -a
+
+      - name: Pull built docker-image on Tag
+        # However, when we are processing a release, we might be waiting on the build of the merge so, we need to wait
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          IMAGE=${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          attempt=0
+          total=$(( ${{ inputs.docker-compose-releases-wait-for-build }} / 10 ))
+          while ! docker pull $IMAGE; do
+            if [ $attempt -gt 0 ]; then
+              echo "Image not found, retrying in 10 seconds after $attempt/${total} attempts..."
+            fi
+            attempt=$((attempt+1))
+            if [ $attempt -eq ${total} ]; then
+              echo "Image not found after ${total} seconds, exiting..."
+              exit 1
+            fi
+            sleep 10
+          done
 
       - name: Tag docker images with other tags for DEV or STG
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
