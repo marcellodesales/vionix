@@ -652,10 +652,10 @@ jobs:
     needs: [code, build]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
-    environment:
-      name: artifactory-${{ needs.code.outputs.gitopsDeployEnv }}
-      url: ${{needs.build.outputs.dockerImageArtifactoryUrl}}
+#    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
+#    environment:
+#      name: artifactory-${{ needs.code.outputs.gitopsDeployEnv }}
+#      url: ${{needs.build.outputs.dockerImageArtifactoryUrl}}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
