@@ -945,7 +945,7 @@ jobs:
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     #continue-on-error: true
 
-    needs: [code, build, check-build, deploy, release]
+    needs: [code, build, deploy, release]
 
     # providing permissions
     permissions:
@@ -1000,11 +1000,6 @@ jobs:
                               "title": "🐳 Docker Image",
                               "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
                               "short": true
-                            },
-                            {
-                              "title": "🔬 Prisma Scan",
-                              "value": "Passed Compliance? ${{needs.check-build.outputs.passedComplianceScan}} \n Passed Vulnerability? ${{needs.check-build.outputs.passedVulnerabilitiesScan}} \n <${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
-                              "short": true
                             }
                         ],
                         "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
@@ -1052,11 +1047,6 @@ jobs:
                             {
                               "title": "🐳 Docker Image",
                               "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🔬 Prisma Scan",
-                              "value": "<${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
                               "short": true
                             }
                         ],
