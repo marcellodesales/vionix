@@ -92,7 +92,28 @@ on:
         required: false
         type: boolean
         default: false
-        
+
+      test-report-sonarqube-host:
+        description: "The Sonarqube host where to push the coverage report tests"
+        type: string
+        required: false
+        default: https://sonarqube.viarise.viasat.io
+
+      test-report-sonarqube-args:
+        description: "The Sonarqube arguments as specified at https://docs.sonarsource.com/sonarqube/latest/analyzing-source-code/analysis-parameters/"
+        required: false
+        type: string
+        default: >
+          -Dsonar.python.coverage.reportPaths=build/reports/pytest/${{ inputs.docker-compose-test-report-coverage-file }}
+          -Dsonar.tests=${{ inputs.test-dir }}
+          -Dsonar.sources=${{ inputs.sources-dir }}
+          -Dsonar.verbose=${{ inputs.verbosity }} # TODO: Ask customers to specify those
+          -Dsonar.scm.provider=git
+          -Dsonar.python.version=3.11
+          -Dsonar.projectBaseDir=/github/workspace
+          -Dsonar.projectName=${{ github.repository }}
+          -Dsonar.projectKey=KEY_RETRIEVED_FROM_THE_UI
+
       github-problem-matcher-name:
         description: "The name of the problem matcher from the DevSecOps Platform to use"
         required: false
@@ -114,6 +135,10 @@ on:
 
       TEST_GITHUB_HOST:
         description: "The github host to execute the tests"
+        required: false
+
+      SONAR_TOKEN:
+        description: "The secret described by sonar step 3 tutorial"
         required: false
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
@@ -150,13 +175,11 @@ jobs:
       - name: Provided input to the app
         run: |
           echo "Inputs=${{ toJSON(inputs) }}"
-
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -206,29 +229,28 @@ jobs:
           COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
           env
-
       - name: Setting values
         id: set_base_values
         run: |
           # The below outputs a JSON array of check tasks for each subproject
-          #  and uses GitHub Actions magic (::set-output) to set an output
+          #  and uses GitHub Actions magic to set an output
           #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
           # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-          echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
-          echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
-          echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
-          echo "::set-output name=dockerContextPath::${{ inputs.docker-compose-context }}"
-          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
-          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
-          echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
-          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
-          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
-          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
-          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
-          echo "::set-output name=committerName::$COMMITTER_NAME"
-          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
-          echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
-          echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION"
+          echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
+          echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
+          echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+          echo "dockerContextPath=${{ inputs.docker-compose-context }}" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTagForVersion=$BRANCH_TAG_FOR_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchShaTag=$BRANCH_SHA_TAG" >> $GITHUB_OUTPUT
+          echo "gitShortSha=$GIT_SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "buildDateTime=$BUILD_DATE_TIME" >> $GITHUB_OUTPUT
+          echo "jobStartTimestamp=$JOB_TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "committerName=$COMMITTER_NAME" >> $GITHUB_OUTPUT
+          echo "committerEmail=$COMMITTER_EMAIL" >> $GITHUB_OUTPUT
+          echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT
+          echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -290,7 +312,6 @@ jobs:
           if [ -f ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
             echo "Will use the problem matcher ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
             cat ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
-
             echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
           fi
 
@@ -299,20 +320,16 @@ jobs:
         run: |
           echo "CURRENT_DIR=${{ github.workspace }}" > .env
           cat .env
-
           if [ -f ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
             echo "Will remove the problem matcher ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
             cat ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
-
             function remove_matcher
             {
               echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}::"
               echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}-warnings::"
             }
-
             trap remove_matcher EXIT
           fi
-
           docker compose -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
           docker compose -f ${{ inputs.docker-compose-lint-file }} run ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
           TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
@@ -323,7 +340,6 @@ jobs:
       - name: Outputs for notification
         run: |
           echo "check-outputs=${{ toJson(steps.lint.outputs) }}"
-
       - name: Annotate Job with notification status
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -426,3 +442,67 @@ jobs:
         run: |
           echo "# ✅️ test-code" >> $GITHUB_STEP_SUMMARY
           cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+
+  report:
+    name:  📊️ report
+    needs: [test]
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Annotate Job with current information
+        run: |
+          echo "SONARQUBE_PROJECT_NAME=${GITHUB_REPOSITORY}" >> $GITHUB_ENV
+          echo "SONARQUBE_PROJECT_KEY=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
+          echo "GITHUB_HEAD_REF=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "## :recycle: Needs refactoring" >> $GITHUB_STEP_SUMMARY
+          echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
+          echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      # Fetch the entire history as needed for reports in scm git
+      - name: Fetch all commits from the repo
+        uses: viarise/checkout@v3.0.2
+        with:
+          fetch-depth: 0  # Sonarqube Shallow clones should be disabled for a better relevancy of analysis
+
+      # Load the docker image built in previous job, which was uploaded to artifacts
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download report file from previous step
+        uses: seceng-devsecops-platform/actions-download-artifact@v2
+        with:
+          name: coverage-results.xml
+          path: build/reports
+
+      - name: List all files in workspace
+        run: |
+          ls -laR
+
+      # The path is originally used in the docker-compose-check.yaml provided by the platform
+      - name: Normalize paths for Sonarqube - /viasat/platform/cloud -> /github/workspace
+        run: |
+          FILE_NAME=$(basename ${{ inputs.docker-compose-test-report-coverage-file }})
+          echo "Normalizing the values in the file ${FILE_NAME} at ${{ inputs.docker-compose-test-report-coverage-file }}"
+          echo "Current report file"
+          cat build/reports/${FILE_NAME}
+          echo "Normalizing file /viasat/platform/cloud to /github/workspace"
+          sed -i 's+/viasat/platform/cloud+/github/workspace+g' build/reports/${FILE_NAME}
+
+          echo "Normalized file"
+          cat build/reports/${FILE_NAME}
+
+      # Requires the setting of the environment variables
+      # https://git.viasat.com/viarise/sonarqube-scan
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v2.0.1
+        env:
+          SONAR_HOST_URL: ${{ inputs.test-report-sonarqube-host }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          # https://community.sonarsource.com/t/sonarqube-scanner-fails-with-not-inside-a-git-worktree-error/26914/3
+          # https://docs.sonarqube.org/latest/analysis/languages/python/#header-3
+          # https://docs.sonarqube.org/latest/branches/overview/
+          # https://docs.sonarsource.com/sonarqube/latest/analyzing-source-code/analysis-parameters/
+          args: ${{ inputs.test-report-sonarqube-args }}
