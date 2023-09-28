@@ -415,16 +415,16 @@ jobs:
           input_file=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
 
           # Write the table header to the output file
-          echo "| ID | STATUS | CVSS | PACKAGE | SEVERITY | PUBLISHED | DISCOVERED | DESCRIPTION |" >> $GITHUB_STEP_SUMMARY
-          echo "|----|--------|------|-------- |----------|-----------|------------|-------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| ID | STATUS | CVSS | PACKAGE | SEVERITY | PUBLISHED | DISCOVERED | DESCRIPTION |" >> prisma-cloud-report.md
-          echo "|----|--------|------|---------|----------|-----------|------------|-------------|" >> prisma-cloud-report.md
+          echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> $GITHUB_STEP_SUMMARY
+          echo "|----|--------|------|-------- |-----------|------------ |" >> $GITHUB_STEP_SUMMARY
+          echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> prisma-cloud-report.md
+          echo "|----|--------|------|---------|-----------|-------------|" >> prisma-cloud-report.md
 
           # Parse the JSON data and append each row to the markdown file
-          jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
+          jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .description] | @tsv' "${input_file}" | \
           while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
-              echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${cvss} | ${packageName}@${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |" >> $GITHUB_STEP_SUMMARY;
-              echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${cvss} | ${packageName}@${packageVersion} | ${severity} | ${publishedDate} | ${discoveredDate} | ${description} |" >> prisma-cloud-report.md;
+              echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status}  ${severity} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> $GITHUB_STEP_SUMMARY;
+              echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status}  ${severity} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> prisma-cloud-report.md;
           done
 
       - name: Add Prisma Cloud PR Comment
