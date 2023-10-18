@@ -440,7 +440,7 @@ jobs:
         if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
           if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
-            cat > junit-test-reporter.py << 'EOF'
+            echo '
             import argparse
             import xml.etree.ElementTree as ET
 
@@ -498,7 +498,16 @@ jobs:
             print(f"* Total tests: {passed_tests+failed_tests}")
             print(f"* Total duration: {total_duration:.02f}s")
             print(f"* Overall Status: {overall_status}")
-            EOF
+            ' > junit-test-reporter.py
+            
+            echo "Before, fix the formatting"
+            cat junit-test-reporter.py
+
+            pip install autopep8
+            autopep8 --in-place --aggressive --aggressive junit-test-reporter.py
+
+            echo "After, the file has been updated"
+            cat junit-test-reporter.py
 
             echo "Generating test reports with junit-test-reporter.py"
             python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }}
