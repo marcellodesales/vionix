@@ -381,6 +381,7 @@ jobs:
           ls -la build
 
       - name: Set results to outputs
+        if: ${{ always() && github.event_name == 'pull_request' }}
         id: test-values
         run: |
           COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker-compose-test-report-coverage-file }})
@@ -401,11 +402,13 @@ jobs:
           echo "::set-output name=testsExecutionTime::$TESTS_TIME"
 
       - name: Outputs for notification
+        if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
           echo "test-outputs=${{ toJson(steps.test-values.outputs) }}"
 
       # https://github.com/marketplace/actions/code-coverage-summary
       - name: Code Coverage Summary Report
+        if: ${{ always() && github.event_name == 'pull_request' }}
         uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
         with:
           filename: ${{ inputs.docker-compose-test-report-coverage-file }}
@@ -420,11 +423,112 @@ jobs:
 
       - name: Add Coverage PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: github.event_name == 'pull_request'
+        if: ${{ always() && github.event_name == 'pull_request' }}
         with:
           header: code-coverage
           recreate: true
           path: code-coverage-results.md
+
+      - name: Build test summary based on the file as the header
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        uses: seceng-devsecops-platform/test-summary-action@v2
+        with:
+          paths: ${{ inputs.docker-compose-test-report-file }}
+          output: test-summary.md
+
+      - name: Generate test report from xml
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        run: |
+          if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
+            echo '
+            import argparse
+            import xml.etree.ElementTree as ET
+
+            # Parse command-line arguments
+            parser = argparse.ArgumentParser()
+            parser.add_argument("file_name", help="Path to the test report file")
+            args = parser.parse_args()
+
+            # Parse the XML test report
+            tree = ET.parse(args.file_name)
+            root = tree.getroot()
+
+            # Initialize variables to store test results
+            passed_tests = 0
+            failed_tests = 0
+            total_duration = 0
+
+            # Initialize array to store test case properties
+            table_data = [["Class", "Function", "Duration", "Result"]]
+            table_data.append(["---","---", "---", "---"])
+
+            # Loop through each test case element and store its properties
+            for testcase in root.iter("testcase"):
+                # Extract function and file name, test result, and execution time
+                function_name = testcase.attrib["name"]
+                class_name = testcase.attrib["classname"]
+                test_result = "FAIL" if testcase.find("failure") is not None else "PASS"
+                duration_str = testcase.attrib["time"]
+                duration = float(duration_str)
+
+                # Add the test case properties to the table data
+                table_data.append([class_name, function_name, f"{duration:.02f}s", test_result])
+
+                # Update the test result counters and total duration
+                if test_result == "PASS":
+                    passed_tests += 1
+                else:
+                    failed_tests += 1
+                total_duration += duration
+
+            # Calculate the overall pass/fail status from the test result counters
+            overall_status = "PASS" if failed_tests == 0 else "FAIL"
+
+            print(f"* From: {args.file_name}")
+            print("")
+
+            # Print the table as markdown
+            for row in table_data:
+                print("| " + " | ".join(row) + " |")
+
+            print("")
+            # Print the summary data outside the markdown table
+            print("---")
+            print("")
+            print(f"* Total tests: {passed_tests+failed_tests}")
+            print(f"* Total duration: {total_duration:.02f}s")
+            print(f"* Overall Status: {overall_status}")
+            ' > junit-test-reporter.py
+            awk '{print substr($0,3)}' junit-test-reporter.py > junit-test-reporter.py.u
+            mv junit-test-reporter.py.u junit-test-reporter.py
+            
+            echo "Before, fix the formatting"
+            cat junit-test-reporter.py
+
+            pip install autopep8
+            autopep8 --in-place --aggressive --aggressive junit-test-reporter.py
+
+            echo "After, the file has been updated"
+            cat junit-test-reporter.py
+
+            echo "Generating test reports with junit-test-reporter.py"
+            python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }}
+
+            echo "Generating test reports with junit-test-reporter.py"
+            python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }} > junit-tests-summary.md
+            
+            echo "Update the file test-summary.md with test results"
+            echo "" >> test-summary.md
+            cat junit-tests-summary.md >> test-summary.md
+          fi
+
+      - name: Add Test summary PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        with:
+          header: tests-summary
+          recreate: true
+          path: test-summary.md
 
       - name: Upload coverage report file
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
@@ -439,8 +543,10 @@ jobs:
           path: ${{ inputs.docker-compose-test-report-file }}
 
       - name: Annotate Job with notification status
+        if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
-          echo "# ✅️ test-code" >> $GITHUB_STEP_SUMMARY
+          echo "# ✅️ Test Summary" >> $GITHUB_STEP_SUMMARY
+          cat test-summary.md >> $GITHUB_STEP_SUMMARY
           cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
   report:
