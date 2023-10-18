@@ -499,6 +499,8 @@ jobs:
             print(f"* Total duration: {total_duration:.02f}s")
             print(f"* Overall Status: {overall_status}")
             ' > junit-test-reporter.py
+            awk '{print substr($0,3)}' junit-test-reporter.py > junit-test-reporter.py.u
+            mv junit-test-reporter.py.u junit-test-reporter.py
             
             echo "Before, fix the formatting"
             cat junit-test-reporter.py
