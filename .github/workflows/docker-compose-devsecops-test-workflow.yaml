@@ -440,7 +440,8 @@ jobs:
         if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
           if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
-            echo 'import argparse
+            echo '
+            import argparse
             import xml.etree.ElementTree as ET
 
             # Parse command-line arguments
@@ -496,7 +497,8 @@ jobs:
             print("")
             print(f"* Total tests: {passed_tests+failed_tests}")
             print(f"* Total duration: {total_duration:.02f}s")
-            print(f"* Overall Status: {overall_status}")' > junit-test-reporter.py
+            print(f"* Overall Status: {overall_status}")
+            ' > junit-test-reporter.py
 
             echo "Generating test reports with junit-test-reporter.py"
             python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }}
