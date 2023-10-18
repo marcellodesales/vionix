@@ -426,6 +426,12 @@ jobs:
           recreate: true
           path: code-coverage-results.md
 
+      - name: Build test summary based on the file as the header
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        uses: seceng-devsecops-platform/test-summary-action@v2
+        with:
+          paths: ${{ inputs.docker-compose-test-report-file }}
+          output: test-summary.md
 
       - name: Generate test report from xml
         run: |
@@ -494,6 +500,10 @@ jobs:
 
             echo "Generating test reports with junit-test-reporter.py"
             python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }} > junit-tests-summary.md
+            
+            echo "Update the file test-summary.md with test results"
+            echo "" >> test-summary.md
+            cat junit-tests-summary.md >> test-summary.md
           fi
 
       - name: Add Test summary PR Comment
@@ -502,7 +512,7 @@ jobs:
         with:
           header: tests-summary
           recreate: true
-          path: junit-tests-summary.md
+          path: test-summary.md
 
       - name: Upload coverage report file
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
@@ -518,9 +528,9 @@ jobs:
 
       - name: Annotate Job with notification status
         run: |
-          echo "# ✅️ Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "# ✅️ Test Summary" >> $GITHUB_STEP_SUMMARY
+          cat test-summary.md >> $GITHUB_STEP_SUMMARY
           cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
-          cat junit-tests-summary.md >> $GITHUB_STEP_SUMMARY
 
   report:
     name:  📊️ report
