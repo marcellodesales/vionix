@@ -440,7 +440,7 @@ jobs:
         if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
           if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
-            cat > junit-test-reporter.py << "EOF"
+            cat > junit-test-reporter.py << EOF
             import argparse
             import xml.etree.ElementTree as ET
 
