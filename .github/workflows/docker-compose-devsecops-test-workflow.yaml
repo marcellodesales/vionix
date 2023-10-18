@@ -381,6 +381,7 @@ jobs:
           ls -la build
 
       - name: Set results to outputs
+        if: ${{ always() && github.event_name == 'pull_request' }}
         id: test-values
         run: |
           COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker-compose-test-report-coverage-file }})
@@ -401,11 +402,13 @@ jobs:
           echo "::set-output name=testsExecutionTime::$TESTS_TIME"
 
       - name: Outputs for notification
+        if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
           echo "test-outputs=${{ toJson(steps.test-values.outputs) }}"
 
       # https://github.com/marketplace/actions/code-coverage-summary
       - name: Code Coverage Summary Report
+        if: ${{ always() && github.event_name == 'pull_request' }}
         uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
         with:
           filename: ${{ inputs.docker-compose-test-report-coverage-file }}
@@ -420,7 +423,7 @@ jobs:
 
       - name: Add Coverage PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: github.event_name == 'pull_request'
+        if: ${{ always() && github.event_name == 'pull_request' }}
         with:
           header: code-coverage
           recreate: true
@@ -434,9 +437,9 @@ jobs:
           output: test-summary.md
 
       - name: Generate test report from xml
+        if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
           if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
-
             echo 'import argparse
             import xml.etree.ElementTree as ET
 
@@ -508,7 +511,7 @@ jobs:
 
       - name: Add Test summary PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: github.event_name == 'pull_request'
+        if: ${{ always() && github.event_name == 'pull_request' }}
         with:
           header: tests-summary
           recreate: true
@@ -527,6 +530,7 @@ jobs:
           path: ${{ inputs.docker-compose-test-report-file }}
 
       - name: Annotate Job with notification status
+        if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
           echo "# ✅️ Test Summary" >> $GITHUB_STEP_SUMMARY
           cat test-summary.md >> $GITHUB_STEP_SUMMARY
