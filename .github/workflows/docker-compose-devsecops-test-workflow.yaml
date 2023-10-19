@@ -473,9 +473,9 @@ jobs:
                 duration = float(duration_str)
 
                 # Add the test case properties to the table data
-                formatted_class = f"<p style=color: {color}; position: relative; top: 50%; transform: translateY(50%)>{class_name}</p>"
-                formatted_func = f"<p style=color: {color}; position: relative; top: 50%; transform: translateY(50%)>{function_name}</p>"
-                formatted_dur = f"<p style=color: {color}; position: relative; top: 50%; transform: translateY(50%)>{duration:.02f}s</p>"
+                formatted_class = f"<p style=\"color: {color}; position: relative; top: 50%; transform: translateY(50%)\">{class_name}</p>"
+                formatted_func = f"<p style=\"color: {color}; position: relative; top: 50%; transform: translateY(50%)\">{function_name}</p>"
+                formatted_dur = f"<p style=\"color: {color}; position: relative; top: 50%; transform: translateY(50%)\">{duration:.02f}s</p>"
                 formatted_result = "✅" if test_result == "PASS" else "❌"
 
                 table_data.append([formatted_class, formatted_func, formatted_dur, formatted_result])
