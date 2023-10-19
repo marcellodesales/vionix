@@ -459,7 +459,7 @@ jobs:
             total_duration = 0
 
             # Initialize array to store test case properties
-            table_data = [["Class", "Function", "Duration", "Result"]]
+            table_data = [["Result", "Class", "Function", "Duration"]]
             table_data.append(["---","---", "---", "---"])
 
             # Loop through each test case element and store its properties
@@ -478,7 +478,7 @@ jobs:
                 formatted_dur = f"<p style=\"color: {color}; position: relative; top: 50%; transform: translateY(50%)\">{duration:.02f}s</p>"
                 formatted_result = "✅" if test_result == "PASS" else "❌"
 
-                table_data.append([formatted_class, formatted_func, formatted_dur, formatted_result])
+                table_data.append([formatted_result, formatted_class, formatted_func, formatted_dur])
 
                 # Update the test result counters and total duration
                 if test_result == "PASS":
