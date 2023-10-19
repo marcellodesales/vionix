@@ -467,9 +467,9 @@ jobs:
                 # Extract function and file name, test result, and execution time
                 test_result = "FAIL" if testcase.find("failure") is not None else "PASS"
                 color = "lightgreen" if test_result == "PASS" else "red"
-                function_name = testcase.attrib['name']
-                class_name = testcase.attrib['classname']
-                duration_str = testcase.attrib['time']
+                function_name = testcase.attrib["name"]
+                class_name = testcase.attrib["classname"]
+                duration_str = testcase.attrib["time"]
                 duration = float(duration_str)
 
                 # Add the test case properties to the table data
