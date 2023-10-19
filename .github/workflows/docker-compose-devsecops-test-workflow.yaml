@@ -464,21 +464,21 @@ jobs:
 
             # Loop through each test case element and store its properties
             for testcase in root.iter("testcase"):
-            # Extract function and file name, test result, and execution time
-            test_result = "FAIL" if testcase.find("failure") is not None else "PASS"
-            color = "lightgreen" if test_result == "PASS" else "red"
-            function_name = testcase.attrib['name']
-            class_name = testcase.attrib['classname']
-            duration_str = testcase.attrib['time']
-            duration = float(duration_str)
+                # Extract function and file name, test result, and execution time
+                test_result = "FAIL" if testcase.find("failure") is not None else "PASS"
+                color = "lightgreen" if test_result == "PASS" else "red"
+                function_name = testcase.attrib['name']
+                class_name = testcase.attrib['classname']
+                duration_str = testcase.attrib['time']
+                duration = float(duration_str)
 
-            # Add the test case properties to the table data
-            formatted_class = f"<p style=color: {color}; position: relative; top: 50%; transform: translateY(50%)>{class_name}</p>"
-            formatted_func = f"<p style=color: {color}; position: relative; top: 50%; transform: translateY(50%)>{function_name}</p>"
-            formatted_dur = f"<p style=color: {color}; position: relative; top: 50%; transform: translateY(50%)>{duration:.02f}s</p>"
-            formatted_result = "✅" if test_result == "PASS" else "❌"
+                # Add the test case properties to the table data
+                formatted_class = f"<p style=color: {color}; position: relative; top: 50%; transform: translateY(50%)>{class_name}</p>"
+                formatted_func = f"<p style=color: {color}; position: relative; top: 50%; transform: translateY(50%)>{function_name}</p>"
+                formatted_dur = f"<p style=color: {color}; position: relative; top: 50%; transform: translateY(50%)>{duration:.02f}s</p>"
+                formatted_result = "✅" if test_result == "PASS" else "❌"
 
-            table_data.append([formatted_class, formatted_func, formatted_dur, formatted_result])
+                table_data.append([formatted_class, formatted_func, formatted_dur, formatted_result])
 
                 # Update the test result counters and total duration
                 if test_result == "PASS":
