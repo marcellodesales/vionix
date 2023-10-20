@@ -365,8 +365,10 @@ jobs:
       run:
         working-directory: ${{ inputs.docker-compose-test-context }}
     env:
+      # TODO: Those must be fetched from Vault, but from outside the workflow
       TEST_GITHUB_TOKEN: '${{ secrets.TEST_GITHUB_TOKEN }}'
       TEST_GITHUB_HOST: '${{ secrets.TEST_GITHUB_HOST }}'
+      TEST_JIRA_TOKEN_AUTH: '${{ secrets.TEST_JIRA_TOKEN_AUTH }}'
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.0.2
