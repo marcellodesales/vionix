@@ -529,7 +529,7 @@ jobs:
 
             if [[ "$value" == *"secrets."* ]]; then
               secret_name=$(echo $value | cut -d '.' -f 2 | sed 's/secrets.//')
-              value="\${{ secrets[format('{0}', env.$secret_name)] }}"
+              value="\${{ secrets[format('{0}', env.\$secret_name)] }}"
             fi
 
             echo "Setting ${key}=${value}"
