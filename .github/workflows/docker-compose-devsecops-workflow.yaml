@@ -527,14 +527,13 @@ jobs:
             key=$(echo $entry | base64 -d | jq -r '.key')
             value=$(echo $entry | base64 -d | jq -r '.value')
             echo "Setting ${key}=${value}"
-            
-            if [[ "$value" == *"secrets."* ]]; then
-              value="${{ $value }}"
-            fi
-            
             echo "$key=$value" >> $GITHUB_ENV
-            
           done
+
+      - name: Review Env Vars
+        run: |
+          echo "Current env with parsed values"
+          env
 
       - name: Annotate Job with current information
         run: |
