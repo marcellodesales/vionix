@@ -519,8 +519,8 @@ jobs:
 
       - name: Set additional envs to docker compose build execution
         run: |
-          echo "Parsing additional compose env vars ${{ inputs.docker-compose-envs }}"
-          yq '${{ inputs.docker-compose-envs }}' | yq eval -o=json - | jq 'to_entries' > entries.json
+          echo "Parsing additional compose env vars '${{ inputs.docker-compose-envs }}'"
+          echo '${{ inputs.docker-compose-envs }}' | jq 'to_entries' > entries.json
           cat entries.json
           echo "Creating env vars"
           for entry in $(cat entries.json | jq -r '.[] | @base64'); do
