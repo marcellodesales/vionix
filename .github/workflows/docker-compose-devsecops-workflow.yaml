@@ -538,15 +538,15 @@ jobs:
       - name: Set additional envs to docker compose build execution
         if: ${{ inputs.artifactory-deploy-workflow != '' && inputs.artifactory-deploy-repo-type != '' }} 
         run: |
-          echo "Parsing the artifactory deployment types '${{ inputs.docker-compose-envs }}'"
+          echo "Parsing the artifactory deployment types '${{ inputs.artifactory-deploy-repo-type }}'"
           obj=$(echo ${{ inputs.artifactory-deploy-workflow }} | jq '.')
           host=$(echo $obj | jq -r '.host')
           type=$(echo $obj | jq -r '.type')
-          virtual_repo=$(echo $obj | jq -r '.repo.virtual')
+          selected_repo=$(echo $obj | jq -r --arg deployRepoType "${{ inputs.artifactory-deploy-repo-type }}" '.repo[$deployRepoType]')
           noSumDb=$(echo $obj | jq -r '.noSumDb')
 
           if [ "$type" = "golang" ] && [ "${{ inputs.artifactory-deploy-repo-type }}" = "virtual" ]; then
-            goproxy="https://${{ secrets.ART_USER }}:${{ secrets.ART_PASSW }}@$host/$virtual_repo"
+            goproxy="https://${{ secrets.ART_USER }}:${{ secrets.ART_PASSW }}@$host/$selected_repo"
             echo "GOPROXY=$goproxy"
             echo "GONOSUMDB=$noSumDb"
             echo "GOPROXY=$goproxy" >> $GITHUB_ENV
