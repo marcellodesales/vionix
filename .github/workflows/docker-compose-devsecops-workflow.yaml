@@ -526,6 +526,12 @@ jobs:
           for entry in $(cat entries.json | jq -r '.[] | @base64'); do
             key=$(echo $entry | base64 -d | jq -r '.key')
             value=$(echo $entry | base64 -d | jq -r '.value')
+
+            if [[ "$value" == *"secrets."* ]]; then
+              secret_name=$(echo $value | cut -d '.' -f 2 | sed 's/secrets.//')
+              value="\${{ secrets[format('{0}', env.$secret_name)] }}"
+            fi
+
             echo "Setting ${key}=${value}"
             echo "$key=$value" >> $GITHUB_ENV
           done
