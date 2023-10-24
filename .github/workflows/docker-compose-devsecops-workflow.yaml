@@ -75,8 +75,7 @@ on:
         required: false
         default: |
           ARTIFACTORY_URL: "artifactory.viasat.com/artifactory"
-          ARTIFACTORY_USER: "${{ secrets.ARTIFACTORY_SVC_USER }}"
-          ARTIFACTORY_API_KEY: "${{ secrets.ARTIFACTORY_SVC_PASS }}"
+          ARTIFACTORY_USER: "mdesales"
 
       gitops-deploy-workflow:
         description: "Cloud provider workflow deploy the repo using k8s"
