@@ -69,18 +69,36 @@ on:
         type: number
         default: 400
 
-      docker-compose-envs:
-        description: "The env vars to set for the execution and build, usually used to pass additional envs to the build system"
-        type: string
-        required: false
-        default: |
-          ARTIFACTORY_URL: "artifactory.viasat.com/artifactory"
-          ARTIFACTORY_USER: "mdesales"
-
       gitops-deploy-workflow:
         description: "Cloud provider workflow deploy the repo using k8s"
         required: false
         type: string
+      
+      artifactory-deploy-repo-type:
+        description: "The type of deployment artifact to use"
+        type: string
+        required: false
+
+      artifactory-deploy-workflow:
+        description: "Deployment of artifactory artifacts based on types"
+        type: string
+        required: false
+        # https://jfrog.com/blog/why-goproxy-matters-and-which-to-pick/
+        # https://jfrog.com/help/r/jfrog-artifactory-documentation/work-with-gosumdb
+        # https://jfrog.com/help/r/jfrog-artifactory-documentation/advanced-configuration-for-go-repositories
+        # https://jfrog.com/help/r/jfrog-artifactory-documentation/local-go-repositories
+        # https://jfrog.com/help/r/jfrog-artifactory-documentation/remote-go-repositories
+        # https://jfrog.com/help/r/jfrog-artifactory-documentation/virtual-go-repositories
+        default: |
+          {
+            "host": "artifactory.viasat.com/artifactory",
+            "type": "golang",
+            "noSumDb": "git.viasat.com/*",
+            "repo": {
+              "virtual": "project-golang",
+              "local": "project-golang-local"
+            }
+          }
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
@@ -518,23 +536,22 @@ jobs:
           echo "::set-output name=dockerImageArtifactoryUrl::$ARTIFACTORY_URL"
 
       - name: Set additional envs to docker compose build execution
+        if: ${{ inputs.artifactory-deploy-workflow != "" && inputs.artifactory-deploy-repo-type != "" }} 
         run: |
-          echo "Parsing additional compose env vars '${{ inputs.docker-compose-envs }}'"
-          echo '${{ inputs.docker-compose-envs }}' | jq 'to_entries' > entries.json
-          cat entries.json
-          echo "Creating env vars"
-          for entry in $(cat entries.json | jq -r '.[] | @base64'); do
-            key=$(echo $entry | base64 -d | jq -r '.key')
-            value=$(echo $entry | base64 -d | jq -r '.value')
+          echo "Parsing the artifactory deployment types '${{ inputs.docker-compose-envs }}'"
+          obj=$(echo ${{ inputs.artifactory-deploy-workflow }} | jq '.')
+          host=$(echo $obj | jq -r '.host')
+          type=$(echo $obj | jq -r '.type')
+          virtual_repo=$(echo $obj | jq -r '.repo.virtual')
+          noSumDb=$(echo $obj | jq -r '.noSumDb')
 
-            if [[ "$value" == *"secrets."* ]]; then
-              secret_name=$(echo $value | cut -d '.' -f 2 | sed 's/secrets.//')
-              value="\${{ secrets[format('{0}', $secret_name)] }}"
-            fi
-
-            echo "Setting ${key}=${value}"
-            echo "$key=$value" >> $GITHUB_ENV
-          done
+          if [ "$type" = "golang" ] && [ "${{ inputs.artifactory-deploy-repo-type }}" = "virtual" ]; then
+            goproxy="https://${{ secrets.ART_USER }}:${{ secrets.ART_PASSW }}@$host/$virtual_repo"
+            echo "GOPROXY=$goproxy"
+            echo "GONOSUMDB=$noSumDb"
+            echo "GOPROXY=$goproxy" >> $GITHUB_ENV
+            echo "GONOSUMDB=$noSumDb" >> $GITHUB_ENV
+          fi
 
       - name: Review Env Vars
         run: |
