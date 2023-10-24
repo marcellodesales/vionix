@@ -62,11 +62,21 @@ on:
         type: string
         default: Dockerfile
 
+      # There's still a possibility that the image is never built, so this will timeout and fail the execution. Make sure to analize the situation.
       docker-compose-releases-wait-for-build:
         description: "The number of seconds to wait while releasing docker images. Usually it's larger than the average builds of the docker image"
         required: false
         type: number
         default: 400
+
+      docker-compose-envs:
+        description: "The env vars to set for the execution and build, usually used to pass additional envs to the build system"
+        type: string
+        required: false
+        default: |
+          ARTIFACTORY_URL: "artifactory.viasat.com/artifactory"
+          ARTIFACTORY_USER: "${{ secrets.ARTIFACTORY_SVC_USER }}"
+          ARTIFACTORY_API_KEY: "${{ secrets.ARTIFACTORY_SVC_PASS }}"
 
       gitops-deploy-workflow:
         description: "Cloud provider workflow deploy the repo using k8s"
@@ -507,6 +517,19 @@ jobs:
           echo "::set-output name=originalDockerImageTag::$ORIGINAL_DOCKER_IMAGE_TAG"
           echo "::set-output name=githubRepoPaths::$GITHUB_REPOSITORY_PATHS"
           echo "::set-output name=dockerImageArtifactoryUrl::$ARTIFACTORY_URL"
+
+      - name: Set additional envs to docker compose build execution
+        run: |
+          echo "Parsing additional compose env vars ${{ inputs.docker-compose-envs }}"
+          yq '${{ inputs.docker-compose-envs }}' | yq eval -o=json - | jq 'to_entries' > entries.json
+          cat entries.json
+          echo "Creating env vars"
+          for entry in $(cat entries.json | jq -r '.[] | @base64'); do
+            key=$(echo $entry | base64 -d | jq -r '.key')
+            value=$(echo $entry | base64 -d | jq -r '.value')
+            echo "Setting ${key}=${value}"
+            echo "$key=$value" >> $GITHUB_ENV
+          done
 
       - name: Annotate Job with current information
         run: |
