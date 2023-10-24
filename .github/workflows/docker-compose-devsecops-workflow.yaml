@@ -536,7 +536,7 @@ jobs:
           echo "::set-output name=dockerImageArtifactoryUrl::$ARTIFACTORY_URL"
 
       - name: Set additional envs to docker compose build execution
-        if: ${{ inputs.artifactory-deploy-workflow != "" && inputs.artifactory-deploy-repo-type != "" }} 
+        if: ${{ inputs.artifactory-deploy-workflow != '' && inputs.artifactory-deploy-repo-type != '' }} 
         run: |
           echo "Parsing the artifactory deployment types '${{ inputs.docker-compose-envs }}'"
           obj=$(echo ${{ inputs.artifactory-deploy-workflow }} | jq '.')
