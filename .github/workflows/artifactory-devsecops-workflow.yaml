@@ -89,6 +89,9 @@ on:
             "host": "artifactory.viasat.com/artifactory",
             "type": "golang",
             "noSumDb": "git.viasat.com/*",
+            "jfrog": {
+              "deps": "ALL"
+            }
             "repo": {
               "virtual": "project-golang",
               "local": "project-golang-local"
@@ -680,7 +683,8 @@ jobs:
           repo_virtual=$(echo $obj | jq -r '.repo.virtual')
           repo_local=$(echo $obj | jq -r '.repo.virtual')
           noSumDb=$(echo $obj | jq -r '.noSumDb')
-          
+          jfrog_deps=$(echo $obj | jq -r '.jfrog.dependencies')
+            
           echo "repository=$selected_repo" >> $GITHUB_OUTPUT
           echo "ARTIFACTORY_REPO_HOST=$host" >> $GITHUB_ENV
           echo "ARTIFACTORY_SVC_USER=${{ secrets.ARTIFACTORY_SVC_USER }}" >> $GITHUB_ENV
@@ -697,6 +701,9 @@ jobs:
 
             ARTIFACTORY_ARTIFACTS_VERSION=$(yq e .version .jfrog/projects/go.yaml |  tr -d '\r')
             echo "ARTIFACTORY_ARTIFACTS_VERSION=${ARTIFACTORY_ARTIFACTS_VERSION}" >> $GITHUB_ENV
+
+            ARTIFACTORY_GO_DEPS=$j{frog_deps}"
+            echo "ARTIFACTORY_GO_DEPS=${ARTIFACTORY_GO_DEPS}" >> $GITHUB_ENV
           fi
 
      # TODO: since we are using self-hosted, the docker image is saved in the same host
