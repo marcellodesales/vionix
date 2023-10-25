@@ -702,7 +702,7 @@ jobs:
             ARTIFACTORY_ARTIFACTS_VERSION=$(yq e .version .jfrog/projects/go.yaml |  tr -d '\r')
             echo "ARTIFACTORY_ARTIFACTS_VERSION=${ARTIFACTORY_ARTIFACTS_VERSION}" >> $GITHUB_ENV
 
-            ARTIFACTORY_GO_DEPS=${jfrog_deps}"
+            ARTIFACTORY_GO_DEPS="${jfrog_deps}"
             echo "ARTIFACTORY_GO_DEPS=${ARTIFACTORY_GO_DEPS}" >> $GITHUB_ENV
           fi
 
