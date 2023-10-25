@@ -684,7 +684,7 @@ jobs:
           repo_local=$(echo $obj | jq -r '.repo.virtual')
           noSumDb=$(echo $obj | jq -r '.noSumDb')
           jfrog_deps=$(echo $obj | jq -r '.jfrog.dependencies')
-            
+
           echo "repository=$selected_repo" >> $GITHUB_OUTPUT
           echo "ARTIFACTORY_REPO_HOST=$host" >> $GITHUB_ENV
           echo "ARTIFACTORY_SVC_USER=${{ secrets.ARTIFACTORY_SVC_USER }}" >> $GITHUB_ENV
@@ -718,7 +718,7 @@ jobs:
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
         with:
           name: jfrog-upload-results
-          path: /tmp
+          path: ./deploy/results
 
   report:
     name: 📢 notify
