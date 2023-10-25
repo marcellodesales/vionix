@@ -695,7 +695,7 @@ jobs:
             echo "GOPROXY=$goproxy" >> $GITHUB_ENV
             echo "GONOSUMDB=$noSumDb" >> $GITHUB_ENV
 
-            ARTIFACTORY_ARTIFACTS_VERSION=$(docker run -ti -w $(pwd) -v $(pwd):$(pwd) dockerhub.docker.artifactory.viasat.com/golang:1.21 go list | awk -F'/' 'END {print $NF}' |  tr -d '\r')
+            ARTIFACTORY_ARTIFACTS_VERSION=$(yq e .version .jfrog/projects/go.yaml |  tr -d '\r')
             echo "ARTIFACTORY_ARTIFACTS_VERSION=${ARTIFACTORY_ARTIFACTS_VERSION}" >> $GITHUB_ENV
           fi
 
