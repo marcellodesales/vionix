@@ -90,7 +90,7 @@ on:
             "type": "golang",
             "noSumDb": "git.viasat.com/*",
             "jfrog": {
-              "deps": "ALL"
+              "dependencies": "ALL"
             }
             "repo": {
               "virtual": "project-golang",
