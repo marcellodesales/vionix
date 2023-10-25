@@ -191,7 +191,7 @@ jobs:
           GIT_SHORT_SHA=${GITHUB_SHA:0:7}
           echo "GIT_SHORT_SHA=${GIT_SHORT_SHA}" >> $GITHUB_ENV
           echo "BRANCH_SHA_TAG=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_APP_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_ARTIFACTS_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
           # For twistcli
           echo "BUILD_JOB_NAME=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
           echo "BUILD_JOB_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
@@ -211,7 +211,7 @@ jobs:
       - name: Set version as Tag=${{ github.ref_name }} as it is a production release
         if: github.ref_type == 'tag'
         run: |
-          echo "NEXT_PUBLIC_APP_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_ARTIFACTS_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
       # only setup deployment when the deployment object is provided
       - name: Setup default deployment properties for all releases
@@ -285,7 +285,7 @@ jobs:
           echo "::set-output name=gitopsDeployTargetProvider::$GITOPS_TARGET_PROVIDER"
           echo "::set-output name=gitopsDeployTargetRegion::$GITOPS_TARGET_REGION"
           echo "::set-output name=gitopsDeployTargetType::$GITOPS_TARGET_TYPE"
-          echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION"
+          echo "::set-output name=gitopsDeployVersion::$ARTIFACTORY_ARTIFACTS_VERSION"
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -311,7 +311,7 @@ jobs:
       - name: Annotate Job with current information
         if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'branch' }}
         run: |
-          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "* :bookmark: App Version: ${ARTIFACTORY_ARTIFACTS_VERSION}" >> $GITHUB_STEP_SUMMARY
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -360,7 +360,7 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 📦 build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_ARTIFACTS_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_ENV
 
       - name: Find out the image repo name and version
         run: |
@@ -467,7 +467,7 @@ jobs:
           echo 'build-outputs=${{ toJSON(steps.buildx.outputs) }}'
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :whale: Docker Metadata" >> $GITHUB_STEP_SUMMARY
-          echo "* Version: NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_STEP_SUMMARY
+          echo "* Version: ARTIFACTORY_ARTIFACTS_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_STEP_SUMMARY
       #          echo "" >> $GITHUB_STEP_SUMMARY
 #          echo "```json" >> $GITHUB_STEP_SUMMARY
 #          echo 'outputs=${{ toJSON(steps.buildx.outputs) }}' >> $GITHUB_STEP_SUMMARY
@@ -490,7 +490,7 @@ jobs:
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.created" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.created ${{needs.code.outputs.buildDateTime}}" >> {}' -- {}
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.version" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.version ${GITHUB_SHA}" >> {}' -- {}
           # https://docs.docker.com/engine/reference/commandline/buildx_bake/#file
-          echo "Using Version: NEXT_PUBLIC_APP_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}"
+          echo "Using Version: ARTIFACTORY_ARTIFACTS_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}"
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file}}" ]; then
             echo "Specifying the buildx bake by the service compose file."
             docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }};
@@ -672,7 +672,8 @@ jobs:
           echo "ARTIFACTORY_SVC_PASS=${{ secrets.ARTIFACTORY_SVC_PASS }}" >> $GITHUB_ENV
           echo "ARTIFACTORY_REPO_VIRTUAL=$repo_virtual" >> $GITHUB_ENV
           echo "ARTIFACTORY_REPO_LOCAL=$repo_local" >> $GITHUB_ENV
-      
+          echo "ARTIFACTORY_ARTIFACTS_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_ENV
+
           if [ "$type" = "golang" ] && [ "${{ inputs.artifactory-deploy-repo-type }}" = "virtual" ]; then
             goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$selected_repo"
             echo "Setting env var GOPROXY=$goproxy"
