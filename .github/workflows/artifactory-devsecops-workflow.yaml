@@ -422,15 +422,22 @@ jobs:
           obj=$(echo '${{ inputs.artifactory-deploy-workflow }}' | jq '.')
           host=$(echo $obj | jq -r '.host')
           type=$(echo $obj | jq -r '.type')
-          selected_repo=$(echo $obj | jq -r --arg deployRepoType "${{ inputs.artifactory-deploy-repo-type }}" '.repo[$deployRepoType]')
+          repo_virtual=$(echo $obj | jq -r '.repo.virtual')
+          repo_local=$(echo $obj | jq -r '.repo.virtual')
           noSumDb=$(echo $obj | jq -r '.noSumDb')
-
+          
+          echo "repository=$selected_repo" >> $GITHUB_OUTPUT
           echo "ARTIFACTORY_REPO_HOST=$host" >> $GITHUB_ENV
+          echo "ARTIFACTORY_SVC_USER=${{ secrets.ARTIFACTORY_SVC_USER }}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_SVC_PASS=${{ secrets.ARTIFACTORY_SVC_PASS }}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_REPO_VIRTUAL=$repo_virtual" >> $GITHUB_ENV
+          echo "ARTIFACTORY_REPO_LOCAL=$repo_local" >> $GITHUB_ENV
+          echo "ARTIFACTORY_ARTIFACTS_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_ENV
 
           if [ "$type" = "golang" ]; then
-            goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$selected_repo"
-            echo "Setting env var GOPROXY=$goproxy"
-            echo "Setting env var GONOSUMDB=$noSumDb"
+            goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$repo_virtual"
+            echo "Setting env var for golang GOPROXY=$goproxy"
+            echo "Setting env var for golang GONOSUMDB=$noSumDb"
             echo "GOPROXY=$goproxy" >> $GITHUB_ENV
             echo "GONOSUMDB=$noSumDb" >> $GITHUB_ENV
           fi
@@ -683,7 +690,7 @@ jobs:
           echo "ARTIFACTORY_ARTIFACTS_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_ENV
 
           if [ "$type" = "golang" ]; then
-            goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$selected_repo"
+            goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$repo_virtual"
             echo "Setting env var for golang GOPROXY=$goproxy"
             echo "Setting env var for golang GONOSUMDB=$noSumDb"
             echo "GOPROXY=$goproxy" >> $GITHUB_ENV
