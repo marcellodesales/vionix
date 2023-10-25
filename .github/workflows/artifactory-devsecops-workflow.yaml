@@ -63,6 +63,12 @@ on:
         required: true
         type: string
       
+      docker-build-mode:
+        description: "How to build the deploy image"
+        required: false
+        type: string
+        default: parallel
+
       artifactory-deploy-repo-type:
         description: "The type of deployment artifact to use"
         type: string
