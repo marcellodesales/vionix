@@ -712,13 +712,13 @@ jobs:
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         run: |
-          docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }} || true
+          docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }}
       
       - name: Upload coverage report file
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
         with:
           name: jfrog-upload-results
-          path: ./deploy/results
+          path: /tmp/deploy-results
 
   report:
     name: 📢 notify
