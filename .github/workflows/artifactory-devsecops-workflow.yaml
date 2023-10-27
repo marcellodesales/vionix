@@ -447,7 +447,7 @@ jobs:
           echo "Preparing to deploy artifactory deployment of type '${{ inputs.artifactory-deploy-repo-type }}'"
 
           host=${{ inputs.artifactory-deploy-host }}
-          type=${{ inputs.artifactory-deploy-type }}
+          type=${{ inputs.artifactory-deploy-repo-type }}
           repo_virtual=${{ inputs.artifactory-deploy-repo-virtual }}
           repo_local=${{ inputs.artifactory-deploy-repo-local }}
           
@@ -703,7 +703,7 @@ jobs:
           echo "Parsing the artifactory deployment settings'"
 
           host=${{ inputs.artifactory-deploy-host }}
-          type=${{ inputs.artifactory-deploy-type }}
+          type=${{ inputs.artifactory-deploy-repo-type }}
           repo_virtual=${{ inputs.artifactory-deploy-repo-virtual }}
           repo_local=${{ inputs.artifactory-deploy-repo-local }}
 
