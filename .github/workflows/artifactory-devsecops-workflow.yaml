@@ -183,7 +183,7 @@ jobs:
           response=$(curl -I -u ${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }} ${{ inputs.artifactory-deploy-host }}/api/storage/${{ inputs.artifactory-deploy-repo-local }})
           status=$(echo "$response" | grep ^HTTP/ | awk '{print $2}')
           if [ "$status" = "403" ]; then
-            echo "::error title=Artifactory Repository Access Denied!::The user credential of ARTIFACTORY_SVC_USER:ARTIFACTORY_SVC_PASS doesn't have write permissions to ${{ inputs.artifactory-deploy-repo-local }}"
+            echo "::error title=Artifactory Repository Access Denied!::The user credential of ARTIFACTORY_SVC_USER:ARTIFACTORY_SVC_PASS doesn't have write permissions to write to the '${{ inputs.artifactory-deploy-repo-type }}' repo '${{ inputs.artifactory-deploy-repo-local }}'"
             exit 1
 
           else
