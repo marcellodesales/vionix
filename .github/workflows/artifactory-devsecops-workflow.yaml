@@ -78,7 +78,7 @@ on:
         description: "The artifactory host used for deployments"
         type: string
         required: false
-        default: https://artifactory.viasat.com/artifactory
+        default: artifactory.viasat.com/artifactory
 
       artifactory-deploy-repo-virtual:
         description: "The virtual repository name used for the deployment"
