@@ -74,8 +74,29 @@ on:
         type: string
         required: false
 
-      artifactory-deploy-workflow:
-        description: "Deployment of artifactory artifacts based on types"
+      artifactory-deploy-host:
+        description: "The artifactory host used for deployments"
+        type: string
+        required: false
+        default: https://artifactory.viasat.com/artifactory
+
+      artifactory-deploy-type:
+        description: "The type of the repository to deploy, it's one of the supported repositories"
+        type: string
+        required: true
+
+      artifactory-deploy-repo-virtual:
+        description: "The virtual repository name used for the deployment"
+        type: string
+        required: true
+
+      artifactory-deploy-repo-local:
+        description: "The repository to deploy the artifacts to"
+        type: string
+        required: true
+
+      artifactory-deploy-type-config:
+        description: "Additional configuration required for the given type"
         type: string
         required: false
         # https://jfrog.com/blog/why-goproxy-matters-and-which-to-pick/
@@ -86,16 +107,9 @@ on:
         # https://jfrog.com/help/r/jfrog-artifactory-documentation/virtual-go-repositories
         default: |
           {
-            "host": "artifactory.viasat.com/artifactory",
             "type": "golang",
             "noSumDb": "git.viasat.com/*",
-            "jfrog": {
-              "dependencies": "ALL"
-            }
-            "repo": {
-              "virtual": "project-golang",
-              "local": "project-golang-local"
-            }
+            "dependencies": "ALL"
           }
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
@@ -162,11 +176,25 @@ jobs:
       - name: Provided input to the app
         run: |
           echo "Inputs=${{ toJSON(inputs) }}"
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check Artifactory API access with credentials provided for publishing
+        run: |
+          response=$(curl -I -u ${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }} ${{ inputs.artifactory-deploy-host }}/api/storage/${{ inputs.artifactory-deploy-repo-local }})
+          status=$(echo "$response" | grep ^HTTP/ | awk '{print $2}')
+          if [ "$status" = "403" ]; then
+            echo "::error title=Artifactory Repository Access Denied!::The user credentials of ARTIFACTORY_SVC_USER:ARTIFACTORY_SVC_PASS doesn't have write permissions to ${{ inputs.artifactory-deploy-repo-local }}"
+            exit 1
+
+          else
+            echo "Artifactory API access granted!"
+          fi
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -174,6 +202,7 @@ jobs:
           echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Fetch all history and have .git locally for inspection
         uses: viarise/checkout@v3.0.2
         with:
@@ -419,14 +448,16 @@ jobs:
 
       - name: Set additional envs to docker compose build execution
         id: artifactory-settings
-        if: ${{ inputs.artifactory-deploy-workflow != '' && inputs.artifactory-deploy-repo-type != '' }} 
+        if: ${{ inputs.artifactory-deploy-type-config != '' && inputs.artifactory-deploy-repo-type != '' }} 
         run: |
           echo "Parsing the artifactory deployment types '${{ inputs.artifactory-deploy-repo-type }}'"
-          obj=$(echo '${{ inputs.artifactory-deploy-workflow }}' | jq '.')
-          host=$(echo $obj | jq -r '.host')
-          type=$(echo $obj | jq -r '.type')
-          repo_virtual=$(echo $obj | jq -r '.repo.virtual')
-          repo_local=$(echo $obj | jq -r '.repo.virtual')
+
+          host=${{ inputs.artifactory-deploy-host }}
+          type=${{ inputs.artifactory-deploy-type }}
+          repo_virtual=${{ inputs.artifactory-deploy-repo-virtual }}
+          repo_local=${{ inputs.artifactory-deploy-repo-local }}
+
+          obj=$(echo '${{ inputs.artifactory-deploy-type-config }}' | jq '.')
           noSumDb=$(echo $obj | jq -r '.noSumDb')
           
           echo "repository=$selected_repo" >> $GITHUB_OUTPUT
@@ -677,11 +708,13 @@ jobs:
         if: ${{ inputs.artifactory-deploy-workflow != '' && inputs.artifactory-deploy-repo-type != '' }} 
         run: |
           echo "Parsing the artifactory deployment settings'"
-          obj=$(echo '${{ inputs.artifactory-deploy-workflow }}' | jq '.')
-          host=$(echo $obj | jq -r '.host')
-          type=$(echo $obj | jq -r '.type')
-          repo_virtual=$(echo $obj | jq -r '.repo.virtual')
-          repo_local=$(echo $obj | jq -r '.repo.virtual')
+
+          host=${{ inputs.artifactory-deploy-host }}
+          type=${{ inputs.artifactory-deploy-type }}
+          repo_virtual=${{ inputs.artifactory-deploy-repo-virtual }}
+          repo_local=${{ inputs.artifactory-deploy-repo-local }}
+
+          obj=$(echo '${{ inputs.artifactory-deploy-type-config }}' | jq '.')
           noSumDb=$(echo $obj | jq -r '.noSumDb')
           jfrog_deps=$(echo $obj | jq -r '.jfrog.dependencies')
 
@@ -713,12 +746,6 @@ jobs:
         # Only run the builds when building either DEV or STG
         run: |
           docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }}
-      
-      - name: Upload coverage report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v2
-        with:
-          name: jfrog-upload-results
-          path: /tmp/deploy-results
 
   report:
     name: 📢 notify
