@@ -443,7 +443,7 @@ jobs:
 
       - name: Set additional envs to docker compose build execution
         id: artifactory-settings
-        if: ${{ inputs.artifactory-deploy-type-config != '' && inputs.artifactory-deploy-repo-type != '' }} 
+        if: ${{ inputs.inputs.artifactory-deploy-type-config != '' && inputs.artifactory-deploy-repo-type != '' }} 
         run: |
           echo "Preparing to deploy artifactory deployment of type '${{ inputs.artifactory-deploy-repo-type }}'"
 
@@ -700,7 +700,7 @@ jobs:
 
       - name: Set additional envs to docker compose build execution
         id: artifactory-settings
-        if: ${{ inputs.artifactory-deploy-workflow != '' && inputs.artifactory-deploy-repo-type != '' }} 
+        if: ${{ inputs.inputs.artifactory-deploy-type-config != '' && inputs.artifactory-deploy-repo-type != '' }} 
         run: |
           echo "Parsing the artifactory deployment settings'"
 
