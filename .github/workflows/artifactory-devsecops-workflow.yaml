@@ -80,11 +80,6 @@ on:
         required: false
         default: https://artifactory.viasat.com/artifactory
 
-      artifactory-deploy-type:
-        description: "The type of the repository to deploy, it's one of the supported repositories"
-        type: string
-        required: true
-
       artifactory-deploy-repo-virtual:
         description: "The virtual repository name used for the deployment"
         type: string
@@ -450,15 +445,12 @@ jobs:
         id: artifactory-settings
         if: ${{ inputs.artifactory-deploy-type-config != '' && inputs.artifactory-deploy-repo-type != '' }} 
         run: |
-          echo "Parsing the artifactory deployment types '${{ inputs.artifactory-deploy-repo-type }}'"
+          echo "Preparing to deploy artifactory deployment of type '${{ inputs.artifactory-deploy-repo-type }}'"
 
           host=${{ inputs.artifactory-deploy-host }}
           type=${{ inputs.artifactory-deploy-type }}
           repo_virtual=${{ inputs.artifactory-deploy-repo-virtual }}
           repo_local=${{ inputs.artifactory-deploy-repo-local }}
-
-          obj=$(echo '${{ inputs.artifactory-deploy-type-config }}' | jq '.')
-          noSumDb=$(echo $obj | jq -r '.noSumDb')
           
           echo "repository=$selected_repo" >> $GITHUB_OUTPUT
           echo "ARTIFACTORY_REPO_HOST=$host" >> $GITHUB_ENV
@@ -469,6 +461,9 @@ jobs:
           echo "ARTIFACTORY_ARTIFACTS_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_ENV
 
           if [ "$type" = "golang" ]; then
+            obj=$(echo '${{ inputs.artifactory-deploy-type-config }}' | jq '.')
+            noSumDb=$(echo $obj | jq -r '.noSumDb')
+
             goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$repo_virtual"
             echo "Setting env var for golang GOPROXY=$goproxy"
             echo "Setting env var for golang GONOSUMDB=$noSumDb"
@@ -715,8 +710,6 @@ jobs:
           repo_local=${{ inputs.artifactory-deploy-repo-local }}
 
           obj=$(echo '${{ inputs.artifactory-deploy-type-config }}' | jq '.')
-          noSumDb=$(echo $obj | jq -r '.noSumDb')
-          jfrog_deps=$(echo $obj | jq -r '.jfrog.dependencies')
 
           echo "repository=$selected_repo" >> $GITHUB_OUTPUT
           echo "ARTIFACTORY_REPO_HOST=$host" >> $GITHUB_ENV
@@ -726,6 +719,9 @@ jobs:
           echo "ARTIFACTORY_REPO_LOCAL=$repo_local" >> $GITHUB_ENV
 
           if [ "$type" = "golang" ]; then
+            noSumDb=$(echo $obj | jq -r '.noSumDb')
+            jfrog_deps=$(echo $obj | jq -r '.jfrog.dependencies')
+
             goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$repo_virtual"
             echo "Setting env var for golang GOPROXY=$goproxy"
             echo "Setting env var for golang GONOSUMDB=$noSumDb"
