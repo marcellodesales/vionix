@@ -739,7 +739,7 @@ jobs:
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         run: |
-          docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }}
+          docker compose -f ${{ inputs.docker-compose-file }} run --build ${{ inputs.docker-compose-service }}
 
   report:
     name: 📢 notify
