@@ -288,9 +288,6 @@ jobs:
       scanResultsId: ${{steps.scan-results-collection.outputs.scanResultsId}}
       scanResultsFilename: ${{steps.scan-results-collection.outputs.scanResultsFilename}}
 
-    strategy:
-      fail-fast: false
-
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
@@ -356,7 +353,6 @@ jobs:
         id: prisma_cloud_scan
         uses: seceng-devsecops-platform/devsecops-platform-action-prisma@main
         if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
-        continue-on-error: true
         with:
           prisma-cloud-url: https://${{ inputs.seceng-devsecops-prisma-domain }}
           prisma-cloud-project: ${{ inputs.seceng-devsecops-prisma-project }}
