@@ -372,6 +372,7 @@ jobs:
           echo "Scan results URL = ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
           echo "Passed Compliance? ${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
           echo "Passed Vulnerabilities? ${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
+          echo "Error Message?" ${{ steps.prisma_cloud_scan.outputs.scan-error }}"
           echo "Report file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
 
           echo "scanResultsUrl=${{ steps.prisma_cloud_scan.outputs.scan-results-url }}" >> $GITHUB_OUTPUT
