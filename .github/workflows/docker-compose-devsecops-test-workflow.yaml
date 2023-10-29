@@ -194,7 +194,7 @@ jobs:
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
       - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
 
@@ -295,7 +295,7 @@ jobs:
     steps:
 
       - name: Checkout Current Repository
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           path: .
 
@@ -303,7 +303,7 @@ jobs:
         run: mkdir ./platform-actions
 
       - name: Checkout deploy repository for all ENVs if the workflow is defined
-        uses: viarise/checkout@v3
+        uses: viarise/checkout@v3.5.3
         with:
           repository: seceng-devsecops-platform/devsecops-platform-github-workflows
           ref: master
@@ -371,7 +371,7 @@ jobs:
       TEST_JIRA_TOKEN_AUTH: '${{ secrets.TEST_JIRA_TOKEN_AUTH }}'
     steps:
       - name: Checkout Current Repository
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
 
       - name: Execute tests in container
         run: |
@@ -584,7 +584,7 @@ jobs:
 
       # Fetch the entire history as needed for reports in scm git
       - name: Fetch all commits from the repo
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0  # Sonarqube Shallow clones should be disabled for a better relevancy of analysis
 

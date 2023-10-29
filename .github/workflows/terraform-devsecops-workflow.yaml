@@ -93,7 +93,7 @@ jobs:
       # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
       # Fixed on GHES 3.5 from June 6, 2022 https://github.com/github/roadmap/issues/74#issuecomment-1147906530
       - name: Checkout Current Repository
-        uses: viarise/checkout@v2
+        uses: viarise/checkout@v3.5.3
 
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download google.creds secret from code step
@@ -142,7 +142,7 @@ jobs:
       # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
       # Fixed on GHES 3.5 from June 6, 2022 https://github.com/github/roadmap/issues/74#issuecomment-1147906530
       - name: Checkout Current Repository
-        uses: viarise/checkout@v2
+        uses: viarise/checkout@v3.5.3
 
       - name: Execute the security linter tfsec
         if: ${{ matrix.checkType == 'tfsec' }}
@@ -236,7 +236,7 @@ jobs:
       # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
       # Fixed on GHES 3.5 from June 6, 2022 https://github.com/github/roadmap/issues/74#issuecomment-1147906530
       - name: Fetch all commits from the repo
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
 
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download google.creds secret from code step
@@ -315,7 +315,7 @@ jobs:
       # Isolated actions doesn't have access to the cloned repo from workflows... it needs to clone them for now
       # Fixed on GHES 3.5 from June 6, 2022 https://github.com/github/roadmap/issues/74#issuecomment-1147906530
       - name: Fetch top commit from the repo
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
 
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download google.creds secret from code step
