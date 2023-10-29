@@ -496,8 +496,8 @@ jobs:
           COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker-compose-test-report-coverage-file }})
           # https://linuxhint.com/round-two-decimal-places-bash/
           # COVERAGE_PERCENT=$(printf '%.2f' $((COVERAGE_RATE * 100)))%
-          echo "numberOfCoveredClasses=$COVERED_CLASSES"
-          echo "coverageRate=$COVERAGE_RATE"
+          echo "numberOfCoveredClasses=$COVERED_CLASSES" >> $GITHUB_OUTPUT
+          echo "coverageRate=$COVERAGE_RATE" >> $GITHUB_OUTPUT
           TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" ${{ inputs.docker-compose-test-report-file }})
           TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" ${{ inputs.docker-compose-test-report-file }})
           TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" ${{ inputs.docker-compose-test-report-file }})
