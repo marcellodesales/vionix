@@ -423,6 +423,7 @@ jobs:
             echo "* ${ERROR_MESSAGE}" >> $GITHUB_STEP_SUMMARY
 
             echo "::error title=${STATUS_CODE} Error while Scanning with Prisma Cloud::${ERROR_MESSAGE}"
+            exit 1
 
           else
 
