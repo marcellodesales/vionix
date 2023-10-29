@@ -351,10 +351,11 @@ jobs:
 
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
+        uses: seceng-devsecops-platform/devsecops-platform-action-prisma@main
         # To be referring to for results https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#example-using-a-public-action
         id: prisma_cloud_scan
-        uses: seceng-devsecops-platform/devsecops-platform-action-prisma@main
         if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
+        continue-on-error: true
         with:
           prisma-cloud-url: https://${{ inputs.seceng-devsecops-prisma-domain }}
           prisma-cloud-project: ${{ inputs.seceng-devsecops-prisma-project }}
