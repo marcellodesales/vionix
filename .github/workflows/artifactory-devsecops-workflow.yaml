@@ -296,29 +296,29 @@ jobs:
           #  and uses GitHub Actions magic (::set-output) to set an output
           #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
           # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-          echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
-          echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
-          echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
-          echo "::set-output name=dockerContextPath::${{ inputs.docker-compose-context }}"
-          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
-          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
-          echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
-          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
-          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
-          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
-          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
-          echo "::set-output name=committerName::$COMMITTER_NAME"
-          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
-          echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
-          echo "::set-output name=gitopsDeployEnv::$GITOPS_TARGET_ENV"
-          echo "::set-output name=gitopsDeployUrl::$GITOPS_TARGET_URL"
-          echo "::set-output name=gitopsDeploySegment::$GITOPS_TARGET_SEGMENT"
-          echo "::set-output name=gitopsDeployTargetRepo::$GITOPS_TARGET_REPO"
-          echo "::set-output name=gitopsDeployTargetRepoBranch::$GITOPS_TARGET_REPO_BRANCH"
-          echo "::set-output name=gitopsDeployTargetProvider::$GITOPS_TARGET_PROVIDER"
-          echo "::set-output name=gitopsDeployTargetRegion::$GITOPS_TARGET_REGION"
-          echo "::set-output name=gitopsDeployTargetType::$GITOPS_TARGET_TYPE"
-          echo "::set-output name=gitopsDeployVersion::$ARTIFACTORY_ARTIFACTS_VERSION"
+          echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
+          echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
+          echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+          echo "dockerContextPath=${{ inputs.docker-compose-context }}" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTagForVersion=$BRANCH_TAG_FOR_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchShaTag=$BRANCH_SHA_TAG" >> $GITHUB_OUTPUT
+          echo "gitShortSha=$GIT_SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "buildDateTime=$BUILD_DATE_TIME" >> $GITHUB_OUTPUT
+          echo "jobStartTimestamp=$JOB_TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "committerName=$COMMITTER_NAME" >> $GITHUB_OUTPUT
+          echo "committerEmail=$COMMITTER_EMAIL" >> $GITHUB_OUTPUT
+          echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT
+          echo "gitopsDeployEnv=$GITOPS_TARGET_ENV" >> $GITHUB_OUTPUT
+          echo "gitopsDeployUrl=$GITOPS_TARGET_URL" >> $GITHUB_OUTPUT
+          echo "gitopsDeploySegment=$GITOPS_TARGET_SEGMENT" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetRepo=$GITOPS_TARGET_REPO" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetRepoBranch=$GITOPS_TARGET_REPO_BRANCH" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetProvider=$GITOPS_TARGET_PROVIDER" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetRegion=$GITOPS_TARGET_REGION" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetType=$GITOPS_TARGET_TYPE" >> $GITHUB_OUTPUT
+          echo "gitopsDeployVersion=$ARTIFACTORY_ARTIFACTS_VERSION" >> $GITHUB_OUTPUT
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -434,12 +434,12 @@ jobs:
             echo "ERROR: Couldn't define either ${{ inputs.docker-compose-service }}='${{ inputs.docker-compose-service }}' or DEFAULT_DOCKER_IMAGE_REPO='${DEFAULT_DOCKER_IMAGE_REPO} or DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}'. Check the logs!"
             exit 1
           fi
-          echo "::set-output name=defaultDockerImageRepo::$DEFAULT_DOCKER_IMAGE_REPO"
-          echo "::set-output name=defaultDockerService::${{ inputs.docker-compose-service }}"
-          echo "::set-output name=defaultDockerRegistry::$DEFAULT_DOCKER_REGISTRY"
-          echo "::set-output name=originalDockerImageTag::$ORIGINAL_DOCKER_IMAGE_TAG"
-          echo "::set-output name=githubRepoPaths::$GITHUB_REPOSITORY_PATHS"
-          echo "::set-output name=dockerImageArtifactoryUrl::$ARTIFACTORY_URL"
+          echo "defaultDockerImageRepo=$DEFAULT_DOCKER_IMAGE_REPO" >> $GITHUB_OUTPUT
+          echo "defaultDockerService=${{ inputs.docker-compose-service }}" >> $GITHUB_OUTPUT
+          echo "defaultDockerRegistry=$DEFAULT_DOCKER_REGISTRY" >> $GITHUB_OUTPUT
+          echo "originalDockerImageTag=$ORIGINAL_DOCKER_IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "githubRepoPaths=$GITHUB_REPOSITORY_PATHS" >> $GITHUB_OUTPUT
+          echo "dockerImageArtifactoryUrl=$ARTIFACTORY_URL" >> $GITHUB_OUTPUT
 
       - name: Set additional envs to docker compose build execution
         id: artifactory-settings
