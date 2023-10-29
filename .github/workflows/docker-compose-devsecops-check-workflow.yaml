@@ -415,9 +415,14 @@ jobs:
           echo "" >> prisma-cloud-report.md
           
           if [ "${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" != "" ]; then
-            echo "## :police-car-light: ERROR SCANNING: ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }} Error while Scanning with Prisma Cloud" >> $GITHUB_STEP_SUMMARY
-            echo "* ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" >> $GITHUB_STEP_SUMMARY
-          
+            export ERROR_MESSAGE=${{ steps.prisma_cloud_scan.outputs.scan-error-message }}
+            export STATUS_CODE=${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}
+
+            echo "## :police-car-light: ERROR SCANNING: ${STATUS_CODE} Error while Scanning with Prisma Cloud" >> $GITHUB_STEP_SUMMARY
+            echo "* ${ERROR_MESSAGE}" >> $GITHUB_STEP_SUMMARY
+
+            echo "::error title=${STATUS_CODE} Error while Scanning with Prisma Cloud::${ERROR_MESSAGE}"
+
           else
 
             # Input JSON file containing the data
