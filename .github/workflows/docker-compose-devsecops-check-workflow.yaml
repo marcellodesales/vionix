@@ -421,8 +421,6 @@ jobs:
 
             echo "## :police-car-light: ERROR SCANNING: ${STATUS_CODE} Error while Scanning with Prisma Cloud" >> $GITHUB_STEP_SUMMARY
             echo "* ${ERROR_MESSAGE}" >> $GITHUB_STEP_SUMMARY
-
-            echo "::error title=${STATUS_CODE} Error while Scanning with Prisma Cloud::${ERROR_MESSAGE}"
             exit 1
 
           else
