@@ -287,6 +287,8 @@ jobs:
       scanResultsUrl: ${{steps.scan-results-collection.outputs.scanResultsUrl}}
       scanResultsId: ${{steps.scan-results-collection.outputs.scanResultsId}}
       scanResultsFilename: ${{steps.scan-results-collection.outputs.scanResultsFilename}}
+      scanErrorMessage: ${{steps.scan-results-collection.outputs.scan-error-message}}
+      scanErrorStatusCode: ${{steps.scan-results-collection.outputs.scan-error-status-code}}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -369,10 +371,11 @@ jobs:
         id: scan-results-collection
         run: |
           echo 'scan-outputs=${{ toJSON(steps.prisma_cloud_scan.outputs) }}'
-          echo "Scan results URL = ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
+          echo "Scan results URL: ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
           echo "Passed Compliance? ${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
           echo "Passed Vulnerabilities? ${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
-          echo "Error Message?" ${{ steps.prisma_cloud_scan.outputs.scan-error }}"
+          echo "Error Message? ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}"
+          echo "Error Status Code? ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}"
           echo "Report file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
 
           echo "scanResultsUrl=${{ steps.prisma_cloud_scan.outputs.scan-results-url }}" >> $GITHUB_OUTPUT
@@ -380,6 +383,9 @@ jobs:
           echo "scanResultsFilename=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}" >> $GITHUB_OUTPUT
           echo "passedComplianceScan=${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}" >> $GITHUB_OUTPUT
           echo "passedVulnerabilitiesScan=${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}" >> $GITHUB_OUTPUT
+
+          echo "scanErrorMessage=${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" >> $GITHUB_OUTPUT
+          echo "scanErrorStatusCode=${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}" >> $GITHUB_OUTPUT
 
       - name: Scan result outputs
         if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
@@ -407,22 +413,30 @@ jobs:
           echo "# Prisma Cloud Reports" >> prisma-cloud-report.md
           echo "* [Viasat Prisma Cloud Results](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> prisma-cloud-report.md
           echo "" >> prisma-cloud-report.md
+          
+          if [ "${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" != "" ]; then
+            echo "## :police-car-light: ERROR SCANNING: ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }} Error while Scanning with Prisma Cloud" >> $GITHUB_STEP_SUMMARY
+            echo "* ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" >> $GITHUB_STEP_SUMMARY
+          
+          else
 
-          # Input JSON file containing the data
-          input_file=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
+            # Input JSON file containing the data
+            input_file=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
 
-          # Write the table header to the output file
-          echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> $GITHUB_STEP_SUMMARY
-          echo "|----|--------|------|-------- |-----------|------------ |" >> $GITHUB_STEP_SUMMARY
-          echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> prisma-cloud-report.md
-          echo "|----|--------|------|---------|-----------|-------------|" >> prisma-cloud-report.md
+            # Write the table header to the output file
+            echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> $GITHUB_STEP_SUMMARY
+            echo "|----|--------|------|-------- |-----------|------------ |" >> $GITHUB_STEP_SUMMARY
+            echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> prisma-cloud-report.md
+            echo "|----|--------|------|---------|-----------|-------------|" >> prisma-cloud-report.md
 
-          # Parse the JSON data and append each row to the markdown file
-          jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
-          while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
-              echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> $GITHUB_STEP_SUMMARY;
-              echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> prisma-cloud-report.md;
-          done
+            # Parse the JSON data and append each row to the markdown file
+            jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
+            while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> $GITHUB_STEP_SUMMARY;
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> prisma-cloud-report.md;
+            done
+
+          fi
 
       - name: Add Prisma Cloud PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
