@@ -352,7 +352,7 @@ jobs:
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
         #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
         id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.2.0
+        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
         if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
@@ -750,7 +750,7 @@ jobs:
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
-        uses: seceng-devsecops-platform/docker-login-action@v2.0.0
+        uses: seceng-devsecops-platform/docker-login-action@v2.2.0
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
