@@ -42,7 +42,7 @@ jobs:
           cat workflows-linter.md
 
       - name: Add Lint PR Comment
-        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2.8.0
         if: ${{ always() && github.event_name == 'pull_request' }}
         with:
           header: github-action-lint
