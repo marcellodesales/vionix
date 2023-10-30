@@ -111,7 +111,7 @@ jobs:
           ref: master
           path: ./platform-actions
           # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
-          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
         # setting up the problem matcher https://github.com/facebookresearch/fairseq2/blob/main/.github/workflows/_lint_py.yaml
       - name: Install the problem matchers for github actions
