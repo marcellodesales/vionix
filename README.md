@@ -1,11 +1,20 @@
 # devsecops-platform-github-workflows
 
 A collection of workflows to be used in Github Actions to build and deploy Docker Images that are scanned by SecEng Scanners and Tools.
+In addition, there is also support to multiple kinds of CI/CD to support various systems:
 
+* Dockerized Applications (apps, clis, etc)
+* IaaS: Deployment of Cloud Assets using Terraform
+* CaaS and FaaS: Deployment of Kubernetes KNative assets similar to AWS Fargate and AWS Lambda
+  * Support for Raw K-Native Objects
+  * Support for Direktiv Workflows
+* PaaS and SaaS: Deployment of specific Kubernetes Deployment and Services 
+  * Support for ArgoCD
+  * Using Helm and Kustomization
 
-# DevSecOps Workflow for Dockerized Apps
+# DevSecOps CloudNative Workflows and Containerized Steps
 
-* Implemented as a Github Actions Workflow
+* Implemented as a reusable Github Actions Workflows
 * Builds a Dockerized application using BuildX and Docker Caches
 * Deploys the built Docker Image to the specified Viasat Artifactory Docker Registry
 * Scans the built Docker Image using Prisma  and provides summaries and links about the Scan result
@@ -118,3 +127,24 @@ jobs:
       SLACK_CHANNEL_AUTOMATION_ID: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
       SLACK_CHANNEL_AUTOMATION_TOKEN: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
 ```
+
+### Problem Matchers
+
+[Problem Matchers][problem-matchers] is a feature to extract GitHub Actions annotations from terminal outputs of linters.
+
+Copy [actionlint-problem-matcher.json](.github/actionlint-problem-matcher.json) to `.github/actionlint-matcher.json` in your repository.
+
+Then enable the matcher using `add-matcher` command before running `actionlint` in the step of your workflow.
+
+```yaml
+- name: Check workflow files
+  run: |
+    echo "::add-matcher::.github/actionlint-matcher.json"
+    bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+    ./actionlint -color
+  shell: bash
+```
+
+When you change your workflow and the changed line causes a new error, CI will annotate the diff with the extracted error message.
+
+<img src="https://github.com/rhysd/ss/blob/master/actionlint/problem-matcher.png?raw=true" alt="annotation by Problem Matchers" width="715" height="221"/>
