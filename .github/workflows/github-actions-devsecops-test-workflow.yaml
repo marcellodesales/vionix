@@ -76,7 +76,6 @@ jobs:
           path: workflows-linter.md
 
       - name: Annotate Workflow Summary with lint info
-        if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
           echo "# 🚨️ Github Actions Lint" >> $GITHUB_STEP_SUMMARY
           cat workflows-linter.md >> $GITHUB_STEP_SUMMARY
