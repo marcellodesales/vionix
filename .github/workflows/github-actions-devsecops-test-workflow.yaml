@@ -39,7 +39,58 @@ jobs:
         run: |
           echo "Preparing the report linter in .md format"
           docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -format '{{range $err := .}}### Error at line {{$err.Line}}, col {{$err.Column}} of `{{$err.Filepath}}`\n\n{{$err.Message}}\n\n```\n{{$err.Snippet}}\n```\n\n{{end}}' > workflows-linter.md || true
-          cat workflows-linter.md
+          ls -la workflows-linter.md
+
+      - name: Enrich the generated md report
+        run: |
+          ls -la workflows-linter.md
+          echo "Processing the file to categorize alerts for summary and PR"
+          # Check if the line contains the start of a new block
+          current_block_name=""
+
+          # Read the file line by line
+          while IFS= read -r line; do
+
+            if [[ $line == "### Error"* ]]; then
+
+              # Get the block name from the file name
+              block_name=$(echo "$line" | cut -d'`' -f2)
+
+              # Only add the block if the current is different
+              if [ "${current_block_name}" != "${block_name}" ]; then
+                # Add the close block when it's not empty, as empty will be the beginning
+                if [ "${current_block_name}" != "" ]; then
+                  echo "</details>"
+                fi
+
+                # Update the reference
+                current_block_name=$block_name
+
+                echo "<details>"
+                echo "<summary> :octocat: Action Lint Errors in '$block_name'</summary>"
+                echo ""
+              fi
+
+              # Print the current line as a subblock of the current block
+              sub_block_text=$(echo "$line" | awk -F"### " '{ print $2 }')
+              echo "🚨 ${sub_block_text}"
+
+              # Just continue because we are just processing the headers
+              continue
+            fi
+
+            # Print the current line as a subblock of the current block
+            echo "$line"
+
+          done < workflows-linter.md > new-report.md
+
+          echo "# 🚨️ Github Actions Lint" >> header.md
+          echo "> **Formatted by the Vionix DevSecOps Platform**" >> header.md
+          echo "" >> header.md
+          cat new-report.md >> header.md
+
+          mv header.md workflows-linter.md
+          ls -la workflows-linter.md
 
       - name: Add Lint PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2.8.0
@@ -51,7 +102,6 @@ jobs:
 
       - name: Annotate Workflow Summary with lint info
         run: |
-          echo "# 🚨️ Github Actions Lint" >> $GITHUB_STEP_SUMMARY
           cat workflows-linter.md >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout Vionix Platform workflows
