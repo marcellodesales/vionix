@@ -128,21 +128,66 @@ jobs:
       SLACK_CHANNEL_AUTOMATION_TOKEN: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
 ```
 
-### Problem Matchers
+## Github Action Linter
+
+* The support to lint Github Action Workflows
+* Create the following workflow in your project dir `.github/workflows`
+
+```yaml
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# This is a composable github Actions Workflow that reuses the SecEng DevSecOps Platform workflow for
+# the execution of Gtihub Action Workflows linter.
+name: vionix-github-actions-check
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - feature/**
+      - bugfix/**
+      - master
+      - main
+
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#example-including-paths
+    paths:
+      - '.github/**'
+
+jobs:
+  ghaction-devsecops:
+    name: 🐙 action
+    secrets: inherit
+    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@master
+
+```
+
+### Linters as Problem Matchers 
 
 [Problem Matchers][problem-matchers] is a feature to extract GitHub Actions annotations from terminal outputs of linters.
 
-Copy [actionlint-problem-matcher.json](.github/actionlint-problem-matcher.json) to `.github/actionlint-matcher.json` in your repository.
+The Vionix DevSecOps Platform supports multiple problem matchers, all included at `.github/*-problem-matcher.json`.
+
+* Github Action Problem Matchers
+* Python Flake8 Linter
+
+### Install Problem Matcher Step
+
+* [ ] We will support a step to install specific matchers based on a linter
+  * This would avoid copy-and-paste the matchers from the Platform
+
+### Manual Problem Matcher Setup
+
+You can use any of them but copy [actionlint-problem-matcher.json](.github/actionlint-problem-matcher.json) to `.github/actionlint-matcher.json` in your repository `.github` dir.
 
 Then enable the matcher using `add-matcher` command before running `actionlint` in the step of your workflow.
 
 ```yaml
 - name: Check workflow files
+  shell: bash
   run: |
     echo "::add-matcher::.github/actionlint-matcher.json"
-    bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-    ./actionlint -color
-  shell: bash
+    echo ".... pattern matcher spec"
 ```
 
 When you change your workflow and the changed line causes a new error, CI will annotate the diff with the extracted error message.
