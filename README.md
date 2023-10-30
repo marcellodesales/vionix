@@ -128,6 +128,40 @@ jobs:
       SLACK_CHANNEL_AUTOMATION_TOKEN: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
 ```
 
+## Github Action Linter
+
+* The support to lint Github Action Workflows
+* Create the following workflow in your project dir `.github/workflows`
+
+```yaml
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# This is a composable github Actions Workflow that reuses the SecEng DevSecOps Platform workflow for
+# the execution of Gtihub Action Workflows linter.
+name: vionix-github-actions-check
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - feature/**
+      - bugfix/**
+      - master
+      - main
+
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#example-including-paths
+    paths:
+      - '.github/**'
+
+jobs:
+  ghaction-devsecops:
+    name: 🐙 action
+    secrets: inherit
+    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@master
+
+```
+
 ### Linters as Problem Matchers 
 
 [Problem Matchers][problem-matchers] is a feature to extract GitHub Actions annotations from terminal outputs of linters.
