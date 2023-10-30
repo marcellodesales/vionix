@@ -32,6 +32,26 @@ jobs:
       - name: Checkout the current sources
         uses: viarise/checkout@v3.5.3
 
+      - name: Generate md report Check workflow files under .github/workflows using linter
+        shell: bash
+        run: |
+          echo "Preparing the report linter in .md format"
+          docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -color -format '{{range $err := .}}### Error at line {{$err.Line}}, col {{$err.Column}} of `{{$err.Filepath}}`\n\n{{$err.Message}}\n\n```\n{{$err.Snippet}}\n```\n\n{{end}}' > workflows-linter.md
+          cat workflows-linter.md
+
+      - name: Add Lint PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        with:
+          header: github-action-lint
+          recreate: true
+          path: workflows-linter.md
+
+      - name: Annotate Workflow Summary with lint info
+        run: |
+          echo "# 🚨️ Github Actions Lint" >> $GITHUB_STEP_SUMMARY
+          cat workflows-linter.md >> $GITHUB_STEP_SUMMARY
+
       - name: Checkout Vionix Platform workflows
         uses: viarise/checkout@v3.5.3
         with:
@@ -59,23 +79,3 @@ jobs:
       - name: Check workflow files under .github/workflows using github linter for problem matcher
         shell: bash
         run: docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -color -format '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}' -ignore 'SC2016:'
-
-      - name: Generate md report Check workflow files under .github/workflows using linter
-        shell: bash
-        run: |
-          echo "Preparing the report linter in .md format"
-          docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -color -format '{{range $err := .}}### Error at line {{$err.Line}}, col {{$err.Column}} of `{{$err.Filepath}}`\n\n{{$err.Message}}\n\n```\n{{$err.Snippet}}\n```\n\n{{end}}' > workflows-linter.md
-          cat workflows-linter.md
-
-      - name: Add Lint PR Comment
-        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: ${{ always() && github.event_name == 'pull_request' }}
-        with:
-          header: github-action-lint
-          recreate: true
-          path: workflows-linter.md
-
-      - name: Annotate Workflow Summary with lint info
-        run: |
-          echo "# 🚨️ Github Actions Lint" >> $GITHUB_STEP_SUMMARY
-          cat workflows-linter.md >> $GITHUB_STEP_SUMMARY
