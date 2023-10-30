@@ -24,12 +24,12 @@ on:
         # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
         default: devsecops
 
-    dont-fail-on-errors:
-        description: "If the PR should pass even if the linter failed"
-        required: false
-        type: boolean
-        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
-        default: false
+      dont-fail-on-errors:
+          description: "If the PR should pass even if the linter failed"
+          required: false
+          type: boolean
+          # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+          default: false
 
 jobs:
   lint:
