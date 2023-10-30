@@ -1,0 +1,45 @@
+#######
+####### Author: Marcello.DeSales@viasat.com
+#######
+####### Scans the github action workflows from a given github repository
+name: github-actions-linter-workflow
+
+# Avoid multiple CI jobs to execute for multiple commits in a given branch
+# section #6: Saving Computation Time by Stopping Obsolete Workflows
+concurrency:
+  group: github-actions-linter-workflow-${{ github.ref }}-1
+  cancel-in-progress: true
+
+on:
+  # Manual workflow execution
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+  # https://github.com/actions/runner/issues/1483#issuecomment-969295757
+  # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
+  workflow_call:
+    inputs:
+      seceng-devsecops-dind-runner-label:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: devsecops
+
+jobs:
+  test:
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    steps:
+      - name: Checkout latest code
+        uses: viarise/checkout@v3.5.3
+
+      - name: Check workflow files under .github/workflows using github linter
+        uses: docker://dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26
+        with:
+          args: -color -format '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}' -ignore 'SC2016:'
+
+      - name: Generate md report Check workflow files under .github/workflows using linter
+        run: |
+          echo "Preparing the report linter in .md format"
+          docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -format '{{range $err := .}}### Error at line {{$err.Line}}, col {{$err.Column}} of `{{$err.Filepath}}`\n\n{{$err.Message}}\n\n```\n{{$err.Snippet}}\n```\n\n{{end}}' > workflows-linter.md
+          cat workflows-linter.md
+
+          
