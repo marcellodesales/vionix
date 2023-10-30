@@ -194,7 +194,7 @@ jobs:
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
       - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
 
@@ -295,7 +295,7 @@ jobs:
     steps:
 
       - name: Checkout Current Repository
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           path: .
 
@@ -303,7 +303,7 @@ jobs:
         run: mkdir ./platform-actions
 
       - name: Checkout deploy repository for all ENVs if the workflow is defined
-        uses: viarise/checkout@v3
+        uses: viarise/checkout@v3.5.3
         with:
           repository: seceng-devsecops-platform/devsecops-platform-github-workflows
           ref: master
@@ -371,7 +371,7 @@ jobs:
       TEST_JIRA_TOKEN_AUTH: '${{ secrets.TEST_JIRA_TOKEN_AUTH }}'
     steps:
       - name: Checkout Current Repository
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
 
       - name: Execute tests in container
         run: |
@@ -396,18 +396,18 @@ jobs:
           COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker-compose-test-report-coverage-file }})
           # https://linuxhint.com/round-two-decimal-places-bash/
           # COVERAGE_PERCENT=$(printf '%.2f' $((COVERAGE_RATE * 100)))%
-          echo "::set-output name=numberOfCoveredClasses::$COVERED_CLASSES"
-          echo "::set-output name=coverageRate::$COVERAGE_RATE"
+          echo "numberOfCoveredClasses=$COVERED_CLASSES"
+          echo "coverageRate=$COVERAGE_RATE"
           TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" ${{ inputs.docker-compose-test-report-file }})
           TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" ${{ inputs.docker-compose-test-report-file }})
           TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" ${{ inputs.docker-compose-test-report-file }})
           TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" ${{ inputs.docker-compose-test-report-file }})
           TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" ${{ inputs.docker-compose-test-report-file }})
-          echo "::set-output name=numberOfTestErrors::$TEST_ERRORS"
-          echo "::set-output name=numberOfTestFailures::$TEST_FAILURES"
-          echo "::set-output name=numberOfTestsSkipped::$TESTS_SKIPPED"
-          echo "::set-output name=numberOfTestsExecuted::$TESTS_EXECUTED"
-          echo "::set-output name=testsExecutionTime::$TESTS_TIME"
+          echo "numberOfTestErrors=$TEST_ERRORS" >> $GITHUB_OUTPUT
+          echo "numberOfTestFailures=$TEST_FAILURES" >> $GITHUB_OUTPUT
+          echo "numberOfTestsSkipped=$TESTS_SKIPPED" >> $GITHUB_OUTPUT
+          echo "numberOfTestsExecuted=$TESTS_EXECUTED" >> $GITHUB_OUTPUT
+          echo "testsExecutionTime=$TESTS_TIME" >> $GITHUB_OUTPUT
 
       - name: Outputs for notification
         if: ${{ always() && github.event_name == 'pull_request' }}
@@ -584,7 +584,7 @@ jobs:
 
       # Fetch the entire history as needed for reports in scm git
       - name: Fetch all commits from the repo
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0  # Sonarqube Shallow clones should be disabled for a better relevancy of analysis
 

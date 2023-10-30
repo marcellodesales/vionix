@@ -145,7 +145,7 @@ jobs:
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
       - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
 
@@ -350,7 +350,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 1
 
@@ -434,7 +434,7 @@ jobs:
 
     steps:
       - name: Checkout history with tags so to get information
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
 
