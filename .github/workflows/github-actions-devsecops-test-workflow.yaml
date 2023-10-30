@@ -28,17 +28,54 @@ jobs:
   test:
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
     steps:
-      - name: Checkout latest code
+      - name: Checkout the current sources
         uses: viarise/checkout@v3.5.3
 
-      - name: Check workflow files under .github/workflows using github linter
-        uses: docker://dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26
+      - name: Checkout Vionix Platform workflows
+        uses: viarise/checkout@v3.5.3
         with:
-          args: -color -format '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}' -ignore 'SC2016:'
+          repository: seceng-devsecops-platform/devsecops-platform-github-workflows
+          ref: master
+          path: ./platform-actions
+          # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
+          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+
+        # setting up the problem matcher https://github.com/facebookresearch/fairseq2/blob/main/.github/workflows/_lint_py.yaml
+      - name: Install the problem matchers for github actions
+        shell: bash
+        env:
+          MATCHER: actionlint
+        run: |
+          ls -laR ./platform-actions/.github
+          if [ -f ./platform-actions/.github/${MATCHER}-problem-matcher.json ]; then
+            echo "Will use the problem matcher ./platform-actions/.github/${MATCHER}-problem-matcher.json"
+            cat ./platform-actions/.github/${MATCHER}-problem-matcher.json | jq
+            echo "::add-matcher::./platform-actions/.github/${MATCHER}-problem-matcher.json"
+          fi
+
+      # This requires the problem matcher to be installed
+      #
+      - name: Check workflow files under .github/workflows using github linter for problem matcher
+        shell: bash
+        run: dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -color -format '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}' -ignore 'SC2016:'
 
       - name: Generate md report Check workflow files under .github/workflows using linter
+        shell: bash
         run: |
           echo "Preparing the report linter in .md format"
           docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -format '{{range $err := .}}### Error at line {{$err.Line}}, col {{$err.Column}} of `{{$err.Filepath}}`\n\n{{$err.Message}}\n\n```\n{{$err.Snippet}}\n```\n\n{{end}}' > workflows-linter.md
           cat workflows-linter.md
 
+      - name: Add Lint PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        with:
+          header: github-action-lint
+          recreate: true
+          path: workflows-linter.md
+
+      - name: Annotate Workflow Summary with lint info
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        run: |
+          echo "# 🚨️ Github Actions Lint" >> $GITHUB_STEP_SUMMARY
+          cat workflows-linter.md >> $GITHUB_STEP_SUMMARY
