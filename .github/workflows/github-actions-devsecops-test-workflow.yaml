@@ -2,12 +2,12 @@
 ####### Author: Marcello.DeSales@viasat.com
 #######
 ####### Scans the github action workflows from a given github repository
-name: github-actions-linter-workflow
+name: github-actions-devsecops-test-workflow
 
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
 # section #6: Saving Computation Time by Stopping Obsolete Workflows
 concurrency:
-  group: github-actions-linter-workflow-${{ github.ref }}-1
+  group: github-actions-devsecops-test-workflow-${{ github.ref }}-1
   cancel-in-progress: true
 
 on:
@@ -42,4 +42,3 @@ jobs:
           docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -format '{{range $err := .}}### Error at line {{$err.Line}}, col {{$err.Column}} of `{{$err.Filepath}}`\n\n{{$err.Message}}\n\n```\n{{$err.Snippet}}\n```\n\n{{end}}' > workflows-linter.md
           cat workflows-linter.md
 
-          

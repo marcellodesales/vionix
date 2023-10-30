@@ -1,0 +1,45 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
+# This is a composable github Actions Workflow that reuses the SecEng DevSecOps Platform workflow for
+# Dockerized apps written with Docker Compose...
+name: github-actions-devsecops-check-workflow
+
+on:
+  push:
+    branches:
+      # DEV environment: integration work from all devs is mapped to develop branch
+      - develop
+      # Development topic branch where developers add work
+      - feature/**
+      - bugfix/**
+      # STG environment is mapped to master
+      - main
+
+    tags:
+      # PRD environment: once we decide on tagging the pipeline with a semantic version. Placed on master branch
+      - 'v*'
+
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#example-including-paths
+    paths:
+      - '.github/**'
+
+# https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
+jobs:
+
+  ghaction-devsecops:
+    name: 🐙 action
+
+    # Updating the pipeline
+    # https://docs.github.com/en/enterprise-server@3.5/actions/using-workflows/reusing-workflows#passing-inputs-and-secrets-to-a-reusable-workflow
+    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@feature/remove-warnings-from-workflows
+
+    # Pass the secrets
+    # https://docs.github.com/en/enterprise-server@3.5/actions/using-workflows/reusing-workflows#passing-inputs-and-secrets-to-a-reusable-workflow
+    secrets:
+      ARTIFACTORY_SVC_USER: ${{ secrets.ARTIFACTORY_SVC_USER }}
+      ARTIFACTORY_SVC_PASS: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+      SLACK_CHANNEL_AUTOMATION_ID: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
+      SLACK_CHANNEL_AUTOMATION_TOKEN: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
+
