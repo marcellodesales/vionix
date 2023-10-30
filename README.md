@@ -159,7 +159,12 @@ jobs:
     name: 🐙 action
     secrets: inherit
     uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@master
-
+    with:
+      # Don't fail the PR workflow if the linter shows errors
+      # This is needed when there's too many linter errors and not in priority for solving them
+      dont-fail-on-errors: true
+      # The default runner label where to run the workflow: default devsecops
+      seceng-devsecops-dind-runner-label: self-hosted
 ```
 
 ### Linters as Problem Matchers 
