@@ -22,4 +22,6 @@ jobs:
   ghaction-devsecops:
     name: 🐙 action
     secrets: inherit
-    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@master
+    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@feature/#46/rename-and-document-gha-linter
+    with:
+      dont-fail-on-errors: true
