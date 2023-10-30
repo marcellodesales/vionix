@@ -7,7 +7,7 @@
 name: github-actions-devsecops-check-workflow
 
 on:
-  push:
+  pull_request:
     branches:
       # DEV environment: integration work from all devs is mapped to develop branch
       - develop
@@ -15,6 +15,7 @@ on:
       - feature/**
       - bugfix/**
       # STG environment is mapped to master
+      - master
       - main
 
     tags:
