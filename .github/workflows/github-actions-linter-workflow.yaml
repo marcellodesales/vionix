@@ -4,7 +4,7 @@
 # https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
 # This is a composable github Actions Workflow that reuses the SecEng DevSecOps Platform workflow for
 # Dockerized apps written with Docker Compose...
-name: github-actions-devsecops-check-workflow
+name: github-actions-devsecops-check
 
 on:
   pull_request:
