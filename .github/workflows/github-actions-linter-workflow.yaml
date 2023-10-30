@@ -34,10 +34,8 @@ jobs:
 
     # Updating the pipeline
     # https://docs.github.com/en/enterprise-server@3.5/actions/using-workflows/reusing-workflows#passing-inputs-and-secrets-to-a-reusable-workflow
-    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@feature/#46/resolve-all-workflow-warnings-after-upgrade-to-github-enterprise-3-8x
+    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@master
 
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idsecretsinherit
     # TODO: These MUST move to Vault in order to make it properly scale
     secrets: inherit
-
-
