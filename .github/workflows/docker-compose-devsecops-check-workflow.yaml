@@ -246,7 +246,7 @@ jobs:
           ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
 
           # Construct the new artifactory URL
-          ARTIFACTORY_URL="https://artifactory.viasat.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
+          ARTIFACTORY_URL="https://artifactory.viasat.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${NEXT_PUBLIC_APP_VERSION}"
           echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
 
       - id: set_docker_image_settings
@@ -400,7 +400,7 @@ jobs:
           echo "> * **Project Name**: ${{ inputs.seceng-devsecops-prisma-project }}" >> prisma-cloud-report.md
           echo "> * **Full Results**: [See Prisma Cloud results in project ${{ inputs.seceng-devsecops-prisma-project }}](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> prisma-cloud-report.md
 
-          echo "## :whale: Artifactory Repository" >> prisma-cloud-report.md
+          echo "### :whale: Artifactory Repository" >> prisma-cloud-report.md
           echo "" >> prisma-cloud-report.md
           echo "> * **Docker Image**: [${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}](${{ needs.code.outputs.dockerImageArtifactoryUrl }})" >> prisma-cloud-report.md
           echo "> Review each layer in Artifactory and update the code here to improve the report below" >> prisma-cloud-report.md
