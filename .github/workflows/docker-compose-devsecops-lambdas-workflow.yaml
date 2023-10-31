@@ -307,7 +307,7 @@ jobs:
       # - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
       #   #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
       #   id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
-      #   uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+      #   uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
       #   if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
       #   with:
       #     bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
@@ -1271,7 +1271,7 @@ jobs:
       - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.1
 
       - name: Slack Notification of successful build of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
         if: ${{ env.WORKFLOW_CONCLUSION == 'success' }}
@@ -1323,7 +1323,7 @@ jobs:
             }
 
       - name: Slack Notification build failure of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
 
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
