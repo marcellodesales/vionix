@@ -465,7 +465,6 @@ jobs:
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
-      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
       defaultDockerRegistry: ${{steps.set_docker_image_settings.outputs.defaultDockerRegistry}}
       defaultDockerImageRepo: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}
       defaultDockerService: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
@@ -518,10 +517,6 @@ jobs:
           echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
 
       - id: set_docker_image_settings
-        # The below outputs a JSON array of check tasks for each subproject
-        #  and uses GitHub Actions magic (::set-output) to set an output
-        #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
-        # https://github.community/t/sharing-a-variable-between-jobs/16967/14
         run: |
           env
           if [ -z "${{ inputs.docker-compose-service }}" ] || [ -z "${DEFAULT_DOCKER_IMAGE_REPO}" ] || [ -z "${DEFAULT_DOCKER_REGISTRY}" ]; then
@@ -1011,7 +1006,7 @@ jobs:
       - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.1
 
       - name: Slack Notification of successful build of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
         if: ${{ env.WORKFLOW_CONCLUSION == 'success' }}
@@ -1058,7 +1053,7 @@ jobs:
             }
 
       - name: Slack Notification build failure of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
 
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
