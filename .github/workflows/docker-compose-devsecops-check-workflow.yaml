@@ -410,12 +410,12 @@ jobs:
           echo "> * **Full Results**: [${{ steps.prisma_cloud_scan.outputs.scan-results-url }}](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> prisma-cloud-report.md
           echo "> * **Docker Image**: ${{needs.code.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> prisma-cloud-report.md
           echo "> * Formatted by Vionix DevSecOps Platform" >> prisma-cloud-report.md
-          echo "" >> prisma-cloud-report.md
 
           if [ "${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" != "" ]; then
             export ERROR_MESSAGE="${{ steps.prisma_cloud_scan.outputs.scan-error-message }}"
             export STATUS_CODE="${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}"
 
+            echo "" >> prisma-cloud-report.md
             echo "## :police-car-light: ERROR SCANNING: ${STATUS_CODE} Error while Scanning with Prisma Cloud" >> $GITHUB_STEP_SUMMARY
             echo "* ${ERROR_MESSAGE}" >> $GITHUB_STEP_SUMMARY
 
@@ -425,7 +425,16 @@ jobs:
           else
 
             input_file=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
+            count_critical=$(jq -r '.results[0].vulnerabilityDistribution.critical')
+            count_high=$(jq -r '.results[0].vulnerabilityDistribution.high')
+            m=$(jq -r '.results[0].vulnerabilityDistribution.medium')
+            l=$(jq -r '.results[0].vulnerabilityDistribution.low')
+            count_lowers=$((m+l))
+            total_count=$(jq -r '.results[0].vulnerabilityDistribution.total')
 
+            echo "> (${total_count}) 🚨 ${count_critical} critical ⚠️ ${count_high} high ℹ️ ${count_lowers} low+medium " >> prisma-cloud-report.md
+
+            echo "" >> prisma-cloud-report.md
             echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> header-prisma-cloud-report.md
             echo "|----|--------|------|---------|-----------|-------------|" >> header-prisma-cloud-report.md
 
@@ -433,21 +442,15 @@ jobs:
             cat header-prisma-cloud-report.md >> high-prisma-cloud-report-table.md;
             cat header-prisma-cloud-report.md >> lowers-prisma-cloud-report-table.md;
 
-            count_critical=0;
-            count_high=0;
-            count_lowers=0;
             jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
             while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
               if [ "${severity}" == "critical" ]; then
-                count_critical=$((count_critical+1));
                 echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> critical-prisma-cloud-report-table.md;
 
               elif [ "${severity}" == "high" ]; then
-                count_high=$((count_high+1));
                 echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> high-prisma-cloud-report-table.md;
 
               else
-                count_lowers=$((count_lowers+1));
                 echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;        
               fi
             done
