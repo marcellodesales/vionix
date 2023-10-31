@@ -394,21 +394,13 @@ jobs:
           echo "Scan results file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
           cat ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
 
-          echo "# :microscope: Scanned Docker Image " >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/rfuwf3yqq2cermkmrej6) Prisma Cloud Scan" >> $GITHUB_STEP_SUMMARY
-          echo "* [Scan Results](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> $GITHUB_STEP_SUMMARY
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Prisma Cloud Details" >> $GITHUB_STEP_SUMMARY
-          echo "* Results from file ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "![logo](https://repository-images.githubusercontent.com/240081584/5d77fb00-4dcd-11ea-9bfb-6a518426adea) Prisma Cloud Scan" >> prisma-cloud-report.md
-          echo "# Viasat Prisma Cloud Reports" >> prisma-cloud-report.md
+          echo "![logo](https://repository-images.githubusercontent.com/240081584/5d77fb00-4dcd-11ea-9bfb-6a518426adea)" >> prisma-cloud-report.md
+          echo "# :microscope: Scanned Docker Image " >> prisma-cloud-report.md
+          echo "" >> prisma-cloud-report.md
           echo "> * **Project Name**: ${{ inputs.seceng-devsecops-prisma-project }}" >> prisma-cloud-report.md
-          echo "> * **Full Results**: [${{ steps.prisma_cloud_scan.outputs.scan-results-url }}](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> prisma-cloud-report.md
+          echo "> * **Full Results**: [Direct Scan Results](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> prisma-cloud-report.md
           echo "> * **Docker Image**: ${{needs.code.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> prisma-cloud-report.md
+          echo "> * Report File download: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}" >> prisma-cloud-report.md
           echo "> * Formatted by Vionix DevSecOps Platform" >> prisma-cloud-report.md
 
           if [ "${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" != "" ]; then
@@ -416,7 +408,7 @@ jobs:
             export STATUS_CODE="${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}"
 
             echo "" >> prisma-cloud-report.md
-            echo "## :police-car-light: ERROR SCANNING: ${STATUS_CODE} Error while Scanning with Prisma Cloud" >> $GITHUB_STEP_SUMMARY
+            echo "## :police-car-light: ERROR SCANNING: ${STATUS_CODE} Error while Scanning with Prisma Cloud" >> prisma-cloud-report.md
             echo "* ${ERROR_MESSAGE}" >> $GITHUB_STEP_SUMMARY
 
             echo "::error title=${STATUS_CODE} Error while Scanning with Prisma Cloud::${ERROR_MESSAGE}"
@@ -432,6 +424,7 @@ jobs:
             total_count=$(cat ${input_file} | jq -r '.results[0].vulnerabilityDistribution.total')
 
             count_lowers=$((medium+low))
+            echo "</br>" >> prisma-cloud-report.md
             echo "> (${total_count}) 🚨 ${count_critical} critical ⚠️ ${count_high} high ℹ️ ${medium} medium ❓ ${low} low  " >> prisma-cloud-report.md
 
             echo "" >> prisma-cloud-report.md
@@ -455,25 +448,25 @@ jobs:
               fi
             done
 
-            echo "## 🚨 There are ${count_critical} `critical` CVEs" >> prisma-cloud-report.md
+            echo "## 🚨 There are ${count_critical} critical CVEs" >> prisma-cloud-report.md
             echo "> * **FSP Compliance Policy**: [resolve them ASAP!](https://scorecard.infosec.viasat.io/faq)" >> prisma-cloud-report.md
-            echo "<details><summary>🚨 See all the ${count_critical} results</summary>" >> prisma-cloud-report.md
+            echo "<details><summary>🚨 See all the ${count_critical} results with links to https://nvd.nist.gov/vuln/detail</summary>" >> prisma-cloud-report.md
             echo "" >> prisma-cloud-report.md
             cat critical-prisma-cloud-report-table.md >> prisma-cloud-report.md
             echo "</details>" >> prisma-cloud-report.md
             echo "" >> prisma-cloud-report.md
 
-            echo "## ⚠️ There are ${count_high} `high` CVEs" >> prisma-cloud-report.md
+            echo "## ⚠️ There are ${count_high} high CVEs" >> prisma-cloud-report.md
             echo "> * **FSP Compliance Policy**: [resolve them soon!](https://scorecard.infosec.viasat.io/faq)" >> prisma-cloud-report.md
-            echo "<details><summary>⚠️ See all the ${count_high} results</summary>" >> prisma-cloud-report.md
+            echo "<details><summary>⚠️ See all the ${count_high} results with links to https://nvd.nist.gov/vuln/detail</summary>" >> prisma-cloud-report.md
             echo "" >> prisma-cloud-report.md
             cat high-prisma-cloud-report-table.md >> prisma-cloud-report.md
             echo "</details>" >> prisma-cloud-report.md
             echo "" >> prisma-cloud-report.md
 
-            echo "## ℹ️ There are ${count_lowers} `low` and `medium` CVEs" >> prisma-cloud-report.md
+            echo "## ℹ️ There are ${count_lowers} medium and low CVEs" >> prisma-cloud-report.md
             echo "> * **FSP Compliance Policy**: [plan to remove them!](https://scorecard.infosec.viasat.io/faq)" >> prisma-cloud-report.md
-            echo "<details><summary>ℹ️ See all the ${count_lowers} results</summary>" >> prisma-cloud-report.md
+            echo "<details><summary>ℹ️ See all the ${count_lowers} results with links to https://nvd.nist.gov/vuln/detail</summary>" >> prisma-cloud-report.md
             echo "" >> prisma-cloud-report.md
             cat lowers-prisma-cloud-report-table.md >> prisma-cloud-report.md
             echo "</details>" >> prisma-cloud-report.md
