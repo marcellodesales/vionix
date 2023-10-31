@@ -405,11 +405,13 @@ jobs:
           echo "* Results from file ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/rfuwf3yqq2cermkmrej6) Prisma Cloud Scan" >> prisma-cloud-report.md
-          echo "# Prisma Cloud Reports" >> prisma-cloud-report.md
-          echo "* [Viasat Prisma Cloud Results](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> prisma-cloud-report.md
+          echo "![logo](https://repository-images.githubusercontent.com/240081584/5d77fb00-4dcd-11ea-9bfb-6a518426adea) Prisma Cloud Scan" >> prisma-cloud-report.md
+          echo "# Viasat Prisma Cloud Reports" >> prisma-cloud-report.md
+          echo "> * **Project Name**: `${{ inputs.seceng-devsecops-prisma-project }}`" >> prisma-cloud-report.md
+          echo "> * **Full Results: [${{ steps.prisma_cloud_scan.outputs.scan-results-url }}](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> prisma-cloud-report.md
+          echo "> * Formatted by Vionix DevSecOps Platform" >> prisma-cloud-report.md
           echo "" >> prisma-cloud-report.md
-          
+
           if [ "${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" != "" ]; then
             export ERROR_MESSAGE="${{ steps.prisma_cloud_scan.outputs.scan-error-message }}"
             export STATUS_CODE="${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}"
@@ -426,18 +428,58 @@ jobs:
             input_file=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
 
             # Write the table header to the output file
-            echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> $GITHUB_STEP_SUMMARY
-            echo "|----|--------|------|-------- |-----------|------------ |" >> $GITHUB_STEP_SUMMARY
-            echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> prisma-cloud-report.md
-            echo "|----|--------|------|---------|-----------|-------------|" >> prisma-cloud-report.md
+            echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> header-prisma-cloud-report.md
+            echo "|----|--------|------|---------|-----------|-------------|" >> header-prisma-cloud-report.md
+
+            cat header-prisma-cloud-report.md >> critical-prisma-cloud-report-table.md;
+            cat header-prisma-cloud-report.md >> high-prisma-cloud-report-table.md;
+            cat header-prisma-cloud-report.md >> lowers-prisma-cloud-report-table.md;
 
             # Parse the JSON data and append each row to the markdown file
             jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
+            count_critical=0
+            count_high=0
+            count_lowers=0
             while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> $GITHUB_STEP_SUMMARY;
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> prisma-cloud-report.md;
+              if [ "$severity" == "critical" ]; then
+                count_critical=$((count_critical+1))
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> critical-prisma-cloud-report-table.md;
+
+              elif [ "$severity" == "high" ]; then
+                count_high=$((count_high+1))
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> high-prisma-cloud-report-table.md;
+
+              else
+                count_lowers=$((count_lowers+1))
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;        
+              if
             done
 
+            echo "## 🚨 There are ${count_critical} `critical` CVEs" >> prisma-cloud-report.md
+            echo "> * **FSP Compliance Policy**: [resolve them ASAP!](https://scorecard.infosec.viasat.io/faq)" >> prisma-cloud-report.md
+            echo "<details><summary>🚨 See all the ${count_critical} results</summary>" >> prisma-cloud-report.md
+            echo "" >> prisma-cloud-report.md
+            cat critical-prisma-cloud-report-table.md >> prisma-cloud-report.md
+            echo "</details>" >> prisma-cloud-report.md
+            echo "" >> prisma-cloud-report.md
+
+            echo "## ⚠️ There are ${count_high} `high` CVEs" >> prisma-cloud-report.md
+            echo "> * **FSP Compliance Policy**: [resolve them soon!](https://scorecard.infosec.viasat.io/faq)" >> prisma-cloud-report.md
+            echo "<details><summary>🚨 See all the ${count_high} results</summary>" >> prisma-cloud-report.md
+            echo "" >> prisma-cloud-report.md
+            cat high-prisma-cloud-report-table.md >> prisma-cloud-report.md
+            echo "</details>" >> prisma-cloud-report.md
+            echo "" >> prisma-cloud-report.md
+
+            echo "## ℹ️ There are ${count_lowers} `low` and `medium` CVEs" >> prisma-cloud-report.md
+            echo "> * **FSP Compliance Policy**: [plan to remove them!](https://scorecard.infosec.viasat.io/faq)" >> prisma-cloud-report.md
+            echo "<details><summary>🚨 See all the ${count_lowers} results</summary>" >> prisma-cloud-report.md
+            echo "" >> prisma-cloud-report.md
+            cat lowers-prisma-cloud-report-table.md >> prisma-cloud-report.md
+            echo "</details>" >> prisma-cloud-report.md
+            echo "" >> prisma-cloud-report.md
+
+            cat prisma-cloud-report.md >> $GITHUB_STEP_SUMMARY;
           fi
 
       - name: Add Prisma Cloud PR Comment
