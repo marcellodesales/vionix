@@ -122,6 +122,7 @@ on:
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+    # TODO: These MUST move to Vault in order to make it properly scale
     secrets:
 
       GITOPS_GITHUB_DEPLOY_PAT:
@@ -140,6 +141,11 @@ on:
       SONAR_TOKEN:
         description: "The secret described by sonar step 3 tutorial"
         required: false
+
+      TEST_JIRA_TOKEN_AUTH:
+        description: "The jira token used for automated jira verification"
+        required: false
+
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
@@ -188,7 +194,7 @@ jobs:
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
       - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
 
@@ -289,7 +295,7 @@ jobs:
     steps:
 
       - name: Checkout Current Repository
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           path: .
 
@@ -297,7 +303,7 @@ jobs:
         run: mkdir ./platform-actions
 
       - name: Checkout deploy repository for all ENVs if the workflow is defined
-        uses: viarise/checkout@v3
+        uses: viarise/checkout@v3.5.3
         with:
           repository: seceng-devsecops-platform/devsecops-platform-github-workflows
           ref: master
@@ -359,11 +365,13 @@ jobs:
       run:
         working-directory: ${{ inputs.docker-compose-test-context }}
     env:
+      # TODO: Those must be fetched from Vault, but from outside the workflow
       TEST_GITHUB_TOKEN: '${{ secrets.TEST_GITHUB_TOKEN }}'
       TEST_GITHUB_HOST: '${{ secrets.TEST_GITHUB_HOST }}'
+      TEST_JIRA_TOKEN_AUTH: '${{ secrets.TEST_JIRA_TOKEN_AUTH }}'
     steps:
       - name: Checkout Current Repository
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
 
       - name: Execute tests in container
         run: |
@@ -381,31 +389,34 @@ jobs:
           ls -la build
 
       - name: Set results to outputs
+        if: ${{ always() && github.event_name == 'pull_request' }}
         id: test-values
         run: |
           COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker-compose-test-report-coverage-file }})
           COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker-compose-test-report-coverage-file }})
           # https://linuxhint.com/round-two-decimal-places-bash/
           # COVERAGE_PERCENT=$(printf '%.2f' $((COVERAGE_RATE * 100)))%
-          echo "::set-output name=numberOfCoveredClasses::$COVERED_CLASSES"
-          echo "::set-output name=coverageRate::$COVERAGE_RATE"
+          echo "numberOfCoveredClasses=$COVERED_CLASSES"
+          echo "coverageRate=$COVERAGE_RATE"
           TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" ${{ inputs.docker-compose-test-report-file }})
           TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" ${{ inputs.docker-compose-test-report-file }})
           TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" ${{ inputs.docker-compose-test-report-file }})
           TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" ${{ inputs.docker-compose-test-report-file }})
           TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" ${{ inputs.docker-compose-test-report-file }})
-          echo "::set-output name=numberOfTestErrors::$TEST_ERRORS"
-          echo "::set-output name=numberOfTestFailures::$TEST_FAILURES"
-          echo "::set-output name=numberOfTestsSkipped::$TESTS_SKIPPED"
-          echo "::set-output name=numberOfTestsExecuted::$TESTS_EXECUTED"
-          echo "::set-output name=testsExecutionTime::$TESTS_TIME"
+          echo "numberOfTestErrors=$TEST_ERRORS" >> $GITHUB_OUTPUT
+          echo "numberOfTestFailures=$TEST_FAILURES" >> $GITHUB_OUTPUT
+          echo "numberOfTestsSkipped=$TESTS_SKIPPED" >> $GITHUB_OUTPUT
+          echo "numberOfTestsExecuted=$TESTS_EXECUTED" >> $GITHUB_OUTPUT
+          echo "testsExecutionTime=$TESTS_TIME" >> $GITHUB_OUTPUT
 
       - name: Outputs for notification
+        if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
           echo "test-outputs=${{ toJson(steps.test-values.outputs) }}"
 
       # https://github.com/marketplace/actions/code-coverage-summary
       - name: Code Coverage Summary Report
+        if: ${{ always() && github.event_name == 'pull_request' }}
         uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
         with:
           filename: ${{ inputs.docker-compose-test-report-coverage-file }}
@@ -420,11 +431,118 @@ jobs:
 
       - name: Add Coverage PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: github.event_name == 'pull_request'
+        if: ${{ always() && github.event_name == 'pull_request' }}
         with:
           header: code-coverage
           recreate: true
           path: code-coverage-results.md
+
+      - name: Build test summary based on the file as the header
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        uses: seceng-devsecops-platform/test-summary-action@v2
+        with:
+          paths: ${{ inputs.docker-compose-test-report-file }}
+          output: test-summary.md
+
+      - name: Generate test report from xml
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        run: |
+          if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
+            echo '
+            import argparse
+            import xml.etree.ElementTree as ET
+
+            # Parse command-line arguments
+            parser = argparse.ArgumentParser()
+            parser.add_argument("file_name", help="Path to the test report file")
+            args = parser.parse_args()
+
+            # Parse the XML test report
+            tree = ET.parse(args.file_name)
+            root = tree.getroot()
+
+            # Initialize variables to store test results
+            passed_tests = 0
+            failed_tests = 0
+            total_duration = 0
+
+            # Initialize array to store test case properties
+            table_data = [["Result", "Class", "Function", "Duration"]]
+            table_data.append(["---","---", "---", "---"])
+
+            # Loop through each test case element and store its properties
+            for testcase in root.iter("testcase"):
+                # Extract function and file name, test result, and execution time
+                test_result = "FAIL" if testcase.find("failure") is not None else "PASS"
+                color = "lightgreen" if test_result == "PASS" else "red"
+                function_name = testcase.attrib["name"]
+                class_name = testcase.attrib["classname"]
+                duration_str = testcase.attrib["time"]
+                duration = float(duration_str)
+
+                # Add the test case properties to the table data
+                formatted_class = f"<p style=\"color: {color}; position: relative; top: 50%; transform: translateY(50%)\">{class_name}</p>"
+                formatted_func = f"<p style=\"color: {color}; position: relative; top: 50%; transform: translateY(50%)\">{function_name}</p>"
+                formatted_dur = f"<p style=\"color: {color}; position: relative; top: 50%; transform: translateY(50%)\">{duration:.02f}s</p>"
+                formatted_result = "✅" if test_result == "PASS" else "❌"
+
+                table_data.append([formatted_result, formatted_class, formatted_func, formatted_dur])
+
+                # Update the test result counters and total duration
+                if test_result == "PASS":
+                    passed_tests += 1
+                else:
+                    failed_tests += 1
+                total_duration += duration
+
+            # Calculate the overall pass/fail status from the test result counters
+            overall_status = "PASS" if failed_tests == 0 else "FAIL"
+
+            print(f"* From: {args.file_name}")
+            print("")
+
+            # Print the table as markdown
+            for row in table_data:
+                print("| " + " | ".join(row) + " |")
+
+            print("")
+            # Print the summary data outside the markdown table
+            print("---")
+            print("")
+            print(f"* Total tests: {passed_tests+failed_tests}")
+            print(f"* Total duration: {total_duration:.02f}s")
+            print(f"* Overall Status: {overall_status}")
+            ' > junit-test-reporter.py
+            awk '{print substr($0,3)}' junit-test-reporter.py > junit-test-reporter.py.u
+            mv junit-test-reporter.py.u junit-test-reporter.py
+            
+            echo "Before, fix the formatting"
+            cat junit-test-reporter.py
+
+            pip install autopep8
+            autopep8 --in-place --aggressive --aggressive junit-test-reporter.py
+
+            echo "After, the file has been updated"
+            cat junit-test-reporter.py
+
+            echo "Generating test reports with junit-test-reporter.py"
+            python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }}
+
+            echo "Generating test reports with junit-test-reporter.py"
+            python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }} > junit-tests-summary.md
+            
+            echo "Update the file test-summary.md with test results"
+            echo "" >> test-summary.md
+            cat junit-tests-summary.md >> test-summary.md
+          fi
+
+      - name: Add Test summary PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        with:
+          header: tests-summary
+          recreate: true
+          path: test-summary.md
 
       - name: Upload coverage report file
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
@@ -439,8 +557,10 @@ jobs:
           path: ${{ inputs.docker-compose-test-report-file }}
 
       - name: Annotate Job with notification status
+        if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
-          echo "# ✅️ test-code" >> $GITHUB_STEP_SUMMARY
+          echo "# ✅️ Test Summary" >> $GITHUB_STEP_SUMMARY
+          cat test-summary.md >> $GITHUB_STEP_SUMMARY
           cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
   report:
@@ -464,7 +584,7 @@ jobs:
 
       # Fetch the entire history as needed for reports in scm git
       - name: Fetch all commits from the repo
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0  # Sonarqube Shallow clones should be disabled for a better relevancy of analysis
 

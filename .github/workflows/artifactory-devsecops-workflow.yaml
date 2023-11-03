@@ -1,16 +1,35 @@
 ####
 #### Author: Marcello DeSales (@mdesales)
 ####
-# Builds and Pushes a Docker Image to Viasat's Artifactory Docker Registry
+# Sets up and publishes Artifactory Repositories to Viasat's Artifactory Server
+# Frog Artifactory repositories are implemented in a similar way across different languages and package managers. 
+# All language package managers supported by Artifactory, including Node.js, Golang, Java, and Python, are implemented with a virtual repository 
+# that is composed of local and remote repositories.
+# Here's a summary of the supported repository types for each language/package manager:
+# * Node.js: Artifactory supports npm packages via local, remote, and virtual repositories.
+# * Golang: Artifactory supports Go packages via local, remote, and virtual repositories.
+# * Java: Artifactory supports Maven packages via local, remote, and virtual repositories, as well as Gradle packages via local and virtual repositories.
+# * Python: Artifactory supports PyPI packages via local, remote, and virtual repositories.
+# * ... any other supported language
+# - In each case, the virtual repository serves as a single access point for developers to access a specific set of artifacts. 
+# The virtual repository is composed of one or more local repositories, which contain the private artifacts developed within 
+# an organization, and one or more remote repositories, which can be public open-source repositories. The remote repositories are used 
+# to cache remote artifacts, eliminating the need to download them repeatedly and improving the build performance.
+# - By creating a virtual repository and configuring the local and remote repositories that compose it, developers can collect all the 
+# artifacts they need for a specific project in one place. The virtual repository also serves as a single source of truth for package 
+# versioning and dependency management.
+# - In summary, while the actual repository types may vary slightly depending on the specific package manager, Artifactory provides local, 
+# remote, and virtual repositories that can be used to manage artifacts and dependencies efficiently for all the major programming languages 
+# and package managers.
 # https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
 # Base Workflow: https://git.viasat.com/seceng-devsecops-platform/devsecops-client-runtime-blackduck/blob/master/.github/workflows/devsecops-python.yaml
 
-name: docker-image-devsecops-cicd
+name: artifactory-repo-deployment
 
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
 # section #6: Saving Computation Time by Stopping Obsolete Workflows
 concurrency:
-  group: docker-image-devsecops-cicd-${{ github.ref }}-1
+  group: artifactory-repo-deployment-${{ github.ref }}-1
   cancel-in-progress: true
 
 on:
@@ -43,44 +62,36 @@ on:
         description: "Docker Compose service to build"
         required: true
         type: string
-
-      docker-build-platforms:
-        description: "The list of docker platforms to build using buildx"
-        required: false
-        type: string
-        default: "linux/amd64"
-
-      docker-build-mode:
-        description: "Whether to run in parallel or sequencial with DOCKER_BUILDKIT=0"
-        required: false
-        type: string
-        default: "parallel"
-
-      docker-build-file-path:
-        description: "The path to Dockerfile when sequencial is provided"
-        required: false
-        type: string
-        default: Dockerfile
-
-      # There's still a possibility that the image is never built, so this will timeout and fail the execution. Make sure to analize the situation.
-      docker-compose-releases-wait-for-build:
-        description: "The number of seconds to wait while releasing docker images. Usually it's larger than the average builds of the docker image"
-        required: false
-        type: number
-        default: 400
-
-      gitops-deploy-workflow:
-        description: "Cloud provider workflow deploy the repo using k8s"
-        required: false
-        type: string
       
+      docker-build-mode:
+        description: "How to build the deploy image"
+        required: false
+        type: string
+        default: parallel
+
       artifactory-deploy-repo-type:
         description: "The type of deployment artifact to use"
         type: string
         required: false
 
-      artifactory-deploy-workflow:
-        description: "Deployment of artifactory artifacts based on types"
+      artifactory-deploy-host:
+        description: "The artifactory host used for deployments"
+        type: string
+        required: false
+        default: artifactory.viasat.com/artifactory
+
+      artifactory-deploy-repo-virtual:
+        description: "The virtual repository name used for the deployment"
+        type: string
+        required: true
+
+      artifactory-deploy-repo-local:
+        description: "The repository to deploy the artifacts to"
+        type: string
+        required: true
+
+      artifactory-deploy-type-config:
+        description: "Additional configuration required for the given type"
         type: string
         required: false
         # https://jfrog.com/blog/why-goproxy-matters-and-which-to-pick/
@@ -91,13 +102,9 @@ on:
         # https://jfrog.com/help/r/jfrog-artifactory-documentation/virtual-go-repositories
         default: |
           {
-            "host": "artifactory.viasat.com/artifactory",
             "type": "golang",
             "noSumDb": "git.viasat.com/*",
-            "repo": {
-              "virtual": "project-golang",
-              "local": "project-golang-local"
-            }
+            "dependencies": "ALL"
           }
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
@@ -119,11 +126,6 @@ on:
       SLACK_CHANNEL_AUTOMATION_TOKEN:
         description: "The token for the given Slack channel ID"
         required: false
-
-      GITOPS_GITHUB_DEPLOY_PAT:
-        description: "The token to clone and push changes to the GitOps Deploy repo"
-        required: false
-
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
@@ -175,6 +177,19 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check Artifactory API access with credentials provided for publishing
+        run: |
+          response=$(curl -I -u ${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }} ${{ inputs.artifactory-deploy-host }}/api/storage/${{ inputs.artifactory-deploy-repo-local }})
+          status=$(echo "$response" | grep ^HTTP/ | awk '{print $2}')
+          if [ "$status" = "403" ]; then
+            echo "::error title=Artifactory Repository Access Denied!::The user credential of ARTIFACTORY_SVC_USER:ARTIFACTORY_SVC_PASS doesn't have write permissions to write to the '${{ inputs.artifactory-deploy-repo-type }}' repo '${{ inputs.artifactory-deploy-repo-local }}'"
+            exit 1
+
+          else
+            echo "Artifactory API access granted!"
+          fi
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -182,6 +197,7 @@ jobs:
           echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Fetch all history and have .git locally for inspection
         uses: viarise/checkout@v3.5.3
         with:
@@ -197,10 +213,8 @@ jobs:
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
           REMOVE="refs/heads/"
           BRANCH_TAG=${GITHUB_REF/$REMOVE/}
-
           REMOVE="refs/tags/"
           BRANCH_TAG=${BRANCH_TAG/$REMOVE/}
-
           echo "BRANCH_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
           # Remove the / from topic branches for versions, etc:
           BRANCH_TAG_FOR_VERSION=$(echo ${BRANCH_TAG} | sed -e 's/\//-/g')
@@ -210,7 +224,7 @@ jobs:
           GIT_SHORT_SHA=${GITHUB_SHA:0:7}
           echo "GIT_SHORT_SHA=${GIT_SHORT_SHA}" >> $GITHUB_ENV
           echo "BRANCH_SHA_TAG=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_APP_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_ARTIFACTS_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
           # For twistcli
           echo "BUILD_JOB_NAME=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
           echo "BUILD_JOB_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
@@ -224,14 +238,13 @@ jobs:
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
           COMMITTER_EMAIL=$(git --no-pager show -s --format="%ae")
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
-
           env
 
       # Override the version with the tag name since it's available on github.ref_name
       - name: Set version as Tag=${{ github.ref_name }} as it is a production release
         if: github.ref_type == 'tag'
         run: |
-          echo "NEXT_PUBLIC_APP_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_ARTIFACTS_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
       # only setup deployment when the deployment object is provided
       - name: Setup default deployment properties for all releases
@@ -239,30 +252,26 @@ jobs:
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
-
-          GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
-          GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.ref')
-          GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
-          GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.region')
-          GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.type')
-
+          GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.repo')
+          GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.ref')
+          GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.provider')
+          GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.region')
+          GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.type')
           echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
-
+          
       # Execute for DEV and STG
       - name: Setup deployment properties for branch
         if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
-
-          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
-          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
-          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].url')
-
+          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
+          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
+          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].url')
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
@@ -273,11 +282,9 @@ jobs:
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
-
-          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.env')
-          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.segment')
-          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.url')
-
+          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.env')
+          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.segment')
+          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.url')
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
@@ -303,7 +310,6 @@ jobs:
           echo "committerName=$COMMITTER_NAME" >> $GITHUB_OUTPUT
           echo "committerEmail=$COMMITTER_EMAIL" >> $GITHUB_OUTPUT
           echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT
-
           echo "gitopsDeployEnv=$GITOPS_TARGET_ENV" >> $GITHUB_OUTPUT
           echo "gitopsDeployUrl=$GITOPS_TARGET_URL" >> $GITHUB_OUTPUT
           echo "gitopsDeploySegment=$GITOPS_TARGET_SEGMENT" >> $GITHUB_OUTPUT
@@ -312,7 +318,7 @@ jobs:
           echo "gitopsDeployTargetProvider=$GITOPS_TARGET_PROVIDER" >> $GITHUB_OUTPUT
           echo "gitopsDeployTargetRegion=$GITOPS_TARGET_REGION" >> $GITHUB_OUTPUT
           echo "gitopsDeployTargetType=$GITOPS_TARGET_TYPE" >> $GITHUB_OUTPUT
-          echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT 
+          echo "gitopsDeployVersion=$ARTIFACTORY_ARTIFACTS_VERSION" >> $GITHUB_OUTPUT
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -325,7 +331,6 @@ jobs:
           done
           echo "```" >> $GITHUB_STEP_SUMMARY
           echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-
           echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
           echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
           echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
@@ -339,7 +344,7 @@ jobs:
       - name: Annotate Job with current information
         if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'branch' }}
         run: |
-          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "* :bookmark: App Version: ${ARTIFACTORY_ARTIFACTS_VERSION}" >> $GITHUB_STEP_SUMMARY
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -347,48 +352,6 @@ jobs:
         if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
         run: |
           echo "* :bookmark: App Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-
-      # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
-      - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
-        #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
-        id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
-        if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
-        with:
-          bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-          channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          payload: >-
-            {
-                "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}> :moving-clock:",
-                "attachments": [
-                    {
-                        "color": "#B6B6B6",
-                        "fields": [
-                            {
-                              "title": "#️⃣ Revision",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{steps.set_base_values.outputs.gitShortSha}}|${{steps.set_base_values.outputs.gitShortSha}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🌿 Branch",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}|${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "👤 Author",
-                              "value": "<${{ github.event.sender.html_url }}|${{steps.set_base_values.outputs.committerName}}, ${{steps.set_base_values.outputs.committerEmail}}>",
-                              "short": true
-                            },
-                            {
-                              "title": "🔧 code Job",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-                              "short": true
-                            }
-                        ],
-                        "footer": "<${{steps.set_base_values.outputs.githubActionJobUrl}}>"
-                    }
-                ]
-            }
 
       - name: Annotate Job with notification status
         run: |
@@ -398,64 +361,9 @@ jobs:
           echo * Successfully notified Slack Channel >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-  check:
-    name: 🛡️ check-code
-    needs: [code]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        checkType: [Dockerfile,Readme]
-
-    # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
-    defaults:
-      run:
-        working-directory: ${{ inputs.docker-compose-context }}
-
-    steps:
-      # Checkout always fetches the whole repo. Depending on the size, this will be super long
-      - name: Fetch only the top commit
-        if: ${{ github.ref_type == 'branch' }}
-        uses: viarise/checkout@v3.5.3
-        with:
-          fetch-depth: 1
-
-      - name: Annotate Job with current information
-        if: ${{ github.ref_type == 'branch' }}
-        run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "# 🛡️ check-code Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Check dockerfile
-        id: check-dockerfile-benchmark
-        uses: viarise/benchmark-dockerfile@main
-        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Dockerfile' }}
-
-      - name: Annotate Job with current information
-        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Dockerfile' }}
-        run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "## :heavy_check_mark: Dockerfile Benchmark " >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          for JSON_LINE in "toJSON(steps.check-dockerfile-benchmark.outputs.violation_report) }}"; do
-#            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-#          done
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Check Readme
-        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Readme' }}
-        run: |
-          env
-          echo "In order to associate the docker image to the repo, we need to associate the Dockerfile to the repo"
-          ls -la
-
   build:
     name: 📦 build
-    needs: [code, check]
+    needs: [code]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
@@ -465,6 +373,7 @@ jobs:
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
+      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
       defaultDockerRegistry: ${{steps.set_docker_image_settings.outputs.defaultDockerRegistry}}
       defaultDockerImageRepo: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}
       defaultDockerService: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
@@ -484,16 +393,16 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 📦 build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_ARTIFACTS_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_ENV
 
       - name: Find out the image repo name and version
         run: |
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
@@ -507,16 +416,18 @@ jobs:
           GITHUB_REPOSITORY_PATHS=$(echo ${GITHUB_REPOSITORY_PATHS} | sed -e "s/-/\//g")
           GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG} 
           echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
-
           # Extract the first token, repository path, and image tag from the image string
           ARTIFACTORY_REPO_TOKEN="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | cut -d '.' -f1)"
           ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
-
           # Construct the new artifactory URL
           ARTIFACTORY_URL="https://artifactory.viasat.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
           echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
 
       - id: set_docker_image_settings
+        # The below outputs a JSON array of check tasks for each subproject
+        #  and uses GitHub Actions magic (::set-output) to set an output
+        #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
+        # https://github.community/t/sharing-a-variable-between-jobs/16967/14
         run: |
           env
           if [ -z "${{ inputs.docker-compose-service }}" ] || [ -z "${DEFAULT_DOCKER_IMAGE_REPO}" ] || [ -z "${DEFAULT_DOCKER_REGISTRY}" ]; then
@@ -527,23 +438,34 @@ jobs:
           echo "defaultDockerService=${{ inputs.docker-compose-service }}" >> $GITHUB_OUTPUT
           echo "defaultDockerRegistry=$DEFAULT_DOCKER_REGISTRY" >> $GITHUB_OUTPUT
           echo "originalDockerImageTag=$ORIGINAL_DOCKER_IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "githubRepoPaths=$GITHUB_REPOSITORY_PATHS" >> $GITHUB_OUTPUT 
+          echo "githubRepoPaths=$GITHUB_REPOSITORY_PATHS" >> $GITHUB_OUTPUT
           echo "dockerImageArtifactoryUrl=$ARTIFACTORY_URL" >> $GITHUB_OUTPUT
 
       - name: Set additional envs to docker compose build execution
-        if: ${{ inputs.artifactory-deploy-workflow != '' && inputs.artifactory-deploy-repo-type != '' }} 
+        id: artifactory-settings
         run: |
-          echo "Parsing the artifactory deployment types '${{ inputs.artifactory-deploy-repo-type }}'"
-          obj=$(echo '${{ inputs.artifactory-deploy-workflow }}' | jq '.')
-          host=$(echo $obj | jq -r '.host')
-          type=$(echo $obj | jq -r '.type')
-          selected_repo=$(echo $obj | jq -r --arg deployRepoType "${{ inputs.artifactory-deploy-repo-type }}" '.repo[$deployRepoType]')
-          noSumDb=$(echo $obj | jq -r '.noSumDb')
-      
-          if [ "$type" = "golang" ] && [ "${{ inputs.artifactory-deploy-repo-type }}" = "virtual" ]; then
-            goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$selected_repo"
-            echo "Setting env var GOPROXY=$goproxy"
-            echo "Setting env var GONOSUMDB=$noSumDb"
+          echo "Preparing to deploy artifactory deployment of type '${{ inputs.artifactory-deploy-repo-type }}'"
+
+          host=${{ inputs.artifactory-deploy-host }}
+          type=${{ inputs.artifactory-deploy-repo-type }}
+          repo_virtual=${{ inputs.artifactory-deploy-repo-virtual }}
+          repo_local=${{ inputs.artifactory-deploy-repo-local }}
+          
+          echo "repository=$selected_repo" >> $GITHUB_OUTPUT
+          echo "ARTIFACTORY_REPO_HOST=$host" >> $GITHUB_ENV
+          echo "ARTIFACTORY_SVC_USER=${{ secrets.ARTIFACTORY_SVC_USER }}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_SVC_PASS=${{ secrets.ARTIFACTORY_SVC_PASS }}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_REPO_VIRTUAL=$repo_virtual" >> $GITHUB_ENV
+          echo "ARTIFACTORY_REPO_LOCAL=$repo_local" >> $GITHUB_ENV
+          echo "ARTIFACTORY_ARTIFACTS_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_ENV
+
+          if [ "$type" = "golang" ]; then
+            obj=$(echo '${{ inputs.artifactory-deploy-type-config }}' | jq '.')
+            noSumDb=$(echo $obj | jq -r '.noSumDb')
+
+            goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$repo_virtual"
+            echo "Setting env var for golang GOPROXY=$goproxy"
+            echo "Setting env var for golang GONOSUMDB=$noSumDb"
             echo "GOPROXY=$goproxy" >> $GITHUB_ENV
             echo "GONOSUMDB=$noSumDb" >> $GITHUB_ENV
           fi
@@ -558,10 +480,6 @@ jobs:
           echo 'build-outputs=${{ toJSON(steps.set_docker_image_settings.outputs) }}'
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
 
       # Newer buildx setting:
       # https://github.com/docker/setup-buildx-action/issues/105#issuecomment-910928571
@@ -592,7 +510,7 @@ jobs:
           echo 'build-outputs=${{ toJSON(steps.buildx.outputs) }}'
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :whale: Docker Metadata" >> $GITHUB_STEP_SUMMARY
-          echo "* Version: NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_STEP_SUMMARY
+          echo "* Version: ARTIFACTORY_ARTIFACTS_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_STEP_SUMMARY
       #          echo "" >> $GITHUB_STEP_SUMMARY
 #          echo "```json" >> $GITHUB_STEP_SUMMARY
 #          echo 'outputs=${{ toJSON(steps.buildx.outputs) }}' >> $GITHUB_STEP_SUMMARY
@@ -615,8 +533,7 @@ jobs:
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.created" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.created ${{needs.code.outputs.buildDateTime}}" >> {}' -- {}
           find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.version" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.version ${GITHUB_SHA}" >> {}' -- {}
           # https://docs.docker.com/engine/reference/commandline/buildx_bake/#file
-
-          echo "Using Version: NEXT_PUBLIC_APP_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}"
+          echo "Using Version: ARTIFACTORY_ARTIFACTS_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}"
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file}}" ]; then
             echo "Specifying the buildx bake by the service compose file."
             docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }};
@@ -649,7 +566,7 @@ jobs:
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == 'parallel' }}
         id: docker-bake
-        uses: seceng-devsecops-platform/docker-bake-action@v3.1.0
+        uses: seceng-devsecops-platform/docker-bake-action@v2.2.0
         with:
           push: true
           # https://github.com/docker/bake-action/pull/76
@@ -709,6 +626,10 @@ jobs:
 #      name: artifactory-${{ needs.code.outputs.gitopsDeployEnv }}
 #      url: ${{needs.build.outputs.dockerImageArtifactoryUrl}}
 
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      repository: ${{steps.artifactory-settings.outputs.repository}}
+
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
@@ -721,13 +642,12 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🚀 deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
@@ -742,7 +662,6 @@ jobs:
         if: ${{ github.ref_type == 'tag' }}
         run: |
           echo "ORIGINAL_DOCKER_IMAGE_TAG=${{ needs.code.outputs.gitopsDeployVersion }}" >> $GITHUB_ENV
-
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
         uses: seceng-devsecops-platform/docker-login-action@v2.2.0
@@ -778,205 +697,49 @@ jobs:
             sleep 10
           done
 
-      - name: Tag docker images with other tags for DEV or STG
+      - name: Set additional envs to docker compose build execution
+        id: artifactory-settings
+        run: |
+          echo "Parsing the artifactory deployment settings'"
+
+          host=${{ inputs.artifactory-deploy-host }}
+          type=${{ inputs.artifactory-deploy-repo-type }}
+          repo_virtual=${{ inputs.artifactory-deploy-repo-virtual }}
+          repo_local=${{ inputs.artifactory-deploy-repo-local }}
+
+          obj=$(echo '${{ inputs.artifactory-deploy-type-config }}' | jq '.')
+
+          echo "repository=$selected_repo" >> $GITHUB_OUTPUT
+          echo "ARTIFACTORY_REPO_HOST=$host" >> $GITHUB_ENV
+          echo "ARTIFACTORY_SVC_USER=${{ secrets.ARTIFACTORY_SVC_USER }}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_SVC_PASS=${{ secrets.ARTIFACTORY_SVC_PASS }}" >> $GITHUB_ENV
+          echo "ARTIFACTORY_REPO_VIRTUAL=$repo_virtual" >> $GITHUB_ENV
+          echo "ARTIFACTORY_REPO_LOCAL=$repo_local" >> $GITHUB_ENV
+
+          if [ "$type" = "golang" ]; then
+            noSumDb=$(echo $obj | jq -r '.noSumDb')
+            jfrog_deps=$(echo $obj | jq -r '.jfrog.dependencies')
+
+            goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$repo_virtual"
+            echo "Setting env var for golang GOPROXY=$goproxy"
+            echo "Setting env var for golang GONOSUMDB=$noSumDb"
+            echo "GOPROXY=$goproxy" >> $GITHUB_ENV
+            echo "GONOSUMDB=$noSumDb" >> $GITHUB_ENV
+
+            ARTIFACTORY_ARTIFACTS_VERSION=$(yq e .version .jfrog/projects/go.yaml |  tr -d '\r')
+            echo "ARTIFACTORY_ARTIFACTS_VERSION=${ARTIFACTORY_ARTIFACTS_VERSION}" >> $GITHUB_ENV
+
+            ARTIFACTORY_GO_DEPS="${jfrog_deps}"
+            echo "ARTIFACTORY_GO_DEPS=${ARTIFACTORY_GO_DEPS}" >> $GITHUB_ENV
+          fi
+
+     # TODO: since we are using self-hosted, the docker image is saved in the same host
+      # https://docs.docker.com/engine/reference/commandline/buildx_bake/
+      - name: Execute the deployment of artifacts declared using mode ${{ inputs.inputs.docker-build-mode }}
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ github.ref_type == 'branch' }}
         run: |
-          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchTagForVersion}}
-          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
-          echo "Current images"
-          docker image ls -a
-
-      - name: Tag docker images with other tags for PRD
-        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
-        # Only run the builds when building either DEV or STG
-        if: ${{ github.ref_type == 'tag' }}
-        run: |
-          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
-          echo "Current images"
-          docker image ls -a
-
-      # TODO: Since the current running is self-hosted, we can just run the command again and reuse
-      # the docker images from cache. When we change, we need to use the transfer of images
-      # https://github.com/docker/build-push-action/blob/master/docs/advanced/share-image-jobs.md
-      # https://docs.docker.com/engine/reference/commandline/buildx_bake/
-      - name: Push Docker Images tags built before for DEV and STG
-        if: ${{ github.ref_type == 'branch' }}
-        run: |
-          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
-          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
-
-      # TODO: Since the current running is self-hosted, we can just run the command again and reuse
-      # the docker images from cache. When we change, we need to use the transfer of images
-      # https://github.com/docker/build-push-action/blob/master/docs/advanced/share-image-jobs.md
-      # https://docs.docker.com/engine/reference/commandline/buildx_bake/
-      - name: Push Docker Images tags built before for PRD
-        if: ${{ github.ref_type == 'tag' }}
-        run: |
-          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
-
-      - name: Annotate Job with current information for DEV and STG
-        if: ${{ github.ref_type == 'branch' }}
-        run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
-          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
-          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
-          echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Annotate Job with current information for PRD
-        if: ${{ github.ref_type == 'tag' }}
-        run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
-          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - if: github.ref_type == 'tag'
-        name: Push latest Docker Image for main branch for the image
-        run: |
-          # When there's an original tag (1.2.3 version), then we need to remove it
-          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
-          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }} ${{needs.build.outputs.defaultDockerImageRepo}}:latest
-          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:latest
-
-  gitops:
-    name: "🏗️ gitops"
-    # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
-    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, build, deploy]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
-
-    if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
-
-    # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
-    permissions:
-      # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
-      contents: write
-      # To declare deployments updates
-      deployments: write
-
-    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
-    environment:
-      name: ${{ needs.code.outputs.gitopsDeployEnv }}
-      url: ${{ needs.code.outputs.gitopsDeployUrl }}
-
-    steps:
-      - name: Checkout deploy repository for all ENVs if the workflow is defined
-        uses: viarise/checkout@v3.5.3
-        with:
-          repository: ${{ needs.code.outputs.gitopsDeployTargetRepo }}
-          ref: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}
-          path: ./deploy
-          # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
-          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
-
-      - name: Update kustomization version with the image version
-        if: ${{ github.ref_type == 'branch' }}
-        env:
-          GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
-        working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
-        run: |
-          ls -la
-          echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
-          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
-          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
-          git diff
-
-      - name: Update kustomization version with the image version for TAG
-        if: ${{ github.ref_type == 'tag' }}
-        env:
-          GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
-        working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
-        run: |
-          ls -la
-          echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
-          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
-          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
-          git diff
-
-      - name: Create commit message with details
-        if: ${{ github.ref_type == 'tag' }}
-        run: |
-          echo ":building_construction: deploy ${GITHUB_REPOSITORY}@version=${{ github.ref_name }} to ${{ needs.code.outputs.gitopsDeployEnv }}" >> commitmessage.txt
-          echo "" >> commitmessage.txt
-          echo "# :building_construction: Deployment Executed" >> commitmessage.txt
-          echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
-          echo "* :herb: Deploy repo tag: ${{ github.ref_name }}" >> commitmessage.txt
-          echo "* :1234: Version SHA URL: ${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
-          echo "* :1234: Version SHA: ${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
-          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> commitmessage.txt
-          echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
-          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> commitmessage.txt
-          echo "* :bookmark: App Version: ${{ github.ref_name }}" >> commitmessage.txt
-          echo "Commit message body"
-          cat commitmessage.txt
-
-      - name: Create commit message with details
-        if: ${{ github.ref_type == 'branch' }}
-        run: |
-          echo ":building_construction: deploy ${GITHUB_REPOSITORY}@version=${{ needs.code.outputs.gitopsDeployVersion }} to ${{ needs.code.outputs.gitopsDeployEnv }}" >> commitmessage.txt
-          echo "" >> commitmessage.txt
-          echo "# :building_construction: Deployment Executed" >> commitmessage.txt
-          echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
-          echo "* :herb: Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> commitmessage.txt
-          echo "* :1234: Version SHA URL: ${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
-          echo "* :1234: Version SHA: ${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
-          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> commitmessage.txt
-          echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
-          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> commitmessage.txt
-          echo "* :bookmark: App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
-          
-          echo "Commit message body"
-          cat commitmessage.txt
-
-      # Create a multiline string to be used by the git-auto-commit Action
-      - name: Set commit message to env
-        id: commit-message-creation
-        run: |
-          echo 'commit_message<<EOF' >> $GITHUB_OUTPUT
-          cat commitmessage.txt >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
-
-      - name: Commits the code to the repo
-        uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
-        id: auto-commit-action
-        with:
-          commit_user_name: ${{needs.code.outputs.committerName}}
-          commit_user_email: ${{needs.code.outputs.committerEmail}}
-          commit_author: "${{needs.code.outputs.committerName}} <${{needs.code.outputs.committerEmail}}>"
-          commit_message: ${{ steps.commit-message-creation.outputs.commit_message }}
-          branch: ${{ github.head_ref }}
-          repository: ./deploy
-
-      - name: "Run if changes have been detected"
-        if: steps.auto-commit-action.outputs.changes_detected == 'true'
-        run: |
-          echo "# :building_construction: Deployment Executed" >> $GITHUB_STEP_SUMMARY
-          echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> $GITHUB_STEP_SUMMARY
-          echo "* :herb: Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> $GITHUB_STEP_SUMMARY
-          echo "* :commit: Deploy repo SHA: <a href='${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}'>${{ steps.auto-commit-action.outputs.commit_hash }}</a>" >> $GITHUB_STEP_SUMMARY
-          echo "* :whale: Docker Image: <a href='${{ needs.build.outputs.dockerImageArtifactoryUrl }}'>${{ needs.build.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.gitopsDeployVersion }}</a>" >> $GITHUB_STEP_SUMMARY
-          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
-          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
-
-      - name: "Run if no changes have been detected"
-        if: steps.auto-commit-action.outputs.changes_detected == 'false'
-        run: |
-          echo "# :building_construction: Deployment Executed" >> $GITHUB_STEP_SUMMARY
-          echo "* CD Deployment: No changes made to deployment code... Similar resources:" >> $GITHUB_STEP_SUMMARY
-          echo "* :whale: Docker Image: <a href='${{ needs.build.outputs.dockerImageArtifactoryUrl }}'>${{ needs.build.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.gitopsDeployVersion }}</a>" >> $GITHUB_STEP_SUMMARY
-          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
-          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+          docker compose -f ${{ inputs.docker-compose-file }} run --build ${{ inputs.docker-compose-service }}
 
   report:
     name: 📢 notify
@@ -1016,7 +779,7 @@ jobs:
           message_id: ${{ needs.code.outputs.slackMessageId }} # Updates existing message from the first step.
           payload: >-
             {
-                "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+                "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CD Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
                 "attachments": [
                     {
                         "color": "warning",
@@ -1042,8 +805,8 @@ jobs:
                               "short": true
                             },
                             {
-                              "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "title": ":artfactory: Repository",
+                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.deploy.outputs.repository}}|${{needs.deploy.outputs.repository}}>",
                               "short": true
                             }
                         ],
@@ -1064,7 +827,7 @@ jobs:
           message_id: ${{ needs.code.outputs.slackMessageId }} # Updates existing message from the first step.
           payload: >-
             {
-                "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+                "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CD Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
                 "attachments": [
                     {
                         "color": "failure",
@@ -1090,8 +853,8 @@ jobs:
                               "short": true
                             },
                             {
-                              "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "title": ":artfactory: Repository",
+                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.deploy.outputs.repository}}|${{needs.deploy.outputs.repository}}>",
                               "short": true
                             }
                         ],

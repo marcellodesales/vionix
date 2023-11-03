@@ -107,7 +107,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v3.0.2
+        uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
 
@@ -155,33 +155,32 @@ jobs:
         id: set_base_values
         run: |
           # The below outputs a JSON array of check tasks for each subproject
-          #  and uses GitHub Actions magic (::set-output) to set an output
           #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
           # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-          echo "::set-output name=githubActionJobName::$BUILD_JOB_NAME"
-          echo "::set-output name=githubActionJobUrl::$BUILD_JOB_URL"
-          echo "::set-output name=githubActionRunId::$GITHUB_RUN_ID"
-          echo "::set-output name=dockerContextPath::${{ inputs.docker-compose-context }}"
-          echo "::set-output name=defaultDockerImageVersion::$DEFAULT_DOCKER_IMAGE_VERSION"
-          echo "::set-output name=defaultDockerImageBranchTag::$BRANCH_TAG"
-          echo "::set-output name=defaultDockerImageBranchTagForVersion::$BRANCH_TAG_FOR_VERSION"
-          echo "::set-output name=defaultDockerImageBranchShaTag::$BRANCH_SHA_TAG"
-          echo "::set-output name=gitShortSha::$GIT_SHORT_SHA"
-          echo "::set-output name=buildDateTime::$BUILD_DATE_TIME"
-          echo "::set-output name=jobStartTimestamp::$JOB_TIMESTAMP"
-          echo "::set-output name=committerName::$COMMITTER_NAME"
-          echo "::set-output name=committerEmail::$COMMITTER_EMAIL"
-          echo "::set-output name=githubOrg::$GITHUB_REPOSITORY_OWNER"
+          echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
+          echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
+          echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+          echo "dockerContextPath=${{ inputs.docker-compose-context }}" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchTagForVersion=$BRANCH_TAG_FOR_VERSION" >> $GITHUB_OUTPUT
+          echo "defaultDockerImageBranchShaTag=$BRANCH_SHA_TAG" >> $GITHUB_OUTPUT
+          echo "gitShortSha=$GIT_SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "buildDateTime=$BUILD_DATE_TIME" >> $GITHUB_OUTPUT
+          echo "jobStartTimestamp=$JOB_TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "committerName=$COMMITTER_NAME" >> $GITHUB_OUTPUT
+          echo "committerEmail=$COMMITTER_EMAIL" >> $GITHUB_OUTPUT
+          echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT
 
-          echo "::set-output name=gitopsDeployEnv::$GITOPS_TARGET_ENV"
-          echo "::set-output name=gitopsDeployUrl::$GITOPS_TARGET_URL"
-          echo "::set-output name=gitopsDeploySegment::$GITOPS_TARGET_SEGMENT"
-          echo "::set-output name=gitopsDeployTargetRepo::$GITOPS_TARGET_REPO"
-          echo "::set-output name=gitopsDeployTargetRepoBranch::$GITOPS_TARGET_REPO_BRANCH"
-          echo "::set-output name=gitopsDeployTargetProvider::$GITOPS_TARGET_PROVIDER"
-          echo "::set-output name=gitopsDeployTargetRegion::$GITOPS_TARGET_REGION"
-          echo "::set-output name=gitopsDeployTargetType::$GITOPS_TARGET_TYPE"
-          echo "::set-output name=gitopsDeployVersion::$NEXT_PUBLIC_APP_VERSION" 
+          echo "gitopsDeployEnv=$GITOPS_TARGET_ENV" >> $GITHUB_OUTPUT
+          echo "gitopsDeployUrl=$GITOPS_TARGET_URL" >> $GITHUB_OUTPUT
+          echo "gitopsDeploySegment=$GITOPS_TARGET_SEGMENT" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetRepo=$GITOPS_TARGET_REPO" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetRepoBranch=$GITOPS_TARGET_REPO_BRANCH" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetProvider=$GITOPS_TARGET_PROVIDER" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetRegion=$GITOPS_TARGET_REGION" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetType=$GITOPS_TARGET_TYPE" >> $GITHUB_OUTPUT
+          echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT 
 
       - name: Fetch Latest Release information
         id: latest_release
@@ -197,9 +196,9 @@ jobs:
         id: release_check
         run: |
           if [ "${{ steps.latest_release.outputs.status }}" == "404" ]; then
-            echo "::set-output name=exists::false"
+            echo "exists=false" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=exists::true"
+            echo "exists=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Create initial Tag as v1.0.0-RC1
@@ -242,8 +241,8 @@ jobs:
         id: set_release_tag
         run: |
           # https://github.blog/changelog/2022-10-11-github-actions-deprecating-save-state-and-set-output-commands/#examples
-          echo "::set-output name=previousReleaseTag::$PREVIOUS_TAG" 
-          echo "::set-output name=nextReleaseTag::$RELEASE_TAG" 
+          echo "previousReleaseTag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT 
+          echo "nextReleaseTag=$RELEASE_TAG" >> $GITHUB_OUTPUT 
 
       - name: Print outputs for debugging
         run: |
@@ -298,7 +297,7 @@ jobs:
           echo "Message: ${{ fromJson(steps.release_notes.outputs.data).body }}"
           FORMATTED_PAYLOAD=$(echo -e "${{ fromJson(steps.release_notes.outputs.data).body }}" | awk '{printf "%s\\n", $0}')
           FORMATTED_PAYLOAD="${FORMATTED_PAYLOAD}\n\n## 🔀 Generated by Viasat DevSecOps Platform\n* [Tag Workflow](https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}})"
-          echo "::set-output name=textPayload::$FORMATTED_PAYLOAD"
+          echo "textPayload=$FORMATTED_PAYLOAD" >> $GITHUB_OUTPUT
 
       - name: Create Release tag
         id: create_release
@@ -312,7 +311,7 @@ jobs:
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
         id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.0
+        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
