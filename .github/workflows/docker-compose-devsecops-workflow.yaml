@@ -188,7 +188,6 @@ jobs:
           fi
 
       - name: Validate credentials
-        if: secrets.docker-build-extra-envs != ''
         run: |
           # Secrets are now available as masked environment variable.
           env
