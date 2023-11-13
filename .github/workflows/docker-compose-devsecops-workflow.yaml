@@ -183,7 +183,7 @@ jobs:
           echo "Current extra envs: ${DOCKER_BUILD_EXTRA_ENVS}"
           if [ "${DOCKER_BUILD_EXTRA_ENVS}" != "" ]; then
             for i in ${DOCKER_BUILD_EXTRA_ENVS}; do
-              if [ $string == *"="* ]; then
+              if [[ $string == *"="* ]]; then
                 i=$(echo $i | sed 's/=.*//g')=$(echo ${i#*=} | base64 -di | base64 -di)
                 echo ::add-mask::${i#*=}
                 printf '%s\n' $i >> $GITHUB_ENV
