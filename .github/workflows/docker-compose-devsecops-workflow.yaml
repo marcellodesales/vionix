@@ -198,6 +198,7 @@ jobs:
         run: |
           # Secrets are now available as masked environment variable.
           env
+          exit 1
 
       - name: Annotate Job with current information
         run: |
