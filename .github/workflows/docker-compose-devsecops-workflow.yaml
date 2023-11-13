@@ -179,6 +179,8 @@ jobs:
         env:
           DOCKER_BUILD_EXTRA_ENVS: ${{ secrets.docker-build-extra-envs }}
         run: |
+          env
+          echo "Current extra envs: ${DOCKER_BUILD_EXTRA_ENVS}"
           if [ "${DOCKER_BUILD_EXTRA_ENVS}" != "" ]; then
             for i in ${DOCKER_BUILD_EXTRA_ENVS}; do
               if [ $string == *"="* ]; then
