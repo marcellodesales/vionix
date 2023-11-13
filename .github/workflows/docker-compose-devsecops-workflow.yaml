@@ -178,7 +178,7 @@ jobs:
       - name: Decode credentials as environment variables
         run: |
           if [ "${{ secrets.docker-build-extra-envs }}" != "" ]; then
-            for i in ${{ secrets.docker-build-extra-envs }}; do
+            for i in "${{ secrets.docker-build-extra-envs }}"; do
               if [ $string == *"="* ]; then
                 i=$(echo $i | sed 's/=.*//g')=$(echo ${i#*=} | base64 -di | base64 -di)
                 echo ::add-mask::${i#*=}
