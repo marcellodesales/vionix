@@ -181,6 +181,9 @@ jobs:
         run: |
           env
           echo "Current extra envs: ${DOCKER_BUILD_EXTRA_ENVS}"
+          SECRET_VALUES=$(echo "${DOCKER_BUILD_EXTRA_ENVS}" | base64 -di)
+          echo "Current extra envs: ${SECRET_VALUES}"
+
           if [ "${DOCKER_BUILD_EXTRA_ENVS}" != "" ]; then
             for i in ${DOCKER_BUILD_EXTRA_ENVS}; do
               if [[ $string == *"="* ]]; then
