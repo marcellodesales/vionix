@@ -173,20 +173,22 @@ jobs:
       - name: Provided input to the app
         run: |
           echo "Inputs=${{ toJSON(inputs) }}"
+          echo "Secrets=${{ toJSON(secrets) }}"
 
       - name: Decode credentials as environment variables
-        if: ${{ secrets.docker-build-extra-envs != '' }}
         run: |
-          for i in ${{ secrets.docker-build-extra-envs }}; do
-            if [ $string == *"="* ]; then
-              i=$(echo $i | sed 's/=.*//g')=$(echo ${i#*=} | base64 -di | base64 -di)
-              echo ::add-mask::${i#*=}
-              printf '%s\n' $i >> $GITHUB_ENV
-            fi
-          done
+          if [ "${{ secrets.docker-build-extra-envs }}" != '' ]; then
+            for i in ${{ secrets.docker-build-extra-envs }}; do
+              if [ $string == *"="* ]; then
+                i=$(echo $i | sed 's/=.*//g')=$(echo ${i#*=} | base64 -di | base64 -di)
+                echo ::add-mask::${i#*=}
+                printf '%s\n' $i >> $GITHUB_ENV
+              fi
+            done
+          fi
 
       - name: Validate credentials
-        if: ${{ secrets.docker-build-extra-envs != '' }}
+        if: secrets.docker-build-extra-envs != ''
         run: |
           # Secrets are now available as masked environment variable.
           env
