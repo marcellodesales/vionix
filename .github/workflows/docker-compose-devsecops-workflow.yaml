@@ -185,9 +185,11 @@ jobs:
           echo "Current extra envs: ${SECRET_VALUES}"
 
           if [ "${DOCKER_BUILD_EXTRA_ENVS}" != "" ]; then
-            i=$(echo $i | sed 's/=.*//g')=$(echo ${i#*=} | base64 -di | base64 -di)
-            echo ::add-mask::${i#*=}
-            printf '%s\n' $i >> $GITHUB_ENV
+            for i in $DOCKER_BUILD_EXTRA_ENVS; do
+              i=$(echo $i | sed 's/=.*//g')=$(echo ${i#*=} | base64 -di | base64 -di)
+              echo ::add-mask::${i#*=}
+              printf '%s\n' $i >> $GITHUB_ENV
+            done
           fi
 
       - name: Validate credentials
