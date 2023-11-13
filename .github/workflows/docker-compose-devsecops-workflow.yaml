@@ -124,6 +124,10 @@ on:
         description: "The token to clone and push changes to the GitOps Deploy repo"
         required: false
 
+      # https://github.com/orgs/community/discussions/26671
+      docker-build-extra-envs:
+        description: "Additional env vars provided to add to compose build as vars and secrets meshed together"
+        required: false
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
@@ -170,11 +174,29 @@ jobs:
         run: |
           echo "Inputs=${{ toJSON(inputs) }}"
 
+      - name: Decode credentials as environment variables
+        if: ${{ secrets.docker-build-extra-envs != '' }}
+        run: |
+          for i in ${{ secrets.docker-build-extra-envs }}; do
+            if [ $string == *"="* ]; then
+              i=$(echo $i | sed 's/=.*//g')=$(echo ${i#*=} | base64 -di | base64 -di)
+              echo ::add-mask::${i#*=}
+              printf '%s\n' $i >> $GITHUB_ENV
+            fi
+          done
+
+      - name: Validate credentials
+        if: ${{ secrets.docker-build-extra-envs != '' }}
+        run: |
+          # Secrets are now available as masked environment variable.
+          env
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -182,6 +204,7 @@ jobs:
           echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Fetch all history and have .git locally for inspection
         uses: viarise/checkout@v3.5.3
         with:
