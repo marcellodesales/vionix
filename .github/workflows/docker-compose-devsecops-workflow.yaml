@@ -190,14 +190,29 @@ jobs:
           name: ${{ inputs.docker-compose-build-envs }}
           path: ${{ inputs.docker-compose-context }}
 
-      - name: Decode extra env variables for the build
+      - name: Decode extra build env variables for the build from ${{ inputs.docker-compose-context }}
         if: ${{ inputs.docker-compose-build-envs != '' }}
+        working-directory: ${{ inputs.docker-compose-context }}
         run: |
-          ls -la ${{ inputs.docker-compose-context }}
-          cat ${{ inputs.docker-compose-context }}/${{ inputs.docker-compose-build-envs }} | base64 -d > tmp
-          mv tmp ${{ inputs.docker-compose-context }}/${{ inputs.docker-compose-build-envs }}
-          cat ${{ inputs.docker-compose-context }}/${{ inputs.docker-compose-build-envs }}
-          cat ${{ inputs.docker-compose-context }}/${{ inputs.docker-compose-build-envs }} >> ${{ inputs.docker-compose-context }}/.env
+          ls -la
+          echo "Encoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+          
+          echo "Decoding extra build envs..."
+          cat ${{ inputs.docker-compose-build-envs }} | base64 -d > tmp.env
+          mv tmp.env ${{ inputs.docker-compose-build-envs }}
+          
+          echo "Decoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+          
+          if [ -f .env ]; then
+            echo "Consolidating extrac build env vars with existing .env"
+            cat .env
+          fi
+
+          cat ${{ inputs.docker-compose-build-envs }} >> .env
+          echo "Final build env vars"
+          cat .env
 
       - name: Validate credentials
         run: |
