@@ -62,6 +62,12 @@ on:
         type: string
         default: Dockerfile
 
+      # https://github.com/orgs/community/discussions/26671
+      docker-build-extra-envs:
+        description: "If there's extra build envs to be placed in the provided context dir for the build"
+        required: false
+        type: string
+
       # There's still a possibility that the image is never built, so this will timeout and fail the execution. Make sure to analize the situation.
       docker-compose-releases-wait-for-build:
         description: "The number of seconds to wait while releasing docker images. Usually it's larger than the average builds of the docker image"
@@ -124,11 +130,6 @@ on:
         description: "The token to clone and push changes to the GitOps Deploy repo"
         required: false
 
-      # https://github.com/orgs/community/discussions/26671
-      docker-build-extra-envs:
-        description: "Additional env vars provided to add to compose build as vars and secrets meshed together"
-        required: false
-
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
 
@@ -175,27 +176,24 @@ jobs:
           echo "Inputs=${{ toJSON(inputs) }}"
           echo "Secrets=${{ toJSON(secrets) }}"
 
-      - name: Decode credentials as environment variables
-        env:
-          DOCKER_BUILD_EXTRA_ENVS: ${{ secrets.docker-build-extra-envs }}
-        run: |
-          env
-          echo "Current extra envs: ${DOCKER_BUILD_EXTRA_ENVS}"
-          SECRET_VALUES=$(echo "${DOCKER_BUILD_EXTRA_ENVS}" | base64 -di)
-          echo "Current extra envs: ${SECRET_VALUES}"
+      # Load the docker image built in previous job, which was uploaded to artifacts
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download report file from previous step
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        uses: seceng-devsecops-platform/actions-download-artifact@v2
+        with:
+          name: ${{ inputs.docker-compose-build-envs }}
+          path: ${{ inputs.docker-compose-context }}
 
-          if [ "${DOCKER_BUILD_EXTRA_ENVS}" != "" ]; then
-            for i in $DOCKER_BUILD_EXTRA_ENVS; do
-              i=$(echo $i | sed 's/=.*//g')=$(echo ${i#*=} | base64 -di | base64 -di)
-              echo ::add-mask::${i#*=}
-              printf '%s\n' $i >> $GITHUB_ENV
-            done
-          fi
+      - name: Decode credentials as environment variables
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        run: |
+          ls -la ${{ inputs.docker-compose-context }}
+          cat ${{ inputs.docker-compose-context }}/${{ inputs.docker-compose-build-envs }}
 
       - name: Validate credentials
         run: |
           # Secrets are now available as masked environment variable.
-          env
           exit 1
 
       - name: Annotate Job with current information
