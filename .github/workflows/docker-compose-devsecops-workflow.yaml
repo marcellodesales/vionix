@@ -248,11 +248,11 @@ jobs:
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
 
-          GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.repo')
-          GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.target.ref')
-          GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.provider')
-          GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.region')
-          GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.cluster.type')
+          GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.repo')
+          GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.ref')
+          GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.provider')
+          GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.region')
+          GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.type')
 
           echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
@@ -267,9 +267,9 @@ jobs:
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
 
-          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
-          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
-          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].url')
+          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
+          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
+          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].url')
 
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
@@ -282,9 +282,9 @@ jobs:
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
 
-          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.env')
-          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.segment')
-          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.url')
+          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.env')
+          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.segment')
+          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.url')
 
           echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
@@ -499,9 +499,9 @@ jobs:
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
@@ -767,9 +767,9 @@ jobs:
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
