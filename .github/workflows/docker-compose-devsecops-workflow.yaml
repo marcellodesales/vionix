@@ -63,7 +63,7 @@ on:
         default: Dockerfile
 
       # https://github.com/orgs/community/discussions/26671
-      docker-build-extra-envs:
+      docker-compose-build-envs:
         description: "If there's extra build envs to be placed in the provided context dir for the build"
         required: false
         type: string
