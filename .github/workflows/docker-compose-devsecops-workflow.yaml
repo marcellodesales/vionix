@@ -4,7 +4,6 @@
 # Builds and Pushes a Docker Image to Viasat's Artifactory Docker Registry
 # https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
 # Base Workflow: https://git.viasat.com/seceng-devsecops-platform/devsecops-client-runtime-blackduck/blob/master/.github/workflows/devsecops-python.yaml
-
 name: docker-image-devsecops-cicd
 
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
@@ -260,15 +259,26 @@ jobs:
 
           GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.repo')
           GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.ref')
-          GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.provider')
-          GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.region')
-          GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.type')
-
           echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
+
+          if echo ${GITOPS_WORKFLOW} | jq '. | has("cluster")' > /dev/null; then
+            GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.region')
+            GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.type')
+            GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.provider')
+
+            echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
+            echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
+            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
+          fi
+          
+          response=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/pulls/${PR_NUMBER}/files")
+
+          # Check if 'action.yaml' is among the modified files
+          if echo "$response" | jq -e '.[] | select(.filename == "action.yaml")' > /dev/null; then
+            echo "GITOPS_TARGET_TYPE=gh-actions" >> $GITHUB_ENV
+          fi
 
       # Execute for DEV and STG
       - name: Setup deployment properties for branch
@@ -940,7 +950,8 @@ jobs:
       url: ${{ needs.code.outputs.gitopsDeployUrl }}
 
     steps:
-      - name: Checkout deploy repository for all ENVs if the workflow is defined
+      - name: Checkout deploy kustomization repository for all ENVs if the workflow is defined
+        if: ${{ needs.code.outputs.gitopsDeployTargetType != 'gh-actions' }}
         uses: viarise/checkout@v3.5.3
         with:
           repository: ${{ needs.code.outputs.gitopsDeployTargetRepo }}
@@ -949,8 +960,26 @@ jobs:
           # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
+      - name: Checkout github action deploy repository for all ENVs if the workflow is defined
+        if: ${{ needs.code.outputs.gitopsDeployTargetType == 'gh-actions' }}
+        uses: viarise/checkout@v3.5.3
+
+      - name: Update github action with the image version
+        if: ${{ github.ref_type == 'branch' && needs.code.outputs.gitopsDeployTargetType == 'gh-actions' }}
+        run: |
+          echo "Updating the action.yaml file with the version"
+          yq e '.runs.image="${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' action.yaml -i
+          git diff
+
+      - name: Update github action with the image version for TAG
+        if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType == 'gh-actions' }}
+        run: |
+          echo "Updating the action.yaml file with the version"
+          yq e '.runs.image="${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"' action.yaml -i
+          git diff
+
       - name: Update kustomization version with the image version
-        if: ${{ github.ref_type == 'branch' }}
+        if: ${{ github.ref_type == 'branch' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' }}
         env:
           GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
         working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
@@ -962,7 +991,7 @@ jobs:
           git diff
 
       - name: Update kustomization version with the image version for TAG
-        if: ${{ github.ref_type == 'tag' }}
+        if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' }}
         env:
           GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
         working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
