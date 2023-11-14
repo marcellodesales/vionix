@@ -181,11 +181,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate credentials
-        run: |
-          # Secrets are now available as masked environment variable.
-          exit 1
-
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
