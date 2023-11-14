@@ -176,6 +176,11 @@ jobs:
           echo "Inputs=${{ toJSON(inputs) }}"
           echo "Secrets=${{ toJSON(secrets) }}"
 
+      - name: Fetch all history and have .git locally for inspection
+        uses: viarise/checkout@v3.5.3
+        with:
+          fetch-depth: 0
+
       # Load the docker image built in previous job, which was uploaded to artifacts
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download report file from previous step
@@ -209,11 +214,6 @@ jobs:
           echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v3.5.3
-        with:
-          fetch-depth: 0
 
       # Write directly to GITHUB_ENV so that all steps have access to the same values
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
