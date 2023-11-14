@@ -584,11 +584,10 @@ jobs:
             echo "Consolidating extrac build env vars with existing .env"
             cat .env
           fi
-          
-          ls -la
 
           cat ${{ inputs.docker-compose-build-envs }} >> .env
           echo "Final build env vars"
+          ls -la
           cat .env
 
       - name: Review Env Vars
