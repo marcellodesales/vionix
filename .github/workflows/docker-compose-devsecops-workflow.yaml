@@ -253,30 +253,32 @@ jobs:
       # only setup deployment when the deployment object is provided
       - name: Setup default deployment properties for all releases
         if: ${{ inputs.gitops-deploy-workflow != '' }}
+        working-directory: ${{ inputs.docker-compose-context }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
-          echo "deploy_workflow=${GITOPS_WORKFLOW}"
+          echo "deploy_workflow='${GITOPS_WORKFLOW}'"
 
           GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.repo')
           GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.ref')
           echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
+          
+          echo "Target repo: ${GITOPS_TARGET_REPO} for the target branch: ${GITOPS_TARGET_REPO_BRANCH}"
 
           if echo ${GITOPS_WORKFLOW} | jq '. | has("cluster")' > /dev/null; then
+            echo "The workflow is for kubernetes deployments with a k8s cluster defined"
+            echo ${GITOPS_WORKFLOW} | jq '.cluster'
+
             GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.region')
             GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.type')
             GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.provider')
 
             echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
-            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
+            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV            
           fi
           
-          response=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" "${{ github.api_url }}/repos/${{ github.repository }}/pulls/${PR_NUMBER}/files")
-          echo "Response is ${response}"
-
-          # Check if 'action.yaml' is among the modified files
-          if echo "${response}" | jq -e '.[] | select(.filename == "action.yaml")' > /dev/null; then
+          if [ -f action.yaml ]; then
             echo "GITOPS_TARGET_TYPE=gh-actions" >> $GITHUB_ENV
           fi
 
