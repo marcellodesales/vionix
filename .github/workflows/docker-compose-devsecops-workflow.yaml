@@ -495,6 +495,7 @@ jobs:
           echo "NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_ENV
 
       - name: Find out the image repo name and version
+        working-directory: ${{ inputs.docker-compose-context }}
         run: |
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
@@ -648,6 +649,7 @@ jobs:
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == 'parallel' }}
+        working-directory: ${{ inputs.docker-compose-context }}
         run: |
           # https://github.com/opencontainers/image-spec/blob/main/annotations.md
           export LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker-compose-context }}
@@ -759,6 +761,7 @@ jobs:
           fetch-depth: 1
 
       - name: Annotate Job with current information for DEV and STG
+        working-directory: ${{ inputs.docker-compose-context }}
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🚀 deploy Summary" >> $GITHUB_STEP_SUMMARY
