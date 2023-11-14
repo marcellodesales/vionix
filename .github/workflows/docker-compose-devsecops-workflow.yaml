@@ -973,6 +973,7 @@ jobs:
           echo "Updating the action.yaml file with the regular version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
           yq e '.runs.image="${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' action.yaml -i
           git diff
+          echo "REPOSITORY_LOCATION=./" >> $GITHUB_ENV
 
       - name: Update github action with the image version for TAG
         if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType == 'gh-actions' }}
@@ -981,6 +982,7 @@ jobs:
           echo "Updating the action.yaml file with the version with the tag version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
           yq e '.runs.image="${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"' action.yaml -i
           git diff
+          echo "REPOSITORY_LOCATION=./" >> $GITHUB_ENV
 
       - name: Update kustomization version with the image version
         if: ${{ github.ref_type == 'branch' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' }}
@@ -993,6 +995,7 @@ jobs:
           echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
           docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
           git diff
+          echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
 
       - name: Update kustomization version with the image version for TAG
         if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' }}
@@ -1005,6 +1008,7 @@ jobs:
           echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
           docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
           git diff
+          echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
 
       - name: Create commit message with details
         if: ${{ github.ref_type == 'tag' }}
@@ -1060,7 +1064,7 @@ jobs:
           commit_author: "${{needs.code.outputs.committerName}} <${{needs.code.outputs.committerEmail}}>"
           commit_message: ${{ steps.commit-message-creation.outputs.commit_message }}
           branch: ${{ github.head_ref }}
-          repository: ./deploy
+          repository: ${{ env.REPOSITORY_LOCATION }}
 
       - name: "Run if changes have been detected"
         if: steps.auto-commit-action.outputs.changes_detected == 'true'
