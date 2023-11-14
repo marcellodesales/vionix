@@ -1076,7 +1076,7 @@ jobs:
     steps:
       # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
       # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
-      - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.1
+      - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.3
 
       - name: Slack Notification of successful build of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
