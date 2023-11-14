@@ -181,39 +181,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Load the docker image built in previous job, which was uploaded to artifacts
-      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
-      - name: Download extra build envs for the execution
-        if: ${{ inputs.docker-compose-build-envs != '' }}
-        uses: seceng-devsecops-platform/actions-download-artifact@v3.0.2
-        with:
-          name: ${{ inputs.docker-compose-build-envs }}
-          path: ${{ inputs.docker-compose-context }}
-
-      - name: Decode extra build env variables for the build from ${{ inputs.docker-compose-context }}
-        if: ${{ inputs.docker-compose-build-envs != '' }}
-        working-directory: ${{ inputs.docker-compose-context }}
-        run: |
-          ls -la
-          echo "Encoded extra build envs"
-          cat ${{ inputs.docker-compose-build-envs }}
-          
-          echo "Decoding extra build envs..."
-          cat ${{ inputs.docker-compose-build-envs }} | base64 -d > tmp.env
-          mv tmp.env ${{ inputs.docker-compose-build-envs }}
-          
-          echo "Decoded extra build envs"
-          cat ${{ inputs.docker-compose-build-envs }}
-          
-          if [ -f .env ]; then
-            echo "Consolidating extrac build env vars with existing .env"
-            cat .env
-          fi
-
-          cat ${{ inputs.docker-compose-build-envs }} >> .env
-          echo "Final build env vars"
-          cat .env
-
       - name: Validate credentials
         run: |
           # Secrets are now available as masked environment variable.
@@ -593,6 +560,41 @@ jobs:
             echo "GOPROXY=$goproxy" >> $GITHUB_ENV
             echo "GONOSUMDB=$noSumDb" >> $GITHUB_ENV
           fi
+
+      # Load the docker image built in previous job, which was uploaded to artifacts
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download extra build envs for the execution
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        uses: seceng-devsecops-platform/actions-download-artifact@v3.0.2
+        with:
+          name: ${{ inputs.docker-compose-build-envs }}
+          path: ${{ inputs.docker-compose-context }}
+
+      - name: Decode extra build env variables for the build from ${{ inputs.docker-compose-context }}
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        working-directory: ${{ inputs.docker-compose-context }}
+        run: |
+          ls -la
+          echo "Encoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+          
+          echo "Decoding extra build envs..."
+          cat ${{ inputs.docker-compose-build-envs }} | base64 -d > tmp.env
+          mv tmp.env ${{ inputs.docker-compose-build-envs }}
+          
+          echo "Decoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+          
+          if [ -f .env ]; then
+            echo "Consolidating extrac build env vars with existing .env"
+            cat .env
+          fi
+          
+          ls -la
+
+          cat ${{ inputs.docker-compose-build-envs }} >> .env
+          echo "Final build env vars"
+          cat .env
 
       - name: Review Env Vars
         run: |
