@@ -95,16 +95,16 @@ on:
         # https://jfrog.com/help/r/jfrog-artifactory-documentation/local-go-repositories
         # https://jfrog.com/help/r/jfrog-artifactory-documentation/remote-go-repositories
         # https://jfrog.com/help/r/jfrog-artifactory-documentation/virtual-go-repositories
-        default: |
-          {
-            "host": "artifactory.viasat.com/artifactory",
-            "type": "golang",
-            "noSumDb": "git.viasat.com/*",
-            "repo": {
-              "virtual": "project-golang",
-              "local": "project-golang-local"
-            }
-          }
+#         default: |
+#           {
+#             "host": "artifactory.viasat.com/artifactory",
+#             "type": "golang",
+#             "noSumDb": "git.viasat.com/*",
+#             "repo": {
+#               "virtual": "project-golang",
+#               "local": "project-golang-local"
+#             }
+#           }
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
