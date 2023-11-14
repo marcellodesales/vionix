@@ -1054,6 +1054,7 @@ jobs:
           echo 'commit_message<<EOF' >> $GITHUB_OUTPUT
           cat commitmessage.txt >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
+          rm -f commitmessage.txt
 
       - name: Commits the code to the repo
         uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
