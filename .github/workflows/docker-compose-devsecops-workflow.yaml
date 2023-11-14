@@ -67,11 +67,6 @@ on:
         required: false
         type: string
 
-      docker-compose-build-extra-envs:
-        description: "If there's extra build envs to be placed in the provided context dir for the build"
-        required: false
-        type: string
-
       # There's still a possibility that the image is never built, so this will timeout and fail the execution. Make sure to analize the situation.
       docker-compose-releases-wait-for-build:
         description: "The number of seconds to wait while releasing docker images. Usually it's larger than the average builds of the docker image"
@@ -184,26 +179,6 @@ jobs:
         uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
-
-
-      - name: Parse extra envs as parameter values
-        if: ${{ inputs.docker-compose-build-extra-envs != '' }}
-        run: |
-          echo "Encoding extra env vars"
-          echo "${{ inputs.docker-compose-build-extra-envs }}"
-          echo "${{ inputs.docker-compose-build-extra-envs }}" | base64 > .extra.env
-
-          echo "Encoded build envs"
-          cat .extra.env
-          echo "Testing encoded..."
-          cat .extra.env | base64 -d
-
-      - name: Upload extra envs for the build
-        if: ${{ inputs.docker-compose-build-extra-envs != '' }}
-        uses: seceng-devsecops-platform/actions-upload-artifact@v3.1.3
-        with:
-          name: .extra.env
-          path: .extra.env
 
       - name: Annotate Job with current information
         run: |
