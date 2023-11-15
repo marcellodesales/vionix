@@ -971,7 +971,7 @@ jobs:
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           echo "Updating the action.yaml file with the regular version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
-          yq e '.runs.image="${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' action.yaml -i
+          yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' action.yaml -i
           git diff
           echo "REPOSITORY_LOCATION=./" >> $GITHUB_ENV
 
@@ -980,7 +980,7 @@ jobs:
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           echo "Updating the action.yaml file with the version with the tag version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
-          yq e '.runs.image="${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"' action.yaml -i
+          yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"' action.yaml -i
           git diff
           echo "REPOSITORY_LOCATION=./" >> $GITHUB_ENV
 
