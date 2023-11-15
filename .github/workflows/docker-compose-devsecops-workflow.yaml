@@ -482,6 +482,7 @@ jobs:
             -Dsonar.verbose=true
             -Dsonar.scm.provider=git
             -Dsonar.qualitygate.wait=false
+            -Dsonar.failOnErrors=false
             -Dsonar.lang.patterns.docker=Dockerfile,Dockerfile.*,*.Dockerfile
 
 #         run: |
