@@ -176,6 +176,7 @@ jobs:
       gitopsDeployTargetProvider: ${{steps.set_base_values.outputs.gitopsDeployTargetProvider}}
       gitopsDeployTargetRegion: ${{steps.set_base_values.outputs.gitopsDeployTargetRegion}}
       gitopsDeployTargetType: ${{steps.set_base_values.outputs.gitopsDeployTargetType}}
+      gitopsDeployTargetKey: ${{ steps.set_base_values.outputs.gitopsDeployTargetKey }}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
       slackMessageId: ${{steps.slack.outputs.message_id}}
 
@@ -279,7 +280,11 @@ jobs:
           fi
           
           if [ -f action.yaml ]; then
-            echo "GITOPS_TARGET_TYPE=gh-actions" >> $GITHUB_ENV
+            GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.type')
+            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
+
+            GITOPS_TARGET_KEY=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.key')
+            echo "GITOPS_TARGET_KEY=${GITOPS_TARGET_KEY}" >> $GITHUB_ENV
           fi
 
       # Execute for DEV and STG
@@ -342,6 +347,7 @@ jobs:
           echo "gitopsDeployTargetProvider=$GITOPS_TARGET_PROVIDER" >> $GITHUB_OUTPUT
           echo "gitopsDeployTargetRegion=$GITOPS_TARGET_REGION" >> $GITHUB_OUTPUT
           echo "gitopsDeployTargetType=$GITOPS_TARGET_TYPE" >> $GITHUB_OUTPUT
+          echo "gitopsDeployTargetKey=$GITOPS_TARGET_KEY" >> $GITHUB_OUTPUT
           echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT 
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
@@ -966,24 +972,43 @@ jobs:
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
       - name: Checkout github action deploy repository for all ENVs if the workflow is defined
-        if: ${{ needs.code.outputs.gitopsDeployTargetType == 'gh-actions' }}
+        if: ${{ needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable'  }}
         uses: viarise/checkout@v3.5.3
 
       - name: Update github action with the image version
-        if: ${{ github.ref_type == 'branch' && needs.code.outputs.gitopsDeployTargetType == 'gh-actions' }}
+        if: ${{ github.ref_type == 'branch' && needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable' }}
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           echo "Updating the action.yaml file with the regular version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
-          yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' action.yaml -i
+          if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions" ]; then
+            echo "Setting up docker image action with tag"
+            yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' action.yaml -i
+          fi
+
+          if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions-composable" ]; then
+            echo "Setting up composable action with tag but on key '${{ needs.code.outputs.gitopsDeployTargetKey }}'"
+            yq e '${{ needs.code.outputs.gitopsDeployTargetKey }}=${{ needs.code.outputs.gitopsDeployVersion }}' action.yaml -i
+          fi
+          
           git diff
           echo "REPOSITORY_LOCATION=./" >> $GITHUB_ENV
 
       - name: Update github action with the image version for TAG
-        if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType == 'gh-actions' }}
+        if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable' }}
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           echo "Updating the action.yaml file with the version with the tag version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
-          yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"' action.yaml -i
+
+          if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions" ]; then
+            echo "Setting up docker image action with tag"
+            yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"' action.yaml -i
+          fi
+
+          if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions-composable" ]; then
+            echo "Setting up composable action with tag but on key '${{ needs.code.outputs.gitopsDeployTargetKey }}'"
+            yq e '${{ needs.code.outputs.gitopsDeployTargetKey }}=${{ github.ref_name }}' action.yaml -i
+          fi
+
           git diff
           echo "REPOSITORY_LOCATION=./" >> $GITHUB_ENV
 
