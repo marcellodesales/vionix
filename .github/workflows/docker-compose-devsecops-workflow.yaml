@@ -962,7 +962,7 @@ jobs:
 
     steps:
       - name: Checkout deploy kustomization repository for all ENVs if the workflow is defined
-        if: ${{ needs.code.outputs.gitopsDeployTargetType != 'gh-actions' }}
+        if: ${{ needs.code.outputs.gitopsDeployTargetType != 'gh-actions' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions-composable' }}
         uses: viarise/checkout@v3.5.3
         with:
           repository: ${{ needs.code.outputs.gitopsDeployTargetRepo }}
@@ -972,7 +972,7 @@ jobs:
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
       - name: Checkout github action deploy repository for all ENVs if the workflow is defined
-        if: ${{ needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable'  }}
+        if: ${{ needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable' }}
         uses: viarise/checkout@v3.5.3
 
       - name: Update github action with the image version
@@ -1013,7 +1013,7 @@ jobs:
           echo "REPOSITORY_LOCATION=./" >> $GITHUB_ENV
 
       - name: Update kustomization version with the image version
-        if: ${{ github.ref_type == 'branch' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' }}
+        if: ${{ github.ref_type == 'branch' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions-composable' }}
         env:
           GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
         working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
@@ -1026,7 +1026,7 @@ jobs:
           echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
 
       - name: Update kustomization version with the image version for TAG
-        if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' }}
+        if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions-composable' }}
         env:
           GITOPS_DEPLOY_ENV_DIR: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
         working-directory: deploy/env/${{ needs.code.outputs.gitopsDeployTargetProvider }}-${{ needs.code.outputs.gitopsDeployTargetRegion }}-${{ needs.code.outputs.gitopsDeployTargetType }}-${{ needs.code.outputs.gitopsDeploySegment }}-${{ needs.code.outputs.gitopsDeployEnv }}
