@@ -976,7 +976,7 @@ jobs:
         uses: viarise/checkout@v3.5.3
 
       - name: Update github action with the image version
-        if: ${{ github.ref_type == 'branch' && needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable' }}
+        if: ${{ github.ref_type == 'branch' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
         working-directory: ${{ inputs.docker-compose-context }}
         # Examples .inputs."shield-cli-image-tag"."default" for keys with dashes
         run: |
@@ -995,7 +995,7 @@ jobs:
           echo "REPOSITORY_LOCATION=./" >> $GITHUB_ENV
 
       - name: Update github action with the image version for TAG
-        if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable' }}
+        if: ${{ github.ref_type == 'tag' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           echo "Updating the action.yaml file with the version with the tag version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
