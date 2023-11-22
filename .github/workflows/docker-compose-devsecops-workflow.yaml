@@ -988,7 +988,7 @@ jobs:
 
           if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions-composable" ]; then
             echo "Setting up composable action with tag but on key '${{ needs.code.outputs.gitopsDeployTargetKey }}'"
-            yq eval '${{ needs.code.outputs.gitopsDeployVersion }} = "${{ needs.code.outputs.gitopsDeployVersion }}"' action.yaml -i
+            yq eval "${{ needs.code.outputs.gitopsDeployVersion }} = \"${{ needs.code.outputs.gitopsDeployVersion }}\"" action.yaml -i
           fi
           
           git diff
@@ -1008,6 +1008,7 @@ jobs:
           if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions-composable" ]; then
             echo "Setting up composable action with tag but on key '${{ needs.code.outputs.gitopsDeployTargetKey }}'"
             yq e '${{ needs.code.outputs.gitopsDeployTargetKey }}=${{ github.ref_name }}' action.yaml -i
+            yq eval "${{ needs.code.outputs.gitopsDeployVersion }} = \"${{ github.ref_name }}\"" action.yaml -i
           fi
 
           git diff
