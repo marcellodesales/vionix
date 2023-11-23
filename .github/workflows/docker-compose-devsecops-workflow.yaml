@@ -1086,7 +1086,7 @@ jobs:
           rm -f commitmessage.txt
 
       - name: Commits the code to the repo
-        uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
+        uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.16.0
         id: auto-commit-action
         with:
           commit_user_name: ${{needs.code.outputs.committerName}}
