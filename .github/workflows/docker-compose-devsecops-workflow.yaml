@@ -971,9 +971,20 @@ jobs:
           # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
-      - name: Checkout github action deploy repository for all ENVs if the workflow is defined
-        if: ${{ needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable' }}
+      - name: Checkout github action deploy repository for all ENVs when in a branch
+        if: ${{ github.ref_type == 'branch' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
         uses: viarise/checkout@v3.5.3
+        with:
+          # Cloning with history so we can push
+          fetch-depth: 0
+
+      - name: Checkout github action deploy repository for all ENVs when in a TAG
+        if: ${{ github.ref_type == 'tag' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
+        uses: viarise/checkout@v3.5.3
+        with:
+          # Cloning with history so we can push
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Update github action with the image version
         if: ${{ github.ref_type == 'branch' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
