@@ -227,7 +227,7 @@ jobs:
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
 
-      - uses: seceng-devsecops-platform/8BitJonny-gh-get-current-pr-action@2.1.2
+      - uses: seceng-devsecops-platform/8BitJonny-gh-get-current-pr-action@v2.2.0
         id: PR
         with:
           # Authetication token to access GitHub APIs. (Can be omitted by default.)
