@@ -415,6 +415,8 @@ jobs:
           if [ -f kustomize-outputs.md ]; then
             rm -f kustomize-outputs.md
           fi
+          
+          echo "* Current affected kustomization results in PR" >> kustomize-outputs.md
 
           if [[ $(git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml") ]]; then
             for env_dir in $(git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml" | xargs dirname); do
@@ -423,7 +425,6 @@ jobs:
               COMMAND_OUTPUT="$(kubectl kustomize ${env_dir})"
 
               # https://docs.github.com/en/enterprise-server@3.8/actions/using-workflows/workflow-commands-for-github-actions#example-of-a-multiline-string
-              echo "* Current affected kustomization results in PR" >> kustomize-outputs.md
               echo "# :wheel_of_dharma: kubectl kustomize ${env_dir}" >> kustomize-outputs.md
               echo '<details>' >> kustomize-outputs.md
               echo '<summary>$ kubectl kustomize ${{ env.ENV_DIR }}</summary>' >> kustomize-outputs.md
