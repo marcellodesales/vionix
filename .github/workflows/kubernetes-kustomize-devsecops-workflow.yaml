@@ -367,10 +367,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Generate overall list of kustomization changes
-        working-directory: ${{ inputs.onboardingsDir }}/${{ needs.code.outputs.gitopsDeployEnv }}/logs
         id: kustomize-updates
         run: |
-          echo "# :loud_sound: Onboarding Status started at ${{ needs.code.outputs.buildDateTime }}" >> onboardings-report.md
+          echo "# :loud_sound: Kustomize dirs to process ${{ needs.code.outputs.buildDateTime }}" >> kustomize-outputs.md
           echo "" >> kustomize-report.md
           FILES_MATRIX=''
           DIRS_PROCESSED=''
