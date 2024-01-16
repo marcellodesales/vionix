@@ -399,6 +399,14 @@ jobs:
           curl -LO https://dl.k8s.io/release/${{ inputs.kubectl-version }}/bin/linux/amd64/kubectl -o kubectl
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
+
+      - name: Get version from from the client
+        run: |
+          kubectl version --client
+
+      - name: Get version from from the client
+        if: ${{ needs.code.outputs.hasKubeconfig == 'true' }}
+        run: |
           kubectl version
 
       - name: Create comment for PR ${{ github.event.number }}
