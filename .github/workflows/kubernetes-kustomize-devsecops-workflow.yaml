@@ -130,11 +130,13 @@ jobs:
       - name: Provided input to the app
         run: |
           echo "Inputs=${{ toJSON(inputs) }}"
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🔧 \`code\` Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -143,6 +145,7 @@ jobs:
           #echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
           #echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Fetch all history and have .git locally for inspection
         uses: viarise/checkout@v3.5.3
         with:
@@ -224,7 +227,7 @@ jobs:
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
 
-      - uses: seceng-devsecops-platform/8BitJonny-gh-get-current-pr-action@2.1.2
+      - uses: seceng-devsecops-platform/8BitJonny-gh-get-current-pr-action@v2.2.0
         id: PR
         with:
           # Authetication token to access GitHub APIs. (Can be omitted by default.)
@@ -233,7 +236,6 @@ jobs:
           sha: ${{ github.event.pull_request.head.sha }}
           # Only return if PR is still open. (By default it returns PRs in any state.)
           filterOutClosed: true
-
 
       # Runs a single command using the runners shell
       - name: Setup kubernetes credentials
@@ -273,56 +275,6 @@ jobs:
           PR_TITLE="${{ steps.PR.outputs.pr_title }}"
           echo "prTitle=$PR_TITLE" >> $GITHUB_OUTPUT
           echo "hasKubeconfig=$HAS_KUBECONFIG" >> $GITHUB_OUTPUT
-
-      # # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
-      # - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
-      #   #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
-      #   id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
-      #   uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
-      #   if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
-      #   with:
-      #     bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-      #     channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-      #     payload: >-
-      #       {
-      #           "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-      #           "attachments": [
-      #               {
-      #                   "color": "#B6B6B6",
-      #                   "fields": [
-      #                       {
-      #                         "title": "#️⃣ Revision",
-      #                         "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{steps.set_base_values.outputs.gitShortSha}}|${{steps.set_base_values.outputs.gitShortSha}}>",
-      #                         "short": true
-      #                       },
-      #                       {
-      #                         "title": "🌿 Branch",
-      #                         "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}|${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}>",
-      #                         "short": true
-      #                       },
-      #                       {
-      #                         "title": "👤 Author",
-      #                         "value": "<${{ github.event.sender.html_url }}|${{steps.set_base_values.outputs.committerName}}, ${{steps.set_base_values.outputs.committerEmail}}>",
-      #                         "short": true
-      #                       },
-      #                       {
-      #                         "title": "🔧 code Job",
-      #                         "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-      #                         "short": true
-      #                       }
-      #                   ],
-      #                   "footer": "<${{steps.set_base_values.outputs.githubActionJobUrl}}>"
-      #               }
-      #           ]
-      #       }
-
-      # - name: Annotate Job with notification status
-      #   run: |
-      #     # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      #     echo "## :loudspeaker: notify" >> $GITHUB_STEP_SUMMARY
-      #     echo "" >> $GITHUB_STEP_SUMMARY
-      #     echo * Successfully notified Slack Channel >> $GITHUB_STEP_SUMMARY
-      #     echo "" >> $GITHUB_STEP_SUMMARY
 
   check:
     name: 🛡️ check-code
@@ -412,7 +364,7 @@ jobs:
           echo "## 🦺 YAML lint report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           {
-            echo "<details><summary>Click to view</summary>
+            echo "<details><summary>View lint report</summary>
 
             \`\`\`yaml
             ${{ steps.yaml-lint.outputs.yamllint_output }}
@@ -499,134 +451,3 @@ jobs:
           echo "Preview of Kubernetes resource configurations recorded in the PR: <https://git.viasat.com/${{ github.repository }}/pull/${{github.event.number}}>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
   
-  # report:
-  #   name: 📢 notify
-  #   # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
-  #   # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-  #   runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
-
-  #   # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
-  #   if: ${{ always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
-
-
-  #   # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
-  #   #continue-on-error: true
-
-  #   needs: [code, check, state]
-
-  #   # providing permissions
-  #   permissions:
-  #     # Used for identity the github status results
-  #     # https://github.com/technote-space/workflow-conclusion-action/issues/122
-  #     contents: read
-  #     # https://docs.github.com/en/rest/actions/workflow-jobs?apiVersion=2022-11-28#list-jobs-for-a-workflow-run
-  #     actions: read
-
-  #   steps:
-  #     # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
-  #     # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
-  #     - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.1
-
-  #     - name: Slack Notification of successful build of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-  #       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
-  #       # Populated by technote-space-workflow-conclusion-action above
-  #       # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-  #       if: ${{ env.WORKFLOW_CONCLUSION == 'success' }}
-  #       with:
-  #         bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-  #         channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-  #         message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
-  #         payload: >-
-  #           {
-  #               "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-  #               "attachments": [
-  #                   {
-  #                       "color": "warning",
-  #                       "fields": [
-  #                           {
-  #                             "title": "#️⃣ Revision",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🌿 Branch",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "👤 Author",
-  #                             "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🚀 deploy Job",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🐳 Docker Image",
-  #                             "value": "<${{needs.build.outputs.dockerImageArtifactoryUrl}}|${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🔬 Prisma Scan",
-  #                             "value": "Passed Compliance? ${{needs.check-build.outputs.passedComplianceScan}} \n Passed Vulnerability? ${{needs.check-build.outputs.passedVulnerabilitiesScan}} \n <${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
-  #                             "short": true
-  #                           }
-  #                       ],
-  #                       "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
-  #                   }
-  #               ]
-  #           }
-  #     - name: Slack Notification build failure of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-  #       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
-
-  #       # Populated by technote-space-workflow-conclusion-action above
-  #       # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-  #       if: ${{ env.WORKFLOW_CONCLUSION == 'failure' }}
-  #       with:
-  #         bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-  #         channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-  #         message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
-  #         payload: >-
-  #           {
-  #               "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-  #               "attachments": [
-  #                   {
-  #                       "color": "failure",
-  #                       "fields": [
-  #                           {
-  #                             "title": "#️⃣ Revision",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🌿 Branch",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "👤 Author",
-  #                             "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🚀 deploy Job",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🐳 Docker Image",
-  #                             "value": "<${{needs.build.outputs.dockerImageArtifactoryUrl}}|${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🔬 Prisma Scan",
-  #                             "value": "<${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
-  #                             "short": true
-  #                           }
-  #                       ],
-  #                       "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
-  #                   }
-  #               ]
-  #           }
