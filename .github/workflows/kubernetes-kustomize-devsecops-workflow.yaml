@@ -420,35 +420,29 @@ jobs:
               # https://docs.github.com/en/enterprise-server@3.8/actions/using-workflows/workflow-commands-for-github-actions#example-of-a-multiline-string
               {
                 echo 'PR_COMMENT<<EOF'
-                kubectl kustomize ${env_dir}
+                # :wheel_of_dharma: kubectl kustomize ${env_dir}
+                * Preview of Kubernetes resources:
+                <details>
+                <summary>$ kubectl kustomize ${{ env.ENV_DIR }}</summary>
+                ```yaml
+                ${{ env.PR_COMMENT }}
+                ```
+                </details>
+                
                 echo EOF
-              } >> $GITHUB_ENV
+              } >> kustomize-outputs.md
             done
           else
-            comment="💚 No changes were detected in any kustomization.yaml files 💚"
-            echo "PR_COMMENT=$comment" >> $GITHUB_ENV
+            echo "💚 No changes were detected in any kustomization.yaml file 💚" >> kustomize-outputs.md
           fi
 
-      - name: Add comment to PR
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: seceng-devsecops-platform/peter-evans-create-or-update-comment-action@v3.0.2
+      - name: Add Coverage PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' }}
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.number }}
-          body: |
-            # :mag: Preview of Kubernetes resources:
-            <details>
-            <summary>
-            $ kubectl kustomize ${{ env.ENV_DIR }}
-            </summary>
-
-            ```yaml
-            ${{ env.PR_COMMENT }}
-            ```
-            </details>
-          edit-mode: append
-          reactions: |
-            rocket
+          header: kustomize-outputs
+          recreate: true
+          path: kustomize-outputs.md
 
       - name: Annotate job summary
         run: |
