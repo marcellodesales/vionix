@@ -428,7 +428,7 @@ jobs:
               echo '<details>' >> kustomize-outputs.md
               echo '<summary>$ kubectl kustomize ${{ env.ENV_DIR }}</summary>' >> kustomize-outputs.md
               echo '```yaml' >> kustomize-outputs.md
-              echo '${COMMAND_OUTPUT}' >> kustomize-outputs.md
+              echo ${COMMAND_OUTPUT} >> kustomize-outputs.md
               echo '```' >> kustomize-outputs.md
               echo '</details>' >> kustomize-outputs.md
               echo '' >> kustomize-outputs.md
