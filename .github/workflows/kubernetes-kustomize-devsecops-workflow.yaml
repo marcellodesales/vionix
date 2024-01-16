@@ -393,7 +393,6 @@ jobs:
           fetch-depth: 0
 
       - name: Get kubectl
-        if: ${{ needs.code.outputs.hasKubeconfig == 'true' }}
         run: |
           echo "Installing kubectl!!!"
           echo ${PATH}
@@ -403,7 +402,7 @@ jobs:
           kubectl version
 
       - name: Create comment for PR ${{ github.event.number }}
-        if: ${{ github.event_name == 'pull_request' && needs.code.outputs.hasKubeconfig == 'true' }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           if [[ $(git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml") ]]; then
             for env_dir in $(git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml" | xargs dirname); do
