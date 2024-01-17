@@ -445,8 +445,8 @@ jobs:
           echo "# 🏗️ Kustomize dirs to process" >> $GITHUB_STEP_SUMMARY
           echo "* Kustomize dirs: ${{ steps.kustomize-updates.outputs.affectedDirsString }}" >> $GITHUB_STEP_SUMMARY
 
-  state:
-    name: "🏗️ state"
+  kustomize:
+    name: "🧅 kustomize"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, check]
