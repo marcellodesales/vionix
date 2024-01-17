@@ -416,12 +416,12 @@ jobs:
           try {
             let output = execSync('git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml"').toString();
             const allKustomizeDirs = output.split("\n").map(dirPath => dirPath.replace("/kustomization.yaml", ""))
-            console.log(`All dirs affected: ${allKustomizeDirs}`);
+            console.log(`All dirs affected: ${JSON.stringify(allKustomizeDirs)}`);
 
             const kustomizeLeafDirs = getLeafDirs(allKustomizeDirs);
-            console.log(`All leaf dirs: ${kustomizeLeafDirs}`);
+            console.log(`All leaf dirs: ${JSON.stringify(kustomizeLeafDirs)}`);
 
-            if (kustomizeLeafDirs.length > 0) {
+            if (kustomizeLeafDirs.include.length > 0) {
               const cliOutputJson = JSON.stringify(kustomizeLeafDirs);
 
               fs.appendFileSync(githubOutputFile, `filesMatrix=${cliOutputJson}\n`, encoding);
