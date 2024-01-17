@@ -414,7 +414,7 @@ jobs:
           };
 
           try {
-            let output = execSync('git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml"').toString();
+            let output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | grep "/kustomization.yaml"').toString();
             const allKustomizeDirs = output.split("\n").map(dirPath => dirPath.replace("/kustomization.yaml", ""))
             console.log(`All dirs affected: ${JSON.stringify(allKustomizeDirs)}`);
 
