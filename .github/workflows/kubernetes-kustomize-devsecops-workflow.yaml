@@ -411,7 +411,8 @@ jobs:
     if: ${{ needs.check.outputs.requiresProcessing == 'true' }}
 
     strategy:
-      fail-fast: false
+      # This is the default strategy, to fail the PR since if anything that was processed fail, then fail them all
+      fail-fast: true
       matrix: ${{ fromJSON(needs.check.outputs.filesMatrix) }}
 
     permissions: write-all
