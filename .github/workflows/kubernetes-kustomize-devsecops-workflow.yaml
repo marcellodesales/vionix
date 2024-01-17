@@ -378,6 +378,7 @@ jobs:
         if: ${{ inputs.shield-cli-image-tag == '' }}
         shell: node {0}
         run: |
+          const fs = require('fs');
           const { execSync } = require('child_process');
           const encoding = 'utf8';
           const githubOutputFile = process.env.GITHUB_OUTPUT;
@@ -415,10 +416,11 @@ jobs:
           try {
             let output = execSync('git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml"').toString();
             const allKustomizeDirs = output.split("\n").map(dirPath => dirPath.replace("/kustomization.yaml", ""))
-            console.log(allKustomizeDirs);
+            console.log(`All dirs affected: ${allKustomizeDirs}`);
 
             const kustomizeLeafDirs = getLeafDirs(allKustomizeDirs);
-            console.log(kustomizeLeafDirs);
+            console.log(`All leaf dirs: ${kustomizeLeafDirs}`);
+
             if (kustomizeLeafDirs.length > 0) {
               const cliOutputJson = JSON.stringify(kustomizeLeafDirs);
 
@@ -427,6 +429,7 @@ jobs:
 
               const affectedDirsString = JSON.stringify(kustomizeLeafDirs.include.map(dirObj => dirObj.dir).join(", "));
               fs.appendFileSync(githubOutputFile, `affectedDirs=${affectedDirsString}\n`, encoding);
+
             } else {
               fs.appendFileSync(githubOutputFile, `requiresProcessing=false\n`, encoding);
             }
