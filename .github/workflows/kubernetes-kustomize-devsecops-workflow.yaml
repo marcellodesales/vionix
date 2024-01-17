@@ -280,18 +280,13 @@ jobs:
     name: 🛡️ check-code
     needs: [code]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     continue-on-error: true
-    # strategy:
-    #   fail-fast: false
-    #   matrix:
-    #     # TODO: Add check for docker images updates
-    #     checkType: [K8s,Yamls,Kustomize]
-
-    # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
-    # defaults:
-    #   run:
-    #     working-directory: ${{ inputs.docker-compose-context }}
+    outputs:
+      filesMatrix: ${{ steps.kustomize-updates.outputs.filesMatrix }}
+      requiresProcessing: ${{ steps.kustomize-updates.outputs.requiresProcessing }}
+      affectedDirs: ${{ steps.kustomize-updates.outputs.affectedDirs }}
 
     steps:
       - name: Annotate job with current information
@@ -373,81 +368,159 @@ jobs:
           } >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-  state:
-    name: "🏗️ state"
+      - uses: viarise/setup-node@v3
+        with:
+          node-version: '18'
+          #node-version-file: .node-version
+
+      - name: Find the current leaf dirs containing kustomization changes 
+        id: kustomize-updates
+        if: ${{ inputs.shield-cli-image-tag == '' }}
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+          const encoding = 'utf8';
+          const githubOutputFile = process.env.GITHUB_OUTPUT;
+          console.log(`The output file is at ${githubOutputFile}`);
+
+          // just get the leaf dirs
+          const getLeafDirs = dirs => {
+            dirs = [...new Set(dirs)];
+            dirs.sort();
+            const newDirs = new Set()
+            dirs.forEach(dir => {
+              if (newDirs.size == 0) {
+                newDirs.add(dir)
+              } else {
+                for (let i = 0; i < newDirs.size; i++) {
+                  const currentValue = Array.from(newDirs)[i];
+                  if (currentValue != dir && dir.indexOf(currentValue) > -1 && dir.length > currentValue.length)  {
+                    newDirs.delete(currentValue)
+                    newDirs.add(dir)
+                    break
+                  }
+                }
+                newDirs.add(dir)
+              }
+            })
+            return {
+              include: Array.from(newDirs).map(dirPath => {
+                return {
+                  dir: dirPath
+                }
+              })
+            }
+          };
+
+          try {
+            let output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | grep "/kustomization.yaml"').toString();
+            const allKustomizeDirs = output.split("\n").map(dirPath => dirPath.replace("/kustomization.yaml", ""))
+            console.log(`All dirs affected: ${JSON.stringify(allKustomizeDirs)}`);
+
+            const kustomizeLeafDirs = getLeafDirs(allKustomizeDirs);
+            console.log(`All leaf dirs: ${JSON.stringify(kustomizeLeafDirs)}`);
+
+            if (kustomizeLeafDirs.include.length > 0) {
+              const cliOutputJson = JSON.stringify(kustomizeLeafDirs);
+
+              fs.appendFileSync(githubOutputFile, `filesMatrix=${cliOutputJson}\n`, encoding);
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=true\n`, encoding);
+
+              const affectedDirsString = JSON.stringify(kustomizeLeafDirs.include.map(dirObj => dirObj.dir).join(", "));
+              fs.appendFileSync(githubOutputFile, `affectedDirs=${affectedDirsString}\n`, encoding);
+
+            } else {
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=false\n`, encoding);
+            }
+
+          } catch (error) {
+            console.error(`Error executing command: ${error}`);
+          }
+
+      - name: Annotate job with current information
+        run: |
+          echo "Outputs=${{ toJSON( steps.kustomize-updates.outputs ) }}"
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# 🏗️ Kustomize dirs to process" >> $GITHUB_STEP_SUMMARY
+          echo "* Kustomize dirs: ${{ steps.kustomize-updates.outputs.affectedDirsString }}" >> $GITHUB_STEP_SUMMARY
+
+  kustomize:
+    name: "🧅 kustomize"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, check]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    if: ${{ needs.check.outputs.requiresProcessing == 'true' }}
+
+    strategy:
+      # This is the default strategy, to fail the PR since if anything that was processed fail, then fail them all
+      fail-fast: true
+      matrix: ${{ fromJSON(needs.check.outputs.filesMatrix) }}
+
+    # So that we can write comments to the PR
+    permissions: write-all
 
     steps:
-      - name: Annotate job with current information
-        run: |
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "# 🏗️ \`state\` Job Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
       - name: Checkout history with tags so to get information
         uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
 
       - name: Get kubectl
-        if: ${{ needs.code.outputs.hasKubeconfig == 'true' }}
         run: |
           echo "Installing kubectl!!!"
           echo ${PATH}
           curl -LO https://dl.k8s.io/release/${{ inputs.kubectl-version }}/bin/linux/amd64/kubectl -o kubectl
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
+
+      - name: Get version from from the client
+        run: |
+          kubectl version --client
+
+      - name: Get version from from the client
+        if: ${{ needs.code.outputs.hasKubeconfig == 'true' }}
+        run: |
           kubectl version
 
       - name: Create comment for PR ${{ github.event.number }}
-        if: ${{ github.event_name == 'pull_request' && needs.code.outputs.hasKubeconfig == 'true' }}
-        run: |
-          if [[ $(git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml") ]]; then
-            for env_dir in $(git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml" | xargs dirname); do
-              echo "ENV_DIR=${env_dir}" >> $GITHUB_ENV
-              echo "Executing 'kubectl kustomize $env_dir'..."            
-              dest_kustomize="$(kubectl kustomize ${env_dir})"
-              # https://docs.github.com/en/enterprise-server@3.8/actions/using-workflows/workflow-commands-for-github-actions#example-of-a-multiline-string
-              {
-                echo 'PR_COMMENT<<EOF'
-                kubectl kustomize ${env_dir}
-                echo EOF
-              } >> $GITHUB_ENV
-            done
-          else
-            comment="💚 No changes were detected in any kustomization.yaml files 💚"
-            echo "PR_COMMENT=$comment" >> $GITHUB_ENV
-          fi
-
-      - name: Add comment to PR
         if: ${{ github.event_name == 'pull_request' }}
-        uses: seceng-devsecops-platform/peter-evans-create-or-update-comment-action@v3.0.2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.number }}
-          body: |
-            # :mag: Preview of Kubernetes resources:
-            <details>
-            <summary>
-            $ kubectl kustomize ${{ env.ENV_DIR }}
-            </summary>
-
-            ```yaml
-            ${{ env.PR_COMMENT }}
-            ```
-            </details>
-          edit-mode: append
-          reactions: |
-            rocket
-
-      - name: Annotate job summary
         run: |
-          echo "Display link to PR with the kustomize output"
-          echo "## 🛂 Kubectl kustomize output" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Preview of Kubernetes resource configurations recorded in the PR: <https://git.viasat.com/${{ github.repository }}/pull/${{github.event.number}}>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-  
+          if [ -f ${{ matrix.dir }}/results.md ]; then
+            rm -f ${{ matrix.dir }}/results.md
+          fi
+          
+          echo "Executing 'kubectl kustomize ${{ matrix.dir }}'"
+          kubectl kustomize ${{ matrix.dir }}
+
+          # https://docs.github.com/en/enterprise-server@3.8/actions/using-workflows/workflow-commands-for-github-actions#example-of-a-multiline-string
+          echo "# :wrench: ${{ matrix.dir }}/kustomization.yaml" >> ${{ matrix.dir }}/results.md
+          echo '```yaml' >> ${{ matrix.dir }}/results.md
+          cat ${{ matrix.dir }}/kustomization.yaml >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
+          echo '```' >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
+
+          echo "# :wheel_of_dharma: kubectl kustomize ${{ matrix.dir }}" >> ${{ matrix.dir }}/results.md
+          echo '<details>' >> ${{ matrix.dir }}/results.md
+          echo '<summary>$ kubectl kustomize ${{ matrix.dir }}</summary>' >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
+          echo '```yaml' >> ${{ matrix.dir }}/results.md
+          kubectl kustomize ${{ matrix.dir }} >> ${{ matrix.dir }}/results.md
+
+          # Avoid API errors {"resource":"IssueComment","code":"unprocessable","field":"data","message":"Body is too long (maximum is 65536 characters)"}
+          head -c 65000 ${{ matrix.dir }}/results.md > ${{ matrix.dir }}/results.md-capped
+          mv ${{ matrix.dir }}/results.md-capped ${{ matrix.dir }}/results.md
+
+          echo '```' >> ${{ matrix.dir }}/results.md
+          echo '</details>' >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
+
+      - name: Add kustomize output for the dir ${{ matrix.dir }}
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        with:
+          header: kustomize-outputs-${{ matrix.dir }}
+          recreate: true
+          path: ${{ matrix.dir }}/results.md
