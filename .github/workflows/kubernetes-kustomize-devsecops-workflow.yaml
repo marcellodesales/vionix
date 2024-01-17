@@ -407,7 +407,7 @@ jobs:
 
             # Output the filtered list
             $FILES_MATRIX_ARRAY=${filtered}
-            echo "filesMatrix={\"include\": $FILES_MATRIX_ARRAY}" >> $GITHUB_OUTPUT
+            echo "filesMatrix={\"include\": [$FILES_MATRIX_ARRAY]}" >> $GITHUB_OUTPUT
             echo "Filtered matrix object $FILES_MATRIX_ARRAY"
 
           else
