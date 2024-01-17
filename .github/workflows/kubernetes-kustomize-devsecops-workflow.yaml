@@ -448,19 +448,18 @@ jobs:
           
           echo "* Current affected kustomization results in PR" >> ${{ matrix.dir }}/results.md
           echo "Executing 'kubectl kustomize ${{ matrix.dir }}'"
-          COMMAND_OUTPUT="$(kubectl kustomize ${{ matrix.dir }})"
-          echo ${COMMAND_OUTPUT}
+          kubectl kustomize ${{ matrix.dir }}
 
           # https://docs.github.com/en/enterprise-server@3.8/actions/using-workflows/workflow-commands-for-github-actions#example-of-a-multiline-string
           echo "# :wheel_of_dharma: kubectl kustomize ${{ matrix.dir }}" >> ${{ matrix.dir }}/results.md
           echo '<details>' >> ${{ matrix.dir }}/results.md
           echo '<summary>$ kubectl kustomize ${{ matrix.dir }}</summary>' >> ${{ matrix.dir }}/results.md
           echo '```yaml' >> ${{ matrix.dir }}/results.md
-          echo ${COMMAND_OUTPUT} >> ${{ matrix.dir }}/results.md
+          kubectl kustomize ${{ matrix.dir }} >> ${{ matrix.dir }}/results.md
 
           # Avoid API errors {"resource":"IssueComment","code":"unprocessable","field":"data","message":"Body is too long (maximum is 65536 characters)"}
-          head -c 65500 ${{ matrix.dir }}/results.md > capped-${{ matrix.dir }}/results.md
-          mv capped-${{ matrix.dir }}/results.md ${{ matrix.dir }}/results.md
+          head -c 65000 ${{ matrix.dir }}/results.md > ${{ matrix.dir }}/results.md-capped
+          mv capped-${{ matrix.dir }}/results.md-capped ${{ matrix.dir }}/results.md
 
           echo '```' >> ${{ matrix.dir }}/results.md
           echo '</details>' >> ${{ matrix.dir }}/results.md
