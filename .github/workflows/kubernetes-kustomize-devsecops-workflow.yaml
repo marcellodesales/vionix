@@ -371,7 +371,7 @@ jobs:
       - uses: viarise/setup-node@v3
         with:
           node-version: '18'
-          node-version-file: .node-version
+          #node-version-file: .node-version
 
       - name: Find the current leaf dirs containing kustomization changes 
         id: kustomize-updates
