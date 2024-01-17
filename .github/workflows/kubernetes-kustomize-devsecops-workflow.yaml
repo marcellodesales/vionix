@@ -453,6 +453,7 @@ jobs:
           echo "# :wrench: ${{ matrix.dir }}/kustomization.yaml" >> ${{ matrix.dir }}/results.md
           echo '```yaml' >> ${{ matrix.dir }}/results.md
           cat ${{ matrix.dir }}/kustomization.yaml >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
           echo '```' >> ${{ matrix.dir }}/results.md
           echo '' >> ${{ matrix.dir }}/results.md
 
