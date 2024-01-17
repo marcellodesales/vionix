@@ -385,30 +385,10 @@ jobs:
             done
 
             echo "requiresProcessing=true" >> $GITHUB_OUTPUT
+            echo "filesMatrix={\"include\": [$FILES_MATRIX]}" >> $GITHUB_OUTPUT
             echo "affectedDirs=${DIRS_PROCESSED}" >> $GITHUB_OUTPUT
             
             echo "Generated matrix object [$FILES_MATRIX]"
-            
-            # Extract the list of all directories
-            dirs=$(echo "[${FILES_MATRIX}]" | jq -r '.[].dir')
-
-            # Loop over each directory and check if it has subdirectories
-            for dir in $dirs; do
-              # Check if the directory has subdirectories by counting the number of subdirectories
-              count=$(echo "$dirs" | jq --arg dir "$dir" 'map(select(.|startswith($dir+"/")))|length')
-
-              # If the directory has no subdirectories and is not already in the filtered list, add it to the filtered list
-              if [[ $count -eq 0 ]]; then
-                if [[ $(echo "$filtered" | jq 'map(.dir == "'"$dir"'")|any') == "false" ]]; then
-                  filtered=$(echo "$filtered" | jq '. + [{"dir": "'"$dir"'"}]')
-                fi
-              fi
-            done
-
-            # Output the filtered list
-            $FILES_MATRIX_ARRAY=${filtered}
-            echo "filesMatrix={\"include\": [$FILES_MATRIX_ARRAY]}" >> $GITHUB_OUTPUT
-            echo "Filtered matrix object $FILES_MATRIX_ARRAY"
 
           else
             echo "filesMatrix=" >> $GITHUB_OUTPUT
