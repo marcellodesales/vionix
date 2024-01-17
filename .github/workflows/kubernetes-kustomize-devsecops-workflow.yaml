@@ -450,7 +450,7 @@ jobs:
           kubectl kustomize ${{ matrix.dir }}
 
           # https://docs.github.com/en/enterprise-server@3.8/actions/using-workflows/workflow-commands-for-github-actions#example-of-a-multiline-string
-          echo "# :wrench: ${{ matrix.dir }}/kustomization.yaml"
+          echo "# :wrench: ${{ matrix.dir }}/kustomization.yaml" >> ${{ matrix.dir }}/results.md
           echo '```yaml' >> ${{ matrix.dir }}/results.md
           cat ${{ matrix.dir }}/kustomization.yaml >> ${{ matrix.dir }}/results.md
           echo '```' >> ${{ matrix.dir }}/results.md
