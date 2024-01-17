@@ -411,6 +411,7 @@ jobs:
     if: ${{ needs.check.outputs.requiresProcessing == 'true' }}
 
     strategy:
+      fail-fast: false
       matrix: ${{ fromJSON(needs.check.outputs.filesMatrix) }}
 
     permissions:
@@ -459,7 +460,7 @@ jobs:
 
           # Avoid API errors {"resource":"IssueComment","code":"unprocessable","field":"data","message":"Body is too long (maximum is 65536 characters)"}
           head -c 65000 ${{ matrix.dir }}/results.md > ${{ matrix.dir }}/results.md-capped
-          mv capped-${{ matrix.dir }}/results.md-capped ${{ matrix.dir }}/results.md
+          mv ${{ matrix.dir }}/results.md-capped ${{ matrix.dir }}/results.md
 
           echo '```' >> ${{ matrix.dir }}/results.md
           echo '</details>' >> ${{ matrix.dir }}/results.md
@@ -471,4 +472,4 @@ jobs:
         with:
           header: kustomize-outputs-${{ matrix.dir }}
           recreate: true
-          path: kustomize-outputs-${{ matrix.dir }}.md
+          path: ${{ matrix.dir }}/results.md
