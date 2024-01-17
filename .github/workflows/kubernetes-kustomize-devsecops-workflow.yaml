@@ -446,14 +446,20 @@ jobs:
             rm -f ${{ matrix.dir }}/results.md
           fi
           
-          echo "* Current affected kustomization results in PR" >> ${{ matrix.dir }}/results.md
           echo "Executing 'kubectl kustomize ${{ matrix.dir }}'"
           kubectl kustomize ${{ matrix.dir }}
 
           # https://docs.github.com/en/enterprise-server@3.8/actions/using-workflows/workflow-commands-for-github-actions#example-of-a-multiline-string
+          echo "# :wrench: ${{ matrix.dir }}/kustomization.yaml"
+          echo '```yaml' >> ${{ matrix.dir }}/results.md
+          cat ${{ matrix.dir }}/kustomization.yaml >> ${{ matrix.dir }}/results.md
+          echo '```' >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
+
           echo "# :wheel_of_dharma: kubectl kustomize ${{ matrix.dir }}" >> ${{ matrix.dir }}/results.md
           echo '<details>' >> ${{ matrix.dir }}/results.md
           echo '<summary>$ kubectl kustomize ${{ matrix.dir }}</summary>' >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
           echo '```yaml' >> ${{ matrix.dir }}/results.md
           kubectl kustomize ${{ matrix.dir }} >> ${{ matrix.dir }}/results.md
 
