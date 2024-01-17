@@ -285,6 +285,8 @@ jobs:
     continue-on-error: true
     outputs:
       filesMatrix: ${{ steps.kustomize-updates.outputs.filesMatrix }}
+      requiresProcessing: ${{ steps.kustomize-updates.outputs.requiresProcessing }}
+      affectedDirs: ${{ steps.kustomize-updates.outputs.affectedDirs }}
 
     steps:
       - name: Annotate job with current information
@@ -383,8 +385,9 @@ jobs:
               cat ${ENV_DIR}/kustomization.yaml
             done
 
-            echo "dirsProcessed=${DIRS_PROCESSED}" >> $GITHUB_OUTPUT
-            echo "filesMatrix={\"kustomizeDirs\": [${FILES_MATRIX}], \"dirsProcessed\": \"${DIRS_PROCESSED}\"}" >> $GITHUB_OUTPUT
+            echo "filesMatrix={\"include\": [$FILES_MATRIX]}" >> $GITHUB_OUTPUT
+            echo "requiresProcessing=true" >> $GITHUB_OUTPUT
+            echo "affectedDirs=${DIRS_PROCESSED}" >> $GITHUB_OUTPUT
 
           else
             echo "filesMatrix=" >> $GITHUB_OUTPUT
@@ -403,10 +406,13 @@ jobs:
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, check]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
-    if: ${{ needs.check.outputs.filesMatrix != '' }}
+    if: ${{ needs.check.outputs.requiresProcessing == 'true' }}
 
     strategy:
       matrix: ${{ fromJSON(needs.check.outputs.filesMatrix) }}
+
+    permissions:
+      contents: read  # <--- allows to read repo
 
     steps:
       - name: Checkout history with tags so to get information
