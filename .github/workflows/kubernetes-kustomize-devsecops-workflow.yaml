@@ -52,6 +52,12 @@ on:
         required: false
         type: string
         default: "."
+        
+      check-kustomization:
+        description: "Whether or not check for kustomization files"
+        required: false
+        type: string
+        default: false
 
       argocd-server:
         description: "The ArgoCD server to use"
@@ -375,7 +381,7 @@ jobs:
 
       - name: Find the current leaf dirs containing kustomization changes 
         id: kustomize-updates
-        if: ${{ inputs.shield-cli-image-tag == '' }}
+        if: ${{ inputs.check-kustomization == 'true' }}
         shell: node {0}
         run: |
           const fs = require('fs');
@@ -451,7 +457,7 @@ jobs:
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, check]
     runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
-    if: ${{ needs.check.outputs.requiresProcessing == 'true' }}
+    if: ${{ inputs.check-kustomization == 'true' && needs.check.outputs.requiresProcessing == 'true' }}
 
     strategy:
       # This is the default strategy, to fail the PR since if anything that was processed fail, then fail them all
