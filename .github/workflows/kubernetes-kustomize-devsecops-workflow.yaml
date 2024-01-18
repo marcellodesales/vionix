@@ -381,7 +381,7 @@ jobs:
             const changedArgoApps = {
               include: output.split("\n").filter(appFilePath => appFilePath.length > 0).map(appFilePath => {
                 return {
-                  name: path.basename(filePath).replace(".yaml", ""),
+                  name: path.basename(appFilePath).replace(".yaml", ""),
                   filePath: appFilePath
                 }
               })
