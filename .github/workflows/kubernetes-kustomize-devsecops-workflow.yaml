@@ -287,6 +287,7 @@ jobs:
           echo "hasKubeconfig=$HAS_KUBECONFIG" >> $GITHUB_OUTPUT
 
       - uses: viarise/setup-node@v3
+        if: ${{ inputs.check-kustomization == 'true' }}
         with:
           node-version: '18'
           #node-version-file: .node-version
@@ -412,14 +413,6 @@ jobs:
             </details>"
           } >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Add lint report to PR comment
-        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: ${{ always() && github.event_name == 'pull_request' }}
-        with:
-          header: kustomize-outputs-${{ matrix.dir }}
-          recreate: true
-          path: ${{ matrix.dir }}/results.md
 
   kustomize:
     name: "🧅 kustomize"
