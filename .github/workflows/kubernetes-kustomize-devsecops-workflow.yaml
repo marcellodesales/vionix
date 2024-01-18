@@ -357,6 +357,86 @@ jobs:
             console.error(`Error executing command: ${error}`);
           }
 
+      - name: Find changed ArgoCD Apps
+        id: argocd-app-updates
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const path = require('path');
+          const { execSync } = require('child_process');
+          const encoding = 'utf8';
+          const githubOutputFile = process.env.GITHUB_OUTPUT;
+          console.log(`The output file is at ${githubOutputFile}`);
+
+          try {
+            const output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | xargs grep -l "kind: Application"').toString();
+            const changedArgoApps = {
+              include: output.split("\n").filter(appFilePath => appFilePath.length > 0).map(appFilePath => {
+                return {
+                  name: path.basename(filePath).replace(".yaml", ""),
+                  filePath: appFilePath
+                }
+              })
+            };
+            console.log(`All dirs affected: ${JSON.stringify(changedArgoApps)}`);
+
+            if (changedArgoApps.include.length > 0) {
+              const cliOutputJson = JSON.stringify(changedArgoApps);
+
+              fs.appendFileSync(githubOutputFile, `filesMatrix=${cliOutputJson}\n`, encoding);
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=true\n`, encoding);
+
+              const affectedFilesString = JSON.stringify(changedArgoApps.include.map(app => app.name).join(", "));
+              fs.appendFileSync(githubOutputFile, `affectedFiles=${affectedFilesString}\n`, encoding);
+
+            } else {
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=false\n`, encoding);
+            }
+
+          } catch (error) {
+            console.error(`Error executing command: ${error}`);
+          }
+
+      - name: Find changed ArgoCD Projects 
+        id: argocd-projects-updates
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const path = require('path');
+          const { execSync } = require('child_process');
+          const encoding = 'utf8';
+          const githubOutputFile = process.env.GITHUB_OUTPUT;
+          console.log(`The output file is at ${githubOutputFile}`);
+
+          try {
+            const output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | xargs grep -l "kind: AppProject"').toString();
+             const changedArgoProjects = {
+              include: output.split("\n").filter(filePath => filePath.length > 0).map(filePath => {
+                return {
+                  name: path.basename(filePath).replace(".yaml", ""),
+                  filePath: filePath
+                }
+              })
+            };
+            console.log(`All projects affected: ${JSON.stringify(changedArgoProjects)}`);
+
+            if (changedArgoProjects.include.length > 0) {
+              const cliOutputJson = JSON.stringify(changedArgoProjects);
+
+              fs.appendFileSync(githubOutputFile, `filesMatrix=${cliOutputJson}\n`, encoding);
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=true\n`, encoding);
+
+              const affectedFilesString = JSON.stringify(changedArgoProjects.include.map(proj => proj.name).join(", "));
+              fs.appendFileSync(githubOutputFile, `affectedFiles=${affectedFilesString}\n`, encoding);
+
+            } else {
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=false\n`, encoding);
+            }
+
+          } catch (error) {
+            console.error(`Error executing command: ${error}`);
+          }
+
   yaml:
     name: 🦺 yaml
     needs: [code]
