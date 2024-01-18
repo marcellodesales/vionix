@@ -407,7 +407,7 @@ jobs:
           {
             echo "<details><summary>View lint report</summary>
 
-            \`\`\`yaml
+            \`\`\`gradle
             ${{ steps.yaml-lint.outputs.yamllint_output }}
             \`\`\`
             </details>"
@@ -482,7 +482,7 @@ jobs:
           head -c 65000 ${{ matrix.dir }}/results.md > ${{ matrix.dir }}/results.md-capped
           mv ${{ matrix.dir }}/results.md-capped ${{ matrix.dir }}/results.md
 
-          echo '```' >> ${{ matrix.dir }}/results.md
+          echo '```gradle' >> ${{ matrix.dir }}/results.md
           echo '</details>' >> ${{ matrix.dir }}/results.md
           echo '' >> ${{ matrix.dir }}/results.md
 
