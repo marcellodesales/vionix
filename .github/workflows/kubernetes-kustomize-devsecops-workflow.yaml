@@ -59,6 +59,12 @@ on:
         type: string
         default: false
 
+      check-argocd:
+        description: "Whether or not check for argocd files"
+        required: false
+        type: string
+        default: false
+
       argocd-server:
         description: "The ArgoCD server to use"
         required: false
@@ -287,7 +293,8 @@ jobs:
           echo "hasKubeconfig=$HAS_KUBECONFIG" >> $GITHUB_OUTPUT
 
       - uses: viarise/setup-node@v3
-        if: ${{ inputs.check-kustomization == 'true' }}
+        #if: ${{ inputs.check-kustomization == 'true' }}
+        if: ${{ inputs.check-argocd == 'true' || inputs.check-kustomization == 'true' }}
         with:
           node-version: '18'
           #node-version-file: .node-version
@@ -359,6 +366,7 @@ jobs:
 
       - name: Find changed ArgoCD Apps
         id: argocd-app-updates
+        if: ${{ inputs.check-argocd == 'true' }}
         shell: node {0}
         run: |
           const fs = require('fs');
@@ -398,6 +406,7 @@ jobs:
           }
 
       - name: Find changed ArgoCD Projects 
+        if: ${{ inputs.check-argocd == 'true' }}
         id: argocd-projects-updates
         shell: node {0}
         run: |
