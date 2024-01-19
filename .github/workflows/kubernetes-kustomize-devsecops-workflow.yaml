@@ -589,7 +589,7 @@ jobs:
 
             echo '## :octocat: Sources' >> ${{ matrix.name }}-projects.md
             ARGO_PROJ_SOURCES=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.sourceRepos[]' ${{ matrix.filePath }})
-            echo "${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-projects.md
+            echo "* '${ARGO_PROJ_SOURCES}'" >> ${{ matrix.name }}-projects.md
 
             echo '## :ship: Destination' >> ${{ matrix.name }}-projects.md
             ARGO_PROJ_DESTINATION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server' ${{ matrix.filePath }})
