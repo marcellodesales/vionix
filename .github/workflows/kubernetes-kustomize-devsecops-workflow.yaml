@@ -612,7 +612,7 @@ jobs:
             ARGO_PROJ_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
 
             echo "# :squid: Updating ArgoCD Project :wrench:" >> ${{ matrix.name }}-projects.md
-            echo "## Name: ${{ matrix.name }} >> ${{ matrix.name }}-projects.md
+            echo "## Name: ${{ matrix.name }}" >> ${{ matrix.name }}-projects.md
             echo "* Created on ${ARGO_PROJ_CREATION}" >> ${{ matrix.name }}-projects.md
             echo "* Namespace: ${ARGO_PROJ_NAMESPACE}" >> ${{ matrix.name }}-projects.md
             echo "* Sources: ${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-projects.md
@@ -669,13 +669,18 @@ jobs:
             ARGO_APP_DESTINATION_SERVER=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.destination.server' ${{ matrix.filePath }})
             ARGO_APP_DESTINATION="${ARGO_APP_DESTINATION_NAMESPACE}@${ARGO_APP_DESTINATION_SERVER}"
 
-            echo "# :squid: New ArgoCD Application ghas-app-az-eastus-pltf-prd-prd :tada:" >> ${{ matrix.name }}-apps.md
+            echo '# :tada: New ArgoCD Application' >> ${{ matrix.name }}-apps.md
+            echo "## :squid: ${APP_NAME}" >> ${{ matrix.name }}-apps.md
             echo "* Project: ${APP_PROJECT_NAME}" >> ${{ matrix.name }}-apps.md
             echo "* Namespace: ${ARGO_APP_NAMESPACE}" >> ${{ matrix.name }}-apps.md
-            echo "* Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-apps.md
-            echo "* Destination: ${ARGO_APP_DESTINATION}" >> ${{ matrix.name }}-apps.md
-            echo '' >> ${{ matrix.name }}-apps.md
 
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-apps.md
+            echo "* Git Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-apps.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-apps.md
+            echo "* Destination: ${ARGO_APP_DESTINATION}" >> ${{ matrix.name }}-apps.md
+
+            echo '## :wrench: Settings' >> ${{ matrix.name }}-apps.md
             echo '<details>' >> ${{ matrix.name }}-apps.md
             echo '<summary>$ cat ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-apps.md
             echo '' >> ${{ matrix.name }}-apps.md
@@ -697,14 +702,19 @@ jobs:
             ARGO_APP_DESTINATION_SERVER=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destination.server')
             ARGO_APP_DESTINATION="${ARGO_APP_DESTINATION_NAMESPACE}@${ARGO_APP_DESTINATION_SERVER}"
 
-            echo "# :squid: Updating ArgoCD Project ${APP_NAME} :wrench:" >> ${{ matrix.name }}-apps.md
+            echo '# :wrench: Updatees for ArgoCD Application' >> ${{ matrix.name }}-apps.md
+            echo "## :squid: ${APP_NAME}" >> ${{ matrix.name }}-apps.md
             echo "* Project: ${APP_PROJECT_NAME}" >> ${{ matrix.name }}-apps.md
-            echo "* Created on ${ARGO_APP_CREATION}" >> ${{ matrix.name }}-apps.md
             echo "* Namespace: ${ARGO_APP_NAMESPACE}" >> ${{ matrix.name }}-apps.md
-            echo "* Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-apps.md
-            echo "* Destination: ${ARGO_APP_DESTINATION}" >> ${{ matrix.name }}-apps.md
-            echo '' >> ${{ matrix.name }}-apps.md
+            echo "* Created on ${ARGO_APP_CREATION}" >> ${{ matrix.name }}-apps.md
 
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-apps.md
+            echo "* Git Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-apps.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-apps.md
+            echo "* Destination: ${ARGO_APP_DESTINATION}" >> ${{ matrix.name }}-apps.md
+
+            echo '## :wrench: Settings' >> ${{ matrix.name }}-apps.md
             echo '<details>' >> ${{ matrix.name }}-apps.md
             echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-apps.md
             echo '' >> ${{ matrix.name }}-apps.md
