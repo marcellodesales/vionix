@@ -701,11 +701,21 @@ jobs:
         run: |
           APPSET_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.name' ${{ matrix.filePath }})
           APPSET_PROJECT_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.project' ${{ matrix.filePath }})
-          APPSET_GENERATOR=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.generators[0].list.elements[]' ${{ matrix.filePath }})
+          APPSET_GENERATOR=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.generators[0].list.elements[]' ${{ matrix.filePath }} | tr '\n' ' ')
 
           RESPONSE=$(curl --silent --write-out "\n%{http_code}" -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" ${{ inputs.argocd-server }}/api/v1/applicationsets?projects=${APPSET_PROJECT_NAME})
           HTTP_STATUS=$(echo "${RESPONSE}" | tail -n1)
           HTTP_BODY=$(echo "${RESPONSE}" | sed '$d')
+
+          LIST_RESULT=$(echo ${HTTP_BODY} | jq '.items | length')
+          if [ "${LIST_RESULT}" == "0" ]; then
+            HTTP_STATUS="404"
+          else
+            HTTP_STATUS="200"
+          fi
+
+          echo "STATUS: ${HTTP_STATUS}"
+          echo "BODY: ${HTTP_BODY}"
 
           if [ "${HTTP_STATUS}" == "404" ]; then
             echo "# :squid: New ArgoCD ApplicationSet ${APPSET_NAME} :tada:" >> ${{ matrix.name }}-appsets.md
