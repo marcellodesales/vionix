@@ -564,7 +564,7 @@ jobs:
 
     strategy:
       # This is the default strategy, to fail the PR since if anything that was processed fail, then fail them all
-      fail-fast: true
+      fail-fast: false
       matrix: ${{ fromJSON(needs.code.outputs.argocdFilesMatrix) }}
 
     # So that we can write comments to the PR
