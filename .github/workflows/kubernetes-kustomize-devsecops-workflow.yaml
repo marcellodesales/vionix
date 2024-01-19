@@ -385,8 +385,7 @@ jobs:
           console.log(`The output file is at ${githubOutputFile}`);
 
           try {
-            const baseMergeBranch = process.env.GITHUB_BASE_REF
-            const output = execSync(`git diff --name-only --diff-filter=d ${baseMergeBranch}..HEAD | xargs grep -l -e "kind:\s*Application" -e "kind:\s*AppProject"`).toString();
+            const output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | xargs grep -l -e "kind:\\s*Application" -e "kind:\\s*AppProject"').toString();
             const changedArgoProjects = {
               include: output.split("\n").filter(filePath => filePath.length > 0).map(filePath => {
                 let argoKind = execSync(`cat ${filePath} | grep kind: | awk '{print $2}'`).toString().split("\n")[0];
