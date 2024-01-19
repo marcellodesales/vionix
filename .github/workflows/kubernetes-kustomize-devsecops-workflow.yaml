@@ -770,8 +770,8 @@ jobs:
             APPSET_DESTINATION_SERVER=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.destination.server' ${{ matrix.filePath }})
             ARGO_APPSET_GENERATORS=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.generators[0].list.elements[]' ${{ matrix.filePath }})
 
-            APPSET_SOURCE_REPO=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.repoURL' ${{ matrix.filePath }})
-            APPSET_SOURCE_REVISION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.targetRevision' ${{ matrix.filePath }})
+            APPSET_SOURCE_REPO=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.source.repoURL' ${{ matrix.filePath }})
+            APPSET_SOURCE_REVISION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.source.targetRevision' ${{ matrix.filePath }})
             APPSET_SOURCE="${ARGO_APP_SOURCE_REPO}@${ARGO_APP_SOURCE_REVISION}"
 
             echo '# :tada: New ArgoCD ApplicationSet' >> ${{ matrix.name }}-appsets.md
@@ -780,7 +780,7 @@ jobs:
             echo "* Namespace: ${APPSET_NAMESPACE}" >> ${{ matrix.name }}-appsets.md
 
             echo '## :octocat: Sources' >> ${{ matrix.name }}-appsets.md
-            echo "* Git Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-appsets.md
+            echo "* Git Source: ${APPSET_SOURCE}" >> ${{ matrix.name }}-appsets.md
 
             echo '## :ship: Destination' >> ${{ matrix.name }}-appsets.md
             echo "* Cluster: ${APPSET_DESTINATION_SERVER}" >> ${{ matrix.name }}-appsets.md
