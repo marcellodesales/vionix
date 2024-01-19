@@ -766,10 +766,25 @@ jobs:
           echo "BODY: ${HTTP_BODY}"
 
           if [ "${HTTP_STATUS}" == "404" ]; then
-            echo "# :squid: New ArgoCD ApplicationSet ${APPSET_NAME} :tada:" >> ${{ matrix.name }}-appsets.md
-            echo "* Name: ${APPSET_NAME}" >> ${{ matrix.name }}-appsets.md
+            APPSET_NAMESPACE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.namespace' ${{ matrix.filePath }})
+            APPSET_DESTINATION_NAMESPACE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.destination.namespace' ${{ matrix.filePath }})
+            APPSET_DESTINATION_SERVER=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.destination.server' ${{ matrix.filePath }})
+
+            APPSET_SOURCE_REPO=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.repoURL' ${{ matrix.filePath }})
+            APPSET_SOURCE_REVISION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.targetRevision' ${{ matrix.filePath }})
+            APPSET_SOURCE="${ARGO_APP_SOURCE_REPO}@${ARGO_APP_SOURCE_REVISION}"
+
+            echo '# :tada: New ArgoCD ApplicationSet' >> ${{ matrix.name }}-appsets.md
+            echo "## :squid: ${APPSET_NAME}" >> ${{ matrix.name }}-appsets.md
             echo "* Project: ${APPSET_PROJECT_NAME}" >> ${{ matrix.name }}-appsets.md
-            echo "* Generators: ${APPSET_GENERATOR}" >> ${{ matrix.name }}-appsets.md
+            echo "* Namespace: ${APPSET_NAMESPACE}" >> ${{ matrix.name }}-appsets.md
+
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-appsets.md
+            echo "* Git Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-appsets.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-appsets.md
+            echo "* Cluster: ${APPSET_DESTINATION_SERVER}" >> ${{ matrix.name }}-appsets.md
+            echo "* Destinations Namespace -> Dir mapping: ${APPSET_GENERATOR}" >> ${{ matrix.name }}-appsets.md
 
             echo '' >> ${{ matrix.name }}-appsets.md
             echo '<details>' >> ${{ matrix.name }}-appsets.md
@@ -787,11 +802,18 @@ jobs:
             ARGO_APPSET_GENERATORS=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.generators[])
             ARGO_APPSET_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
 
-            echo "# :squid: Updating ArgoCD ApplicationSet ${APPSET_NAME} :wrench:" >> ${{ matrix.name }}-appsets.md
-            echo "* Created on ${ARGO_PROJ_CREATION}" >> ${{ matrix.name }}-appsets.md
-            echo "* Namespace: ${ARGO_PROJ_NAMESPACE}" >> ${{ matrix.name }}-appsets.md
-            echo "* Sources: ${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-appsets.md
-            echo "* Cluster: ${ARGO_PROJ_DESTINATION}" >> ${{ matrix.name }}-appsets.md
+            echo '# :wrench: Updating ArgoCD ApplicationSet' >> ${{ matrix.name }}-appsets.md
+            echo "## :squid: ${APPSET_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo "* Project: ${APPSET_PROJECT_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo "* Namespace: ${ARGO_APPSET_NAMESPACE}" >> ${{ matrix.name }}-appsets.md
+            echo "* Creation: ${ARGO_APPSET_CREATION}" >> ${{ matrix.name }}-appsets.md
+
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-appsets.md
+            echo "* Git Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-appsets.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-appsets.md
+            echo "* Cluster: ${APPSET_DESTINATION_SERVER}" >> ${{ matrix.name }}-appsets.md
+            echo "* Destinations Namespace -> Dir mapping: ${APPSET_GENERATOR}" >> ${{ matrix.name }}-appsets.md
 
             echo '<details>' >> ${{ matrix.name }}-appsets.md
             echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-appsets.md
