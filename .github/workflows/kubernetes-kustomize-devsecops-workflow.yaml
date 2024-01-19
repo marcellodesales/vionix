@@ -688,7 +688,7 @@ jobs:
             exit 1
           fi
 
-      - name: Add argocd project ${{ matrix.name }} details
+      - name: Add argocd application ${{ matrix.name }} details
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: ${{ always() && github.event_name == 'pull_request' && matrix.kind == 'Application' }}
         with:
@@ -761,7 +761,7 @@ jobs:
             exit 1
           fi
 
-      - name: Add argocd project ${{ matrix.name }} details
+      - name: Add argocd applicationset ${{ matrix.name }} details
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: ${{ always() && github.event_name == 'pull_request' && matrix.kind == 'ApplicationSet' }}
         with:
