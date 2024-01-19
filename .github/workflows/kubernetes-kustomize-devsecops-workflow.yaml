@@ -638,12 +638,31 @@ jobs:
           RESPONSE=$(curl --silent --write-out "\n%{http_code}" -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" ${{ inputs.argocd-server }}/api/v1/applications/${APP_NAME})
           HTTP_STATUS=$(echo "${RESPONSE}" | tail -n1)
           HTTP_BODY=$(echo "${RESPONSE}" | sed '$d')
+          
+          # Currently the API returns 403 when it doesn't exist
+          if [ "${HTTP_STATUS}" == "403" ]; then
+            HTTP_STATUS="404"
+          else
+            HTTP_STATUS="200"
+          fi
 
           if [ "${HTTP_STATUS}" == "404" ]; then
-            echo "# :squid: New ArgoCD ApplicationSet ${{ matrix.name }} :tada:" >> ${{ matrix.name }}-apps.md
-            echo "* Name: ${APP_NAME}" >> ${{ matrix.name }}-appsets.md
-            echo "* Project: ${APP_PROJECT_NAME}" >> ${{ matrix.name }}-appsets.md
-            echo '' >> ${{ matrix.name }}-appsets.md
+            ARGO_APP_NAMESPACE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.namespace' ${{ matrix.filePath }})
+            ARGO_APP_SOURCE_REPO=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.repoURL' ${{ matrix.filePath }})
+            ARGO_APP_SOURCE_PATH=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.path' ${{ matrix.filePath }})
+            ARGO_APP_SOURCE_REVISION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.targetRevision' ${{ matrix.filePath }})
+            ARGO_APP_SOURCE="${ARGO_APP_SOURCE_REPO}@${ARGO_APP_SOURCE_REVISION}#/${ARGO_APP_SOURCE_PATH}"
+
+            ARGO_APP_DESTINATION_NAMESPACE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.destination.namespace' ${{ matrix.filePath }})
+            ARGO_APP_DESTINATION_SERVER=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.destination.server' ${{ matrix.filePath }})
+            ARGO_APP_DESTINATION="${ARGO_APP_DESTINATION_NAMESPACE}@${ARGO_APP_DESTINATION_SERVER}"
+
+            echo "# :squid: New ArgoCD Application ghas-app-az-eastus-pltf-prd-prd :tada:" >> ${{ matrix.name }}-apps.md
+            echo "* Project: ${APP_PROJECT_NAME}" >> ${{ matrix.name }}-apps.md
+            echo "* Namespace: ${ARGO_APP_NAMESPACE}" >> ${{ matrix.name }}-apps.md
+            echo "* Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-apps.md
+            echo "* Destination: ${ARGO_APP_DESTINATION}" >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
 
             echo '<details>' >> ${{ matrix.name }}-apps.md
             echo '<summary>$ cat ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-apps.md
@@ -662,15 +681,17 @@ jobs:
             ARGO_APP_SOURCE_REVISION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.source.targetRevision)
             ARGO_APP_SOURCE="${ARGO_APP_SOURCE_REPO}@${ARGO_APP_SOURCE_REVISION}#/${ARGO_APP_SOURCE_PATH}"
 
-            ARGO_APP_DESTINATION_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
-            ARGO_APP_DESTINATION_SERVER=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
+            ARGO_APP_DESTINATION_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destination.namespace')
+            ARGO_APP_DESTINATION_SERVER=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destination.server')
             ARGO_APP_DESTINATION="${ARGO_APP_DESTINATION_NAMESPACE}@${ARGO_APP_DESTINATION_SERVER}"
 
-            echo "# :squid: Updating ArgoCD Project ${{ matrix.name }} :wrench:" >> ${{ matrix.name }}-apps.md
-            echo "* Created on ${ARGO_PROJ_CREATION}" >> ${{ matrix.name }}-apps.md
-            echo "* Namespace: ${ARGO_PROJ_NAMESPACE}" >> ${{ matrix.name }}-apps.md
+            echo "# :squid: Updating ArgoCD Project ${APP_NAME} :wrench:" >> ${{ matrix.name }}-apps.md
+            echo "* Project: ${APP_PROJECT_NAME}" >> ${{ matrix.name }}-apps.md
+            echo "* Created on ${ARGO_APP_CREATION}" >> ${{ matrix.name }}-apps.md
+            echo "* Namespace: ${ARGO_APP_NAMESPACE}" >> ${{ matrix.name }}-apps.md
             echo "* Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-apps.md
             echo "* Destination: ${ARGO_APP_DESTINATION}" >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
 
             echo '<details>' >> ${{ matrix.name }}-apps.md
             echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-apps.md
