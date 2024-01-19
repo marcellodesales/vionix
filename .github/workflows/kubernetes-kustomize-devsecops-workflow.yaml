@@ -585,13 +585,13 @@ jobs:
 
           if [ "${HTTP_STATUS}" == "404" ]; then
             echo "# :tada: New ArgoCD Project" >> ${{ matrix.name }}-projects.md
-            echo "## :squid: ${{ matrix.name }} >> ${{ matrix.name }}-projects.md
+            echo "## :squid: ${{ matrix.name }}" >> ${{ matrix.name }}-projects.md
 
-            echo "## :octocat: Sources" >> ${{ matrix.name }}-projects.md
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-projects.md
             ARGO_PROJ_SOURCES=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.sourceRepos[]' ${{ matrix.filePath }})
             echo "${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-projects.md
 
-            echo "## :ship: Destination >> ${{ matrix.name }}-projects.md
+            echo '## :ship: Destination' >> ${{ matrix.name }}-projects.md
             ARGO_PROJ_DESTINATION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server' ${{ matrix.filePath }})
             echo "* ${ARGO_PROJ_DESTINATION}" >> ${{ matrix.name }}-projects.md
 
@@ -611,12 +611,17 @@ jobs:
             ARGO_PROJ_SOURCES=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.sourceRepos[])
             ARGO_PROJ_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
 
-            echo "# :squid: Updating ArgoCD Project :wrench:" >> ${{ matrix.name }}-projects.md
-            echo "## Name: ${{ matrix.name }}" >> ${{ matrix.name }}-projects.md
+            echo "# :wrench: Updating ArgoCD Project" >> ${{ matrix.name }}-projects.md
+            echo "## :squid: ${{ matrix.name }}" >> ${{ matrix.name }}-projects.md
             echo "* Created on ${ARGO_PROJ_CREATION}" >> ${{ matrix.name }}-projects.md
-            echo "* Namespace: ${ARGO_PROJ_NAMESPACE}" >> ${{ matrix.name }}-projects.md
-            echo "* Sources: ${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-projects.md
-            echo "* Cluster: ${ARGO_PROJ_DESTINATION}" >> ${{ matrix.name }}-projects.md
+
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-projects.md
+            ARGO_PROJ_SOURCES=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.sourceRepos[]' ${{ matrix.filePath }})
+            echo "${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-projects.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-projects.md
+            ARGO_PROJ_DESTINATION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server' ${{ matrix.filePath }})
+            echo "* ${ARGO_PROJ_DESTINATION}" >> ${{ matrix.name }}-projects.md
 
             echo '<details>' >> ${{ matrix.name }}-projects.md
             echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-projects.md
