@@ -767,8 +767,8 @@ jobs:
 
           if [ "${HTTP_STATUS}" == "404" ]; then
             APPSET_NAMESPACE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.namespace' ${{ matrix.filePath }})
-            APPSET_DESTINATION_NAMESPACE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.destination.namespace' ${{ matrix.filePath }})
-            APPSET_DESTINATION_SERVER=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.destination.server' ${{ matrix.filePath }})
+            APPSET_DESTINATION_SERVER=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.destination.server' ${{ matrix.filePath }})
+            ARGO_APPSET_GENERATORS=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.generators[0].list.elements[]' ${{ matrix.filePath }})
 
             APPSET_SOURCE_REPO=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.repoURL' ${{ matrix.filePath }})
             APPSET_SOURCE_REVISION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.targetRevision' ${{ matrix.filePath }})
@@ -799,7 +799,7 @@ jobs:
           elif [ "${HTTP_STATUS}" == "200" ]; then
             ARGO_APPSET_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.namespace)
             ARGO_APPSET_CREATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.creationTimestamp)
-            ARGO_APPSET_GENERATORS=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.generators[])
+            ARGO_APPSET_GENERATORS=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.generators[0].list.elements[])
             ARGO_APPSET_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
 
             echo '# :wrench: Updating ArgoCD ApplicationSet' >> ${{ matrix.name }}-appsets.md
@@ -813,7 +813,7 @@ jobs:
 
             echo '## :ship: Destination' >> ${{ matrix.name }}-appsets.md
             echo "* Cluster: ${APPSET_DESTINATION_SERVER}" >> ${{ matrix.name }}-appsets.md
-            echo "* Destinations Namespace -> Dir mapping: ${APPSET_GENERATOR}" >> ${{ matrix.name }}-appsets.md
+            echo "* Destinations Namespace -> Dir mapping: ${ARGO_APPSET_GENERATORS}" >> ${{ matrix.name }}-appsets.md
 
             echo '<details>' >> ${{ matrix.name }}-appsets.md
             echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-appsets.md
