@@ -78,6 +78,10 @@ on:
         description: "The base64 value of HOME/.kube/config to access the cluster"
         required: false
 
+      ARGOCD_TOKEN:
+        description: "The base64 value of ArgoCD token from ARGOCD_SERVER/settings/accounts/XYZ"
+        required: false
+
       ARTIFACTORY_SVC_USER:
         description: "The username of the service account for Artifactory Docker registry Repository"
         required: false
@@ -138,9 +142,13 @@ jobs:
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
       hasKubeconfig: ${{steps.set-base-values.outputs.hasKubeconfig}}
 
-      filesMatrix: ${{ steps.kustomize-updates.outputs.filesMatrix }}
-      requiresProcessing: ${{ steps.kustomize-updates.outputs.requiresProcessing }}
-      affectedDirs: ${{ steps.kustomize-updates.outputs.affectedDirs }}
+      kustomizeFilesMatrix: ${{ steps.kustomize-updates.outputs.filesMatrix }}
+      requiresKustomizeProcessing: ${{ steps.kustomize-updates.outputs.requiresProcessing }}
+      affectedKustomizeDirs: ${{ steps.kustomize-updates.outputs.affectedDirs }}
+
+      argocdFilesMatrix: ${{ steps.argocd-updates.outputs.filesMatrix }}
+      requiresArgocdProcessing: ${{ steps.argocd-updates.outputs.requiresProcessing }}
+      affectedArgocdFiles: ${{ steps.argocd-updates.outputs.affectedDirs }}
 
     steps:
       - name: Provided input to the app
@@ -365,7 +373,7 @@ jobs:
           }
 
       - name: Find changed ArgoCD Apps
-        id: argocd-app-updates
+        id: argocd-updates
         if: ${{ inputs.check-argocd == 'true' }}
         shell: node {0}
         run: |
@@ -377,12 +385,16 @@ jobs:
           console.log(`The output file is at ${githubOutputFile}`);
 
           try {
-            const output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | xargs grep -l "kind: Application"').toString();
-            const changedArgoApps = {
-              include: output.split("\n").filter(appFilePath => appFilePath.length > 0).map(appFilePath => {
+            const output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | xargs grep -l -e "kind:\s*Application" -e "kind:\s*AppProject"').toString();
+            const changedArgoProjects = {
+              include: output.split("\n").filter(filePath => filePath.length > 0).map(filePath => {
+                let argoKind = execSync(`cat ${filePath} | grep kind: | awk '{print $2}'`).toString().split("\n")[0];
+                argoKind = ["Application", "ApplicationSet", "AppProject"].indexOf(argoKind) > -1 ? argoKind : undefined
+
                 return {
-                  name: path.basename(appFilePath).replace(".yaml", ""),
-                  filePath: appFilePath
+                  name: path.basename(filePath).replace(".yaml", ""),
+                  kind: argoKind,
+                  filePath: filePath,
                 }
               })
             };
@@ -395,47 +407,6 @@ jobs:
               fs.appendFileSync(githubOutputFile, `requiresProcessing=true\n`, encoding);
 
               const affectedFilesString = JSON.stringify(changedArgoApps.include.map(app => app.name).join(", "));
-              fs.appendFileSync(githubOutputFile, `affectedFiles=${affectedFilesString}\n`, encoding);
-
-            } else {
-              fs.appendFileSync(githubOutputFile, `requiresProcessing=false\n`, encoding);
-            }
-
-          } catch (error) {
-            console.error(`Error executing command: ${error}`);
-          }
-
-      - name: Find changed ArgoCD Projects 
-        if: ${{ inputs.check-argocd == 'true' }}
-        id: argocd-projects-updates
-        shell: node {0}
-        run: |
-          const fs = require('fs');
-          const path = require('path');
-          const { execSync } = require('child_process');
-          const encoding = 'utf8';
-          const githubOutputFile = process.env.GITHUB_OUTPUT;
-          console.log(`The output file is at ${githubOutputFile}`);
-
-          try {
-            const output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | xargs grep -l "kind: AppProject"').toString();
-             const changedArgoProjects = {
-              include: output.split("\n").filter(filePath => filePath.length > 0).map(filePath => {
-                return {
-                  name: path.basename(filePath).replace(".yaml", ""),
-                  filePath: filePath
-                }
-              })
-            };
-            console.log(`All projects affected: ${JSON.stringify(changedArgoProjects)}`);
-
-            if (changedArgoProjects.include.length > 0) {
-              const cliOutputJson = JSON.stringify(changedArgoProjects);
-
-              fs.appendFileSync(githubOutputFile, `filesMatrix=${cliOutputJson}\n`, encoding);
-              fs.appendFileSync(githubOutputFile, `requiresProcessing=true\n`, encoding);
-
-              const affectedFilesString = JSON.stringify(changedArgoProjects.include.map(proj => proj.name).join(", "));
               fs.appendFileSync(githubOutputFile, `affectedFiles=${affectedFilesString}\n`, encoding);
 
             } else {
@@ -509,12 +480,12 @@ jobs:
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code]
     runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
-    if: ${{ inputs.check-kustomization == 'true' && needs.code.outputs.requiresProcessing == 'true' }}
+    if: ${{ inputs.check-kustomization == 'true' && needs.code.outputs.requiresKustomizeProcessing == 'true' }}
 
     strategy:
       # This is the default strategy, to fail the PR since if anything that was processed fail, then fail them all
       fail-fast: true
-      matrix: ${{ fromJSON(needs.code.outputs.filesMatrix) }}
+      matrix: ${{ fromJSON(needs.code.outputs.kustomizeFilesMatrix) }}
 
     # So that we can write comments to the PR
     permissions: write-all
@@ -571,7 +542,7 @@ jobs:
           head -c 65000 ${{ matrix.dir }}/results.md > ${{ matrix.dir }}/results.md-capped
           mv ${{ matrix.dir }}/results.md-capped ${{ matrix.dir }}/results.md
 
-          echo '```gradle' >> ${{ matrix.dir }}/results.md
+          echo '```' >> ${{ matrix.dir }}/results.md
           echo '</details>' >> ${{ matrix.dir }}/results.md
           echo '' >> ${{ matrix.dir }}/results.md
 
@@ -582,3 +553,208 @@ jobs:
           header: kustomize-outputs-${{ matrix.dir }}
           recreate: true
           path: ${{ matrix.dir }}/results.md
+
+  argocd:
+    name: "🦑 argocd"
+    # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    needs: [code]
+    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+    if: ${{ inputs.check-argocd == 'true' && needs.code.outputs.requiresArgocdProcessing == 'true' }}
+
+    strategy:
+      # This is the default strategy, to fail the PR since if anything that was processed fail, then fail them all
+      fail-fast: true
+      matrix: ${{ fromJSON(needs.code.outputs.argocdFilesMatrix) }}
+
+    # So that we can write comments to the PR
+    permissions: write-all
+
+    steps:
+      - name: Checkout history with tags so to get information
+        uses: viarise/checkout@v3.5.3
+        with:
+          fetch-depth: 0
+
+      - name: Verify ArgoCD Project
+        if: ${{ matrix.kind == 'AppProject' }}
+        run: |
+          RESPONSE=$(curl --silent --write-out "\n%{http_code}" -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" ${{ inputs.argocd-server }}/api/v1/projects/${{ matrix.name }})
+          HTTP_STATUS=$(echo "${RESPONSE}" | tail -n1)
+          HTTP_BODY=$(echo "${RESPONSE}" | sed '$d')
+
+          if [ "${HTTP_STATUS}" == "404" ]; then
+            echo "# :squid: New ArgoCD Project ${{ matrix.name }} :tada:" >> ${{ matrix.name }}-projects.md
+            echo '<details>' >> ${{ matrix.name }}-projects.md
+            echo '<summary>$ cat ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-projects.md
+            echo '' >> ${{ matrix.name }}-projects.md
+            echo '```yaml' >> ${{ matrix.name }}-projects.md
+            cat ${{ matrix.filePath }} >> ${{ matrix.name }}-projects.md
+            echo '```' >> ${{ matrix.name }}-projects.md
+            echo '</details>' >> ${{ matrix.name }}-projects.md
+            echo '' >> ${{ matrix.name }}-projects.md
+
+          elif [ "${HTTP_STATUS}" == "200" ]; then
+            ARGO_PROJ_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.namespace)
+            ARGO_PROJ_CREATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.creationTimestamp)
+            ARGO_PROJ_SOURCES=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.sourceRepos[])
+            ARGO_PROJ_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
+
+            echo "# :squid: Updating ArgoCD Project ${{ matrix.name }} :wrench:" >> ${{ matrix.name }}-projects.md
+            echo "* Created on ${ARGO_PROJ_CREATION}" >> ${{ matrix.name }}-projects.md
+            echo "* Namespace: ${ARGO_PROJ_NAMESPACE}" >> ${{ matrix.name }}-projects.md
+            echo "* Sources: ${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-projects.md
+            echo "* Cluster: ${ARGO_PROJ_DESTINATION}" >> ${{ matrix.name }}-projects.md
+
+            echo '<details>' >> ${{ matrix.name }}-projects.md
+            echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-projects.md
+            echo '' >> ${{ matrix.name }}-projects.md
+            echo '```diff' >> ${{ matrix.name }}-projects.md
+            git --no-pager diff HEAD^ HEAD ${{ matrix.filePath }} >> ${{ matrix.name }}-projects.md
+            echo '```' >> ${{ matrix.name }}-projects.md
+            echo '</details>' >> ${{ matrix.name }}-projects.md
+            echo '' >> ${{ matrix.name }}-projects.md
+
+          else
+            echo "Maybe we are missing ArgoCD secret ARGOCD_TOKEN?" >> ${{ matrix.name }}-projects.md
+            echo "STATUS: ${HTTP_STATUS}" >> ${{ matrix.name }}-projects.md
+            echo "BODY: ${HTTP_BODY}" >> ${{ matrix.name }}-projects.md
+          fi
+
+      - name: Add argocd project ${{ matrix.name }} details
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' && matrix.kind == 'AppProject' }}
+        with:
+          header: argocd-projects-${{ matrix.name }}-outputs
+          recreate: true
+          path: ${{ matrix.name }}-projects.md
+
+      - name: Verify ArgoCD Application ${{ matrix.name }}
+        if: ${{ matrix.kind == 'Application' }}
+        run: |
+          APP_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.name' ${{ matrix.filePath }})
+          APP_PROJECT_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.project' ${{ matrix.filePath }})
+
+          RESPONSE=$(curl --silent --write-out "\n%{http_code}" -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" ${{ inputs.argocd-server }}/api/v1/applications/${APP_NAME})
+          HTTP_STATUS=$(echo "${RESPONSE}" | tail -n1)
+          HTTP_BODY=$(echo "${RESPONSE}" | sed '$d')
+
+          if [ "${HTTP_STATUS}" == "404" ]; then
+            echo "# :squid: New ArgoCD ApplicationSet ${{ matrix.name }} :tada:" >> ${{ matrix.name }}-apps.md
+            echo "* Name: ${APP_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo "* Project: ${APP_PROJECT_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo '' >> ${{ matrix.name }}-appsets.md
+
+            echo '<details>' >> ${{ matrix.name }}-apps.md
+            echo '<summary>$ cat ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
+            echo '```yaml' >> ${{ matrix.name }}-apps.md
+            cat ${{ matrix.filePath }} >> ${{ matrix.name }}-apps.md
+            echo '```' >> ${{ matrix.name }}-apps.md
+            echo '</details>' >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
+
+          elif [ "${HTTP_STATUS}" == "200" ]; then
+            ARGO_APP_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.namespace)
+            ARGO_APP_CREATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.creationTimestamp)
+            ARGO_APP_SOURCE_REPO=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.source.repoURL)
+            ARGO_APP_SOURCE_PATH=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.source.path)
+            ARGO_APP_SOURCE_REVISION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.source.targetRevision)
+            ARGO_APP_SOURCE="${ARGO_APP_SOURCE_REPO}@${ARGO_APP_SOURCE_REVISION}#/${ARGO_APP_SOURCE_PATH}"
+
+            ARGO_APP_DESTINATION_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
+            ARGO_APP_DESTINATION_SERVER=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
+            ARGO_APP_DESTINATION="${ARGO_APP_DESTINATION_NAMESPACE}@${ARGO_APP_DESTINATION_SERVER}"
+
+            echo "# :squid: Updating ArgoCD Project ${{ matrix.name }} :wrench:" >> ${{ matrix.name }}-apps.md
+            echo "* Created on ${ARGO_PROJ_CREATION}" >> ${{ matrix.name }}-apps.md
+            echo "* Namespace: ${ARGO_PROJ_NAMESPACE}" >> ${{ matrix.name }}-apps.md
+            echo "* Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-apps.md
+            echo "* Destination: ${ARGO_APP_DESTINATION}" >> ${{ matrix.name }}-apps.md
+
+            echo '<details>' >> ${{ matrix.name }}-apps.md
+            echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
+            echo '```diff' >> ${{ matrix.name }}-apps.md
+            git --no-pager diff HEAD^ HEAD ${{ matrix.filePath }} >> ${{ matrix.name }}-apps.md
+            echo '```' >> ${{ matrix.name }}-apps.md
+            echo '</details>' >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
+
+          else
+            echo "Maybe we are missing ArgoCD secret ARGOCD_TOKEN?" >> ${{ matrix.name }}-apps.md
+            echo "STATUS: ${HTTP_STATUS}" >> ${{ matrix.name }}-apps.md
+            echo "BODY: ${HTTP_BODY}" >> ${{ matrix.name }}-apps.md
+            exit 1
+          fi
+
+      - name: Add argocd project ${{ matrix.name }} details
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' && matrix.kind == 'Application' }}
+        with:
+          header: argocd-apps-${{ matrix.name }}-outputs
+          recreate: true
+          path: ${{ matrix.name }}-apps.md
+
+      - name: Verify ArgoCD ApplicationSet ${{ matrix.name }}
+        if: ${{ matrix.kind == 'ApplicationSet' }}
+        run: |
+          APPSET_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.name' ${{ matrix.filePath }})
+          APPSET_PROJECT_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.project' ${{ matrix.filePath }})
+          APPSET_GENERATOR=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.generators[0].list.elements[]' ${{ matrix.filePath }})
+
+          RESPONSE=$(curl --silent --write-out "\n%{http_code}" -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" ${{ inputs.argocd-server }}/api/v1/applicationsets?projects=${APPSET_PROJECT_NAME})
+          HTTP_STATUS=$(echo "${RESPONSE}" | tail -n1)
+          HTTP_BODY=$(echo "${RESPONSE}" | sed '$d')
+
+          if [ "${HTTP_STATUS}" == "404" ]; then
+            echo "# :squid: New ArgoCD ApplicationSet ${APPSET_NAME} :tada:" >> ${{ matrix.name }}-appsets.md
+            echo "* Name: ${APPSET_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo "* Project: ${APPSET_PROJECT_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo "* Generators: ${APPSET_GENERATOR}" >> ${{ matrix.name }}-appsets.md
+
+            echo '' >> ${{ matrix.name }}-appsets.md
+            echo '<details>' >> ${{ matrix.name }}-appsets.md
+            echo '<summary>$ cat ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-appsets.md
+            echo '' >> ${{ matrix.name }}-appsets.md
+            echo '```yaml' >> ${{ matrix.name }}-appsets.md
+            cat ${{ matrix.filePath }} >> ${{ matrix.name }}-appsets.md
+            echo '```' >> ${{ matrix.name }}-appsets.md
+            echo '</details>' >> ${{ matrix.name }}-appsets.md
+            echo '' >> ${{ matrix.name }}-appsets.md
+
+          elif [ "${HTTP_STATUS}" == "200" ]; then
+            ARGO_APPSET_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.namespace)
+            ARGO_APPSET_CREATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.creationTimestamp)
+            ARGO_APPSET_GENERATORS=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.generators[])
+            ARGO_APPSET_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
+
+            echo "# :squid: Updating ArgoCD ApplicationSet ${APPSET_NAME} :wrench:" >> ${{ matrix.name }}-appsets.md
+            echo "* Created on ${ARGO_PROJ_CREATION}" >> ${{ matrix.name }}-appsets.md
+            echo "* Namespace: ${ARGO_PROJ_NAMESPACE}" >> ${{ matrix.name }}-appsets.md
+            echo "* Sources: ${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-appsets.md
+            echo "* Cluster: ${ARGO_PROJ_DESTINATION}" >> ${{ matrix.name }}-appsets.md
+
+            echo '<details>' >> ${{ matrix.name }}-appsets.md
+            echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-appsets.md
+            echo '' >> ${{ matrix.name }}-appsets.md
+            echo '```diff' >> ${{ matrix.name }}-appsets.md
+            git --no-pager diff HEAD^ HEAD ${{ matrix.filePath }} >> ${{ matrix.name }}-appsets.md
+            echo '```' >> ${{ matrix.name }}-appsets.md
+            echo '</details>' >> ${{ matrix.name }}-appsets.md
+            echo '' >> ${{ matrix.name }}-appsets.md
+
+          else
+            echo "Maybe we are missing ArgoCD secret ARGOCD_TOKEN?" >> ${{ matrix.name }}-appsets.md
+            echo "STATUS: ${HTTP_STATUS}" >> ${{ matrix.name }}-appsets.md
+            echo "BODY: ${HTTP_BODY}" >> ${{ matrix.name }}-appsets.md
+            exit 1
+          fi
+
+      - name: Add argocd project ${{ matrix.name }} details
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' && matrix.kind == 'ApplicationSet' }}
+        with:
+          header: argocd-appsets-${{ matrix.name }}-outputs
+          recreate: true
+          path: ${{ matrix.name }}-appsets.md
