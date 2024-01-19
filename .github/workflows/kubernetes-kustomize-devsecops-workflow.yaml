@@ -584,7 +584,18 @@ jobs:
           HTTP_BODY=$(echo "${RESPONSE}" | sed '$d')
 
           if [ "${HTTP_STATUS}" == "404" ]; then
-            echo "# :squid: New ArgoCD Project ${{ matrix.name }} :tada:" >> ${{ matrix.name }}-projects.md
+            echo "# :tada: New ArgoCD Project" >> ${{ matrix.name }}-projects.md
+            echo "## :squid: ${{ matrix.name }} >> ${{ matrix.name }}-projects.md
+
+            echo "## :octocat: Sources >> ${{ matrix.name }}-projects.md
+            ARGO_PROJ_SOURCES=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.sourceRepos[])
+            echo "${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-projects.md
+
+            echo "## :ship: Destination >> ${{ matrix.name }}-projects.md
+            ARGO_PROJ_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
+            echo "* ${ARGO_PROJ_DESTINATION}" >> ${{ matrix.name }}-projects.md
+
+            echo "## :wrench: Settings >> ${{ matrix.name }}-projects.md
             echo '<details>' >> ${{ matrix.name }}-projects.md
             echo '<summary>$ cat ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-projects.md
             echo '' >> ${{ matrix.name }}-projects.md
@@ -600,7 +611,8 @@ jobs:
             ARGO_PROJ_SOURCES=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.sourceRepos[])
             ARGO_PROJ_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
 
-            echo "# :squid: Updating ArgoCD Project ${{ matrix.name }} :wrench:" >> ${{ matrix.name }}-projects.md
+            echo "# :squid: Updating ArgoCD Project :wrench:" >> ${{ matrix.name }}-projects.md
+            echo "## Name: ${{ matrix.name }} >> ${{ matrix.name }}-projects.md
             echo "* Created on ${ARGO_PROJ_CREATION}" >> ${{ matrix.name }}-projects.md
             echo "* Namespace: ${ARGO_PROJ_NAMESPACE}" >> ${{ matrix.name }}-projects.md
             echo "* Sources: ${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-projects.md
