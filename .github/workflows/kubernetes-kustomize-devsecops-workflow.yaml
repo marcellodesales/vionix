@@ -372,7 +372,7 @@ jobs:
             console.error(`Error executing command: ${error}`);
           }
 
-      - name: Find changed ArgoCD Apps
+      - name: Find changed ArgoCD Artifacts
         id: argocd-updates
         if: ${{ inputs.check-argocd == 'true' }}
         shell: node {0}
@@ -386,7 +386,7 @@ jobs:
 
           try {
             const output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | xargs grep -l -e "kind:\\s*Application" -e "kind:\\s*AppProject"').toString();
-            const changedArgoProjects = {
+            const changedArgoArtifacts = {
               include: output.split("\n").filter(filePath => filePath.length > 0).map(filePath => {
                 let argoKind = execSync(`cat ${filePath} | grep kind: | awk '{print $2}'`).toString().split("\n")[0];
                 argoKind = ["Application", "ApplicationSet", "AppProject"].indexOf(argoKind) > -1 ? argoKind : undefined
@@ -398,15 +398,15 @@ jobs:
                 }
               })
             };
-            console.log(`All dirs affected: ${JSON.stringify(changedArgoApps)}`);
+            console.log(`All dirs affected: ${JSON.stringify(changedArgoArtifacts)}`);
 
-            if (changedArgoApps.include.length > 0) {
-              const cliOutputJson = JSON.stringify(changedArgoApps);
+            if (changedArgoArtifacts.include.length > 0) {
+              const cliOutputJson = JSON.stringify(changedArgoArtifacts);
 
               fs.appendFileSync(githubOutputFile, `filesMatrix=${cliOutputJson}\n`, encoding);
               fs.appendFileSync(githubOutputFile, `requiresProcessing=true\n`, encoding);
 
-              const affectedFilesString = JSON.stringify(changedArgoApps.include.map(app => app.name).join(", "));
+              const affectedFilesString = JSON.stringify(changedArgoArtifacts.include.map(app => app.name).join(", "));
               fs.appendFileSync(githubOutputFile, `affectedFiles=${affectedFilesString}\n`, encoding);
 
             } else {
