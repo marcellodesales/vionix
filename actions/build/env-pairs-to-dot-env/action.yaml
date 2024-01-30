@@ -1,5 +1,5 @@
-name: "Shield CLI"
-description: "Shield CLI Github Action"
+name: "Env pairs to dot env file"
+description: "Generate a .env file with the given contents"
 
 author: "seceng-devsecops-platform"
 
