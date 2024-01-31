@@ -80,7 +80,7 @@ jobs:
       - name: Show the converted json file
         run: |
           echo "Provided input in json"
-          echo ${{ steps.converted.outputs.eventPayload }} | jq
+          echo '${{ steps.converted.outputs.eventPayload }}' | jq
 
       - name: Dispatch event for the provided input
         uses: actions/github-script@v6
