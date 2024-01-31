@@ -60,7 +60,7 @@ jobs:
           echo "org=${ORG}" >> $GITHUB_OUTPUT
           echo "repo=${REPO}" >> $GITHUB_OUTPUT
           
-          echo "Github Org is ${ORG} and Github Repo ${REPO}
+          echo "Github Org is ${ORG} and Github Repo ${REPO}"
       
       - name: Parse and validate the yaml input
         run: |
