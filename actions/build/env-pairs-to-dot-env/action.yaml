@@ -50,8 +50,8 @@ runs:
            echo "Testing encoded..."
            cat ${{ inputs.dot-file-path }} | base64 -d
 
-        - name: Upload extra envs for the build
-          uses: seceng-devsecops-platform/actions-upload-artifact@v3.1.3
-          with:
-            name: ${{ inputs.dot-file-artifact-name }}
-            path: ${{ inputs.dot-file-path }}
+       - name: Upload extra envs for the build
+         uses: seceng-devsecops-platform/actions-upload-artifact@v3.1.3
+         with:
+           name: ${{ inputs.dot-file-artifact-name }}
+           path: ${{ inputs.dot-file-path }}
