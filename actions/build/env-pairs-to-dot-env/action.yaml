@@ -26,15 +26,18 @@ runs:
   using: composite
   steps:
      - name: Show the current env
+       shell: bash
        run: env 
 
      - name: Show the current contexts
+       shell: bash
        run: |
         echo "Inputs = '${{ toJSON(inputs) }}'"
         echo "Steps = '${{ toJSON(steps) }}'"
         echo "Github = '${{ toJSON(github) }}'"
 
      - name: Setup additional credentials based on the given .env file
+       shell: bash
        env:
          DOCKER_EXTRA_BUILD_ENVS: ${{ inputs.dot-file-content }}
        run: |
