@@ -65,7 +65,7 @@ jobs:
       - name: Parse and validate the yaml input
         run: |
           echo "Payload is the following"
-          echo ${{ inputs.event-payload }} > event-payload.yaml
+          echo '${{ inputs.event-payload }}' > event-payload.yaml
           cat event-payload.yaml
 
       - name: Convert the yaml to json input
