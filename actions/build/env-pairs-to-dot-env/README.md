@@ -3,7 +3,16 @@
 * Sometimes you need to create env vars as input to docker builds
 * An external job to the DevSecOps builds can be introduced to generate such env vars
 
-# Example 1: Golang Builds
+Examples of this pattern include the following use cases:
+
+## Docker Builds that depends on Credentials to system
+
+* https://git.viasat.com/seceng-devsecops-platform/viasat-ghas-k8s-operator/blob/develop/.github/workflows/docker-image-devsecops-actions-processor-workflow.yaml
+
+
+## Golang Builds that depends on Artifactory Dependencies with credentials
+
+* https://git.viasat.com/seceng-devsecops-platform/viasat-ghas-k8s-operator/blob/develop/.github/workflows/docker-image-devsecops-actions-processor-workflow.yaml
 
 * We require credentials to build other docker images with Golang where the Artifactory Proxy server is located
   * This uploads the generated k=v file to be used as a `.env` file for `docker buildx`
