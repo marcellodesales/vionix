@@ -98,6 +98,9 @@ jobs:
 
           mv header.md workflows-linter.md
           ls -la workflows-linter.md
+          
+          cat workflows-linter.md | head -c 65536 > workflows-linter.md-max
+          mv -v workflows-linter.md-max workflows-linter.md
 
       - name: Add Lint PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2.8.0
