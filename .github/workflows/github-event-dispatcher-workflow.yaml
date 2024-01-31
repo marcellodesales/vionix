@@ -1,0 +1,94 @@
+#######
+####### Author: Marcello.DeSales@viasat.com
+#######
+####### Distatches events to workflows
+#######
+name: github-event-dispatcher-workflow
+
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#run-name
+# https://github.blog/changelog/2022-09-26-github-actions-dynamic-names-for-workflow-runs/
+run-name: 🛸 Dispatch event ${{ inputs.event-type }} to ${{ inputs.github-org-repo }} by @${{ github.actor }}
+
+on:
+  workflow_call:
+
+    inputs:
+
+      vionix-devsecops-dind-runner-label:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        default: devsecops
+
+      github-org-repo:
+          description: "The Github Org/Repo that needs to receive the dispatch event"
+          required: true
+          type: string
+
+      event-type:
+          description: "The name of the event to be dispatched"
+          required: true
+          type: string
+
+      event-payload:
+          description: "The object to be submitted based on the event type definition"
+          required: true
+          type: string
+
+    secrets:
+
+      GITOPS_GITHUB_DEPLOY_PAT:
+        description: "The token to clone and push changes to the GitOps Deploy repo"
+        required: false
+
+jobs:
+  dispatch:
+    name: 🛸 dispatch 
+    runs-on: ${{ inputs.vionix-devsecops-dind-runner-label }}
+    steps:
+      - name: Show inputs to workflow
+        run: |
+          echo "inputs=${{ toJSON(inputs) }}"
+
+      - name: Process input as org/repo
+        id: githubRequest
+        run: |
+          GITHUB_ORG_REPO=${{ inputs.github-org-repo }}
+          ORG=${GITHUB_ORG_REPO%%/*}
+          REPO=${GITHUB_ORG_REPO##*/}
+          
+          echo "org=${ORG}" >> $GITHUB_OUTPUT
+          echo "repo=${REPO}" >> $GITHUB_OUTPUT
+          
+          echo "Github Org is ${ORG} and Github Repo ${REPO}
+      
+      - name: Parse and validate the yaml input
+        run: |
+          echo "Payload is the following"
+          echo ${{ inputs.event-payload }} > event-payload.yaml
+          cat event-payload.yaml
+
+      - name: Convert the yaml to json input
+        # https://mikefarah.gitbook.io/yq/usage/convert
+        id: converted
+        run: |
+          yq -o=json '.' -I=0 event-payload.yaml > event-payload.json
+          EVENT_PAYLOAD='$(cat event-payload.json)'
+          echo "eventPayload=${EVENT_PAYLOAD}" >> $GITHUB_OUTPUT
+
+      - name: Show the converted json file
+        run: |
+          echo "Provided input in json"
+          echo ${{ steps.converted.outputs.eventPayload }} | jq
+
+      - name: Dispatch event for the provided input
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+          script: |
+              await github.rest.repos.createDispatchEvent({
+                owner: '${{ steps.githubRequest.outputs.org }}',
+                repo: '${{ steps.githubRequest.outputs.repo }}',
+                event_type: '${{ inputs.event-type }}',
+                client_payload: JSON.parse('${{ steps.converted.outputs.eventPayload }}')
+              })
