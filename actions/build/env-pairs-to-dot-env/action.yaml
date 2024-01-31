@@ -27,14 +27,15 @@ runs:
   steps:
      - name: Show the current env
        shell: bash
-       run: env 
+       run: |
+         env 
 
      - name: Show the current contexts
        shell: bash
        run: |
-        echo "Inputs = '${{ toJSON(inputs) }}'"
-        echo "Steps = '${{ toJSON(steps) }}'"
-        echo "Github = '${{ toJSON(github) }}'"
+         echo "Inputs = '${{ toJSON(inputs) }}'"
+         echo "Steps = '${{ toJSON(steps) }}'"
+         echo "Github = '${{ toJSON(github) }}'"
 
      - name: Setup additional credentials based on the given .env file
        shell: bash
