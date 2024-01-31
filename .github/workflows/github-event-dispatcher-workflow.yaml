@@ -74,7 +74,7 @@ jobs:
         id: converted
         run: |
           yq -o=json '.' -I=0 event-payload.yaml > event-payload.json
-          EVENT_PAYLOAD='$(cat event-payload.json)'
+          EVENT_PAYLOAD=$(cat event-payload.json)
           echo "eventPayload=${EVENT_PAYLOAD}" >> $GITHUB_OUTPUT
 
       - name: Show the converted json file
