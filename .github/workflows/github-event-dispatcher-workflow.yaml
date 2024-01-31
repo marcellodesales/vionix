@@ -43,12 +43,13 @@ on:
 
 jobs:
   dispatch:
-    name: 🛸 dispatch 
+    name: 🛸 dispatch
     runs-on: ${{ inputs.vionix-devsecops-dind-runner-label }}
     steps:
       - name: Show inputs to workflow
         run: |
           echo "inputs=${{ toJSON(inputs) }}"
+          echo "secrets=${{ toJSON(secrets) }}"
 
       - name: Process input as org/repo
         id: githubRequest
