@@ -1,11 +1,11 @@
-name: "Env pairs to dot env file"
-description: "Generate a .env file with the given contents"
+name: Env pairs to dot env file
+description: Generate a .env file with the given contents
 
-author: "seceng-devsecops-platform"
+author: seceng-devsecops-platform
 
 branding:
-  icon: "anchor"
-  color: "blue"
+  icon: anchor
+  color: blue
 
 inputs:
   dot-file-content:
@@ -22,15 +22,15 @@ inputs:
     default: .env
 
 runs:
-  # https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
   using: composite
   steps:
+
     - name: Show the current env
       shell: bash
-      run: env 
+      run: env
 
     - name: Show the current contexts
-      shell: bash
+      shell: bash
       run: |
         echo "Inputs = '${{ toJSON(inputs) }}'"
         echo "Steps = '${{ toJSON(steps) }}'"
@@ -39,7 +39,7 @@ runs:
     - name: Setup additional credentials based on the given .env file
       shell: bash
       env:
-        DOCKER_EXTRA_BUILD_ENVS: ${{ inputs.dot-file-content }}
+        DOCKER_EXTRA_BUILD_ENVS: '${{ inputs.dot-file-content }}'
       run: |
         echo "Encoding extra env vars"
         echo "${DOCKER_EXTRA_BUILD_ENVS}"
