@@ -25,33 +25,31 @@ runs:
   # https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
   using: composite
   steps:
+     - name: Show the current env
+       run: env 
 
-     steps:
-       - name: Show the current env
-         run: env 
+     - name: Show the current contexts
+       run: |
+        echo "Inputs = '${{ toJSON(inputs) }}'"
+        echo "Steps = '${{ toJSON(steps) }}'"
+        echo "Github = '${{ toJSON(github) }}'"
 
-       - name: Show the current contexts
-         run: |
-          echo "Inputs = '${{ toJSON(inputs) }}'"
-          echo "Steps = '${{ toJSON(steps) }}'"
-          echo "Github = '${{ toJSON(github) }}'"
+     - name: Setup additional credentials based on the given .env file
+       env:
+         DOCKER_EXTRA_BUILD_ENVS: ${{ inputs.dot-file-content }}
+       run: |
+         echo "Encoding extra env vars"
+         echo "${DOCKER_EXTRA_BUILD_ENVS}"
+         echo "${DOCKER_EXTRA_BUILD_ENVS}" | base64 > ${{ inputs.dot-file-path }}
 
-       - name: Setup additional credentials based on the given .env file
-         env:
-           DOCKER_EXTRA_BUILD_ENVS: ${{ inputs.dot-file-content }}
-         run: |
-           echo "Encoding extra env vars"
-           echo "${DOCKER_EXTRA_BUILD_ENVS}"
-           echo "${DOCKER_EXTRA_BUILD_ENVS}" | base64 > ${{ inputs.dot-file-path }}
+         echo "Encoded build envs"
+         cat ${{ inputs.dot-file-path }}
 
-           echo "Encoded build envs"
-           cat ${{ inputs.dot-file-path }}
+         echo "Testing encoded..."
+         cat ${{ inputs.dot-file-path }} | base64 -d
 
-           echo "Testing encoded..."
-           cat ${{ inputs.dot-file-path }} | base64 -d
-
-       - name: Upload extra envs for the build
-         uses: seceng-devsecops-platform/actions-upload-artifact@v3.1.3
-         with:
-           name: ${{ inputs.dot-file-artifact-name }}
-           path: ${{ inputs.dot-file-path }}
+     - name: Upload extra envs for the build
+       uses: seceng-devsecops-platform/actions-upload-artifact@v3.1.3
+       with:
+         name: ${{ inputs.dot-file-artifact-name }}
+         path: ${{ inputs.dot-file-path }}
