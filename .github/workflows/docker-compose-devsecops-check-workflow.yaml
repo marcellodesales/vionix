@@ -231,9 +231,9 @@ jobs:
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
@@ -304,9 +304,9 @@ jobs:
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | docker run --rm -i dockerhub.docker.artifactory.viasat.com/mikefarah/yq e . - -o json | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
