@@ -85,7 +85,7 @@ jobs:
       - name: Dispatch event for the provided input
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+          github-token: ${{ secrets.github_token }}
           script: |
               await github.rest.repos.createDispatchEvent({
                 owner: '${{ steps.githubRequest.outputs.org }}',
