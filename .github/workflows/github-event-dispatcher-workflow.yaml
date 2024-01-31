@@ -77,7 +77,6 @@ jobs:
           cat event-payload.yaml >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          cat event-payload.yaml >> $GITHUB_STEP_SUMMARY
 
       - name: Convert the yaml to json input
         # https://mikefarah.gitbook.io/yq/usage/convert
