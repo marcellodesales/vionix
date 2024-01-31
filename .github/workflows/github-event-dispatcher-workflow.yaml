@@ -69,6 +69,16 @@ jobs:
           echo '${{ inputs.event-payload }}' > event-payload.yaml
           cat event-payload.yaml
 
+          echo "# 🛸 Event Dispatcher" >> $GITHUB_STEP_SUMMARY
+          echo "* Github Repository: [${{ inputs.github-org-repo }}](${{ github.server_url }}/${{ inputs.github-org-repo }}/actions)" >> $GITHUB_STEP_SUMMARY
+          echo "* Event type: ${{ inputs.event-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "* Event Payload" >> $GITHUB_STEP_SUMMARY
+          echo '```yaml' >> $GITHUB_STEP_SUMMARY
+          cat event-payload.yaml >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat event-payload.yaml >> $GITHUB_STEP_SUMMARY
+
       - name: Convert the yaml to json input
         # https://mikefarah.gitbook.io/yq/usage/convert
         id: converted
