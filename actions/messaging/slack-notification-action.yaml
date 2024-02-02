@@ -33,6 +33,10 @@ outputs:
     description: "The ID of the message submitted"
     value: ${{ steps.response.outputs.message_id }}
   
+  emailList:
+    description: "The list of emails found on the payload"
+    value: ${{ steps.fetch_emails.outputs.emailsList }}
+
   mentionsList:
     description: "The list of users Ids for mentions mapping"
     value: ${{ steps.fetch_mentions.outputs.mentionsByEmail }}
@@ -47,6 +51,15 @@ runs:
 
     - name: Received the payload as follows
       run: echo '${{ inputs.payload }}'
+    
+    - id: fetch_emails
+      name: Fetch the list of emails
+      run: |
+        TEXT='${{ inputs.payload }}'
+        EMAIL_LIST=$(echo $TEXT | grep -o -E '[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+' | tr '\n' ',' | sed 's/,$//')
+        echo "The list of emails in the message is ${EMAIL_LIST}"
+
+        echo "emailsList=${EMAIL_LIST}" >> $GITHUB_OUTPUT
 
     - id: fetch_mentions
       name: Update the provided payload with mentions
