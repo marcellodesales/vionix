@@ -54,10 +54,12 @@ runs:
       shell: bash
       run: |
         TEXT=$(echo '${{ inputs.payload }}' | jq -c)
-        EMAIL_LIST=$(echo $TEXT | grep -o -E '[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+' | tr '\n' ',' | sed 's/,$//')
-        echo "The list of emails in the message is ${EMAIL_LIST}"
+        echo "TEST is ${TEXT}"
 
-        echo "emailsList=${EMAIL_LIST}" >> $GITHUB_OUTPUT
+        #EMAIL_LIST=$(echo $TEXT | grep -o -E '[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+' | tr '\n' ',' | sed 's/,$//')
+        #echo "The list of emails in the message is ${EMAIL_LIST}"
+
+        #echo "emailsList=${EMAIL_LIST}" >> $GITHUB_OUTPUT
 
     - id: fetch_mentions
       name: Update the provided payload with mentions
