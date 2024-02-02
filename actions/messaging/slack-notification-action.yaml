@@ -1,0 +1,112 @@
+name: Vionix Slack Notification
+description: Sends slack notifications with
+
+author: vionix-devsecops-platform
+
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  channelId:
+    description: "The ID of the channel with Vionix Slack Channel"
+    required: true
+
+  messageId:
+    description: "pdates the message based on the message Id"
+    required: true
+
+  slackBotToken:
+    description: "The slack bot token for authentication"
+    required: true
+
+  usersList:
+    description: "The list of users to fetch mentions"
+    required: false
+
+  payload:
+    description: "The full payload following the slack API in json format"
+    required: false
+
+outputs:
+  messageId:
+    description: "The ID of the message submitted"
+    value: ${{ steps.response.outputs.message_id }}
+  
+  mentionsList:
+    description: "The list of users Ids for mentions mapping"
+    value: ${{ steps.fetch_mentions.outputs.mentionsByEmail }}
+
+  payloadWithMentions:
+    description: "The list of users Ids for mentions mapping"
+    value: ${{ steps.fetch_mentions.outputs.payloadWithMentions }}
+
+runs:
+  using: composite
+  steps:
+
+    - name: Received the payload as follows
+      run: echo '${{ inputs.payload }}'
+
+    - id: fetch_mentions
+      name: Update the provided payload with mentions
+      run: |
+        USER_EMAILS="${{ inputs.usersList }}"
+        IFS=',' read -ra EMAIL_ARRAY <<< "$USER_EMAILS"
+
+        TOKEN="${{ inputs.slackBotToken }}"
+        RESULT=[]
+        
+        UPDATED_PAYLOAD=${{ inputs.payload }}
+
+        for EMAIL in "${EMAIL_ARRAY[@]}"; do
+          USER_INFO=$(curl -s -X POST \
+            https://slack.com/api/users.lookupByEmail \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "Authorization: Bearer $TOKEN" \
+            -d "email=$EMAIL")
+
+          USER_ID=$(echo "$USER_INFO" | jq -r '.user.id')
+          EMAIL_USER_ID="{\"email\": \"$EMAIL\", \"userId\": \"$USER_ID\"}"
+          RESULT=$(echo $RESULT | jq ".+[${EMAIL_USER_ID}]")
+
+          UPDATED_PAYLOAD=$(echo "${UPDATED_PAYLOAD}" | sed "s/${EMAIL}/<@${USER_ID}>/g")          
+        done
+
+        MENTIONS_LIST=$(echo '$RESULT' | jq -c '.')
+        echo "Found the mentions list ${MENTIONS_LIST}"
+        echo "mentionsByEmail='${MENTIONS_LIST}'" >> $GITHUB_OUTPUT
+        
+        echo "Updated the payload with mentions: '${UPDATED_PAYLOAD}'"
+        echo "payloadWithMentions=${UPDATED_PAYLOAD}" >> $GITHUB_OUTPUT
+
+    - id: message
+      if: ${{ inputs.messageId == '' }}
+      name: New message without updating
+      uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
+      with:
+        bot_token: ${{ inputs.slackBotToken }}
+        channel_id: ${{ inputs.channelId }}
+        payload: ${{ steps.fetch_mentions.outputs.payloadWithMentions }}
+
+    - id: message_update
+      if: ${{ inputs.messageId != '' }}
+      name: Update existing message ${{ inputs.messageId }}
+      uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
+      with:
+        bot_token: ${{ inputs.slackBotToken }}
+        channel_id: ${{ inputs.channelId }}
+        message_id: ${{ inputs.messageId }} # Updates existing message from the first step.
+        payload: ${{ steps.fetch_mentions.outputs.payloadWithMentions }}
+
+    - id: response
+      name: Return the correct response
+      run: |
+        if [ -n "${{ inputs.messageId }}" ]; then
+          echo "The request was for an update, since ${{ inputs.messageId }} != ''"
+          echo "response=${{ steps.message_update.outputs.message_id }}" >> $GITHUB_OUTPUT
+
+        else
+          echo "The request was for a new message, since ${{ inputs.messageId }} == ''"
+          echo "response=${{ steps.message.outputs.message_id }}" >> $GITHUB_OUTPUT
+        fi
