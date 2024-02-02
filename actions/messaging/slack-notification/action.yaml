@@ -46,10 +46,12 @@ runs:
   steps:
 
     - name: Received the payload as follows
+      shell: bash
       run: echo '${{ inputs.payload }}'
     
     - id: fetch_emails
       name: Fetch the list of emails
+      shell: bash
       run: |
         TEXT='${{ inputs.payload }}'
         EMAIL_LIST=$(echo $TEXT | grep -o -E '[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+' | tr '\n' ',' | sed 's/,$//')
@@ -59,6 +61,7 @@ runs:
 
     - id: fetch_mentions
       name: Update the provided payload with mentions
+      shell: bash
       run: |
         USER_EMAILS="${{ inputs.usersList }}"
         IFS=',' read -ra EMAIL_ARRAY <<< "$USER_EMAILS"
@@ -91,6 +94,7 @@ runs:
 
     - id: message
       if: ${{ inputs.messageId == '' }}
+      shell: bash
       name: New message without updating
       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
       with:
@@ -100,6 +104,7 @@ runs:
 
     - id: message_update
       if: ${{ inputs.messageId != '' }}
+      shell: bash
       name: Update existing message ${{ inputs.messageId }}
       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
       with:
@@ -109,6 +114,7 @@ runs:
         payload: ${{ steps.fetch_mentions.outputs.payloadWithMentions }}
 
     - id: response
+      shell: bash
       name: Return the correct response
       run: |
         if [ -n "${{ inputs.messageId }}" ]; then
