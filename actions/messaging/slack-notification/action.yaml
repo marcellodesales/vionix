@@ -27,7 +27,7 @@ inputs:
 outputs:
   messageId:
     description: "The ID of the message submitted"
-    value: ${{ steps.response.outputs.message_id }}
+    value: ${{ steps.response.outputs.messageId }}
   
   emailList:
     description: "The list of emails found on the payload"
@@ -123,9 +123,9 @@ runs:
       run: |
         if [ -n "${{ inputs.messageId }}" ]; then
           echo "The request was for an update, since ${{ inputs.messageId }} != ''"
-          echo "response=${{ steps.message_update.outputs.message_id }}" >> $GITHUB_OUTPUT
+          echo "messageId=${{ steps.message_update.outputs.message_id }}" >> $GITHUB_OUTPUT
 
         else
-          echo "The request was for a new message, since ${{ inputs.messageId }} == ''"
-          echo "response=${{ steps.message.outputs.message_id }}" >> $GITHUB_OUTPUT
+          echo "The request was for a new message, since inputs.messageId == '' empty"
+          echo "messageId=${{ steps.message.outputs.message_id }}" >> $GITHUB_OUTPUT
         fi
