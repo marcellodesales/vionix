@@ -65,7 +65,7 @@ runs:
       name: Update the provided payload with mentions
       shell: bash
       run: |
-        USER_EMAILS="${{ steps.fetch_emails.outputs.emailsList }}"
+        USER_EMAILS=${{ steps.fetch_emails.outputs.emailsList }}
         IFS=',' read -ra EMAIL_ARRAY <<< "$USER_EMAILS"
 
         TOKEN="${{ inputs.slackBotToken }}"
