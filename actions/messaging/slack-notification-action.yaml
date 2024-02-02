@@ -20,10 +20,6 @@ inputs:
     description: "The slack bot token for authentication"
     required: true
 
-  usersList:
-    description: "The list of users to fetch mentions"
-    required: false
-
   payload:
     description: "The full payload following the slack API in json format"
     required: false
