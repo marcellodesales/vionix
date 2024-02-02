@@ -94,7 +94,6 @@ runs:
 
     - id: message
       if: ${{ inputs.messageId == '' }}
-      shell: bash
       name: New message without updating
       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
       with:
@@ -104,7 +103,6 @@ runs:
 
     - id: message_update
       if: ${{ inputs.messageId != '' }}
-      shell: bash
       name: Update existing message ${{ inputs.messageId }}
       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
       with:
