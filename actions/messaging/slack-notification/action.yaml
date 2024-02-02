@@ -67,7 +67,6 @@ runs:
       shell: bash
       run: |
         USER_EMAILS="${{ steps.fetch_emails.outputs.emailsList }}"
-        echo "Current user emails: ${{ steps.fetch_emails.outputs.payloadSingleLine }}"
         
         IFS=',' read -ra EMAIL_ARRAY <<< "$USER_EMAILS"
         echo "intialized"
