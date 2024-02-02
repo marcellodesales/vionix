@@ -88,6 +88,12 @@ runs:
           UPDATED_PAYLOAD=$(echo "${UPDATED_PAYLOAD}" | sed "s/${EMAIL}/<@${USER_ID}>/g")          
         done
 
+        MENTIONS_LIST=$(echo '$RESULT' | jq -c '.')
+        echo "Found the mentions list ${MENTIONS_LIST}"
+        echo "mentionsByEmail=${MENTIONS_LIST}" >> $GITHUB_OUTPUT
+
+        echo "Updated the payload with mentions: '${UPDATED_PAYLOAD}'"
+        echo "payloadWithMentions=${UPDATED_PAYLOAD}" >> $GITHUB_OUTPUT
 
     - id: message
       if: ${{ inputs.messageId == '' }}
