@@ -60,17 +60,24 @@ runs:
         echo "The list of emails in the message is ${EMAIL_LIST}"
 
         echo "emailsList=${EMAIL_LIST}" >> $GITHUB_OUTPUT
+        echo "payloadSingleLine=${TEXT}" >> $GITHUB_OUTPUT
 
     - id: fetch_mentions
       name: Update the provided payload with mentions
       shell: bash
       run: |
         USER_EMAILS="${{ steps.fetch_emails.outputs.emailsList }}"
-        echo "Current user emails: ${USER_EMAILS}"
+        echo "Current user emails: ${{ steps.fetch_emails.outputs.payloadSingleLine }}"
         
         IFS=',' read -ra EMAIL_ARRAY <<< "$USER_EMAILS"
+        echo "intialized"
+
         RESULT=[]
-        UPDATED_PAYLOAD='${{ inputs.payload }}'
+        echo "result is empty"
+
+        UPDATED_PAYLOAD='${{ steps.fetch_emails.outputs.payloadSingleLine }}'
+
+        echo "result is empty with ${UPDATED_PAYLOAD}"
 
         for EMAIL in "${EMAIL_ARRAY[@]}"; do
           USER_INFO=$(curl -s -X POST https://slack.com/api/users.lookupByEmail \
