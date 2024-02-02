@@ -87,8 +87,11 @@ runs:
           RESULT=$(echo $RESULT | jq ".+[${EMAIL_USER_ID}]")
           UPDATED_PAYLOAD=$(echo "${UPDATED_PAYLOAD}" | sed "s/${EMAIL}/<@${USER_ID}>/g")          
         done
+        
+        echo "Results are ${$RESULT}"
+        echo "Updated pyalod is ${UPDATED_PAYLOAD}"
 
-        MENTIONS_LIST=$(echo '$RESULT' | jq -c '.')
+        MENTIONS_LIST=$(echo $RESULT | jq -c '.')
         echo "Found the mentions list ${MENTIONS_LIST}"
         echo "mentionsByEmail=${MENTIONS_LIST}" >> $GITHUB_OUTPUT
 
