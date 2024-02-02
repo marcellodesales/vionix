@@ -52,10 +52,10 @@ runs:
         echo '${{ inputs.payload }}'
 
         if echo '${{ inputs.payload }}' | grep -q -E '[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+'; then
-          echo "contains_email=true"
+          echo "contains_email=true" >> $GITHUB_OUTPUT
 
         else
-          echo "contains_email=false"
+          echo "contains_email=false" >> $GITHUB_OUTPUT
         fi
     
     - id: fetch_emails
@@ -119,7 +119,7 @@ runs:
 
         else
           echo "The request payload doesn't contain emails"
-          echo "message=${{ inputs.payload }}" >> $GITHUB_OUTPUT
+          echo "message='${{ inputs.payload }}'" >> $GITHUB_OUTPUT
         fi
 
 
