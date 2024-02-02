@@ -116,12 +116,12 @@ runs:
         if [ "${{ steps.email_check.outputs.contains_email }}" == "true" ]; then
           echo "The request payload contains emails"
           MESSAGES_OUTPUT=$( echo '${{ steps.fetch_mentions.outputs.payloadWithMentions }}' | jq -c )
-          echo "message=${MESSAGES_OUTPUT}" >> $GITHUB_OUTPUT
 
         else
           echo "The request payload doesn't contain emails"
-          echo "message='${{ inputs.payload }}'" >> $GITHUB_OUTPUT
+          MESSAGES_OUTPUT=$( echo '${{ inputs.payload }}' | jq -c )
         fi
+        echo "message=${MESSAGES_OUTPUT}" >> $GITHUB_OUTPUT
 
 
     - id: message
