@@ -71,11 +71,10 @@ runs:
         TOKEN="${{ inputs.slackBotToken }}"
         RESULT=[]
         
-        UPDATED_PAYLOAD=${{ inputs.payload }}
+        UPDATED_PAYLOAD='${{ inputs.payload }}'
 
         for EMAIL in "${EMAIL_ARRAY[@]}"; do
-          USER_INFO=$(curl -s -X POST \
-            https://slack.com/api/users.lookupByEmail \
+          USER_INFO=$(curl -s -X POST https://slack.com/api/users.lookupByEmail \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -H "Authorization: Bearer $TOKEN" \
             -d "email=$EMAIL")
