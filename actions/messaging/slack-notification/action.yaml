@@ -62,6 +62,7 @@ runs:
         echo "emailsList=${EMAIL_LIST}" >> $GITHUB_OUTPUT
 
     - name: Jjust testing
+      shell: bash
       run: |
         USER_EMAILS="marcello.desales@viasat.com,Ivan.Camero@viasat.com,David.Garcia@viasat.com"
         IFS=',' read -ra EMAIL_ARRAY <<< "$USER_EMAILS"
