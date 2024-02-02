@@ -88,8 +88,8 @@ runs:
           UPDATED_PAYLOAD=$(echo "${UPDATED_PAYLOAD}" | sed "s/${EMAIL}/<@${USER_ID}>/g")          
         done
         
-        echo "Results are ${$RESULT}"
-        echo "Updated pyalod is ${UPDATED_PAYLOAD}"
+        echo "User ID index: ${RESULT}"
+        echo "Updated payload: ${UPDATED_PAYLOAD}"
 
         MENTIONS_LIST=$(echo $RESULT | jq -c '.')
         echo "Found the mentions list ${MENTIONS_LIST}"
