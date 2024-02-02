@@ -61,14 +61,43 @@ runs:
 
         echo "emailsList=${EMAIL_LIST}" >> $GITHUB_OUTPUT
 
+    - name: Jjust testing
+      run: |
+        USER_EMAILS="marcello.desales@viasat.com,Ivan.Camero@viasat.com,David.Garcia@viasat.com"
+        IFS=',' read -ra EMAIL_ARRAY <<< "$USER_EMAILS"
+
+        VALUE='{"pretext":"Vionix GHAS installation on Github Org *vionix* has started!","text":":github_octocat: <https://git.viasat.com/vionix|https://git.viasat.com/vionix>","attachments":[{"color":"#B6B6B6","fields":[{"title":" Github Installation","value":"<https://git.viasat.com/vionix|ID >","short":true},{"title":" Org Owner","value":"marcello.desales@viasat.com","short":true},{"title":" Vionix GHAS App Installed","value":"<https://ghas.vionix.viasat.io/vionix>","short":true},{"title":" GHAS Onboarding Process","value":"<https://ghas.vionix.viasat.io/vionix>","short":true},{"value":"The installation just got started after the Org Owner mentioned here requested the install. New updates will be added into this thread","short":false}],"footer":"https://ghas.vionix.viasat.io/vionix"}]}'
+
+
+        TOKEN='${{ inputs.slackBotToken }}'
+        RESULT=[]
+
+        for EMAIL in "${EMAIL_ARRAY[@]}"; do
+          echo "Evaluating $EMAIL"
+          USER_INFO=$(curl -s -X POST \
+            https://slack.com/api/users.lookupByEmail \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "Authorization: Bearer $TOKEN" \
+            -d "email=$EMAIL")
+
+          USER_ID=$(echo "$USER_INFO" | jq -r '.user.id')
+          EMAIL_USER_ID="{\"email\": \"$EMAIL\", \"userId\": \"$USER_ID\"}"
+
+          # Replace the email address with the user ID in the given text (replace all)
+          VALUE=$(echo "$VALUE" | sed "s/${EMAIL}/<@${USER_ID}>/g")
+
+        done
+
+        echo $VALUE
+
     - id: fetch_mentions
       name: Update the provided payload with mentions
       shell: bash
       run: |
-        USER_EMAILS=${{ steps.fetch_emails.outputs.emailsList }}
+        USER_EMAILS="${{ steps.fetch_emails.outputs.emailsList }}"
         IFS=',' read -ra EMAIL_ARRAY <<< "$USER_EMAILS"
 
-        TOKEN="${{ inputs.slackBotToken }}"
+        TOKEN='${{ inputs.slackBotToken }}'
         RESULT=[]
         
         UPDATED_PAYLOAD='${{ inputs.payload }}'
