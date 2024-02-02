@@ -53,7 +53,7 @@ runs:
       name: Fetch the list of emails
       shell: bash
       run: |
-        TEXT='${{ inputs.payload }}'
+        TEXT=$(echo '${{ inputs.payload }}' | jq -c)
         EMAIL_LIST=$(echo $TEXT | grep -o -E '[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+' | tr '\n' ',' | sed 's/,$//')
         echo "The list of emails in the message is ${EMAIL_LIST}"
 
