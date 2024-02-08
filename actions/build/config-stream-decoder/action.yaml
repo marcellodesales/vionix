@@ -24,24 +24,23 @@ runs:
       shell: bash
       run: env
 
-      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
-      - name: Parse out config stream
-        if: ${{ inputs.config-stream != '' }}
-        run: |
-          echo "Creating the config stream file at terraform-config-stream.base64"
-          echo ${{ inputs.config-stream }} > config-stream.base64
-          ls -la config-stream.base64
+    - name: Parse out config stream
+      if: ${{ inputs.config-stream != '' }}
+      run: |
+        echo "Creating the config stream file at terraform-config-stream.base64"
+        echo ${{ inputs.config-stream }} > config-stream.base64
+        ls -la config-stream.base64
 
-          echo "Parsing terraform-config.tar.gz"
-          base64 -d config-stream.base64 > config-stream.tar.gz
+        echo "Parsing terraform-config.tar.gz"
+        base64 -d config-stream.base64 > config-stream.tar.gz
 
-          echo "Checking config integrity"
-          tar -tvf config-stream.tar.gz
-          tar -tvf config-stream.tar.gz > output.txt
-          
-          echo "Unpacking configs"
-          tar zxpvf config-stream.tar.gz
-          
-          echo "decodeOutputEOF" >> $GITHUB_OUTPUT
-          echo output.txt >> $GITHUB_OUTPUT
-          echo "decodeOutputEOF" $GITHUB_OUTPUT
+        echo "Checking config integrity"
+        tar -tvf config-stream.tar.gz
+        tar -tvf config-stream.tar.gz > output.txt
+
+        echo "Unpacking configs"
+        tar zxpvf config-stream.tar.gz
+
+        echo "decodeOutputEOF" >> $GITHUB_OUTPUT
+        echo output.txt >> $GITHUB_OUTPUT
+        echo "decodeOutputEOF" $GITHUB_OUTPUT
