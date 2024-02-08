@@ -43,7 +43,7 @@ runs:
         tar zxpvf config-stream.tar.gz
 
         echo 'decodeOutput<<EOF' >> $GITHUB_OUTPUT
-        echo stream-out.txt >> $GITHUB_OUTPUT
-        echo "EOF" $GITHUB_OUTPUT
-        
+        cat stream-out.txt >> $GITHUB_OUTPUT
+        echo 'EOF' >> $GITHUB_OUTPUT
+
         rm -f stream-out.txt
