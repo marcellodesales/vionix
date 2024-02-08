@@ -29,16 +29,11 @@ runs:
       shell: bash
       run: env
 
-    - name: Show the current env
-      shell: bash
-      run: |
-        echo "Resolving all dirs"
-
     - name: Setup additional credentials based on the given .env file
       shell: bash
       env:
         FILE_PATHS: '${{ inputs.file-paths }}'
-        DIR_PATHS: '${{ inputs.file-paths }}'
+        DIR_PATHS: '${{ inputs.dir-paths }}'
       run: |
         if [ "${FILE_PATHS}" != "" ]; then
           FILE_PATHS=$(echo "${FILE_PATHS}" | tr '\n' ' ')
@@ -46,6 +41,7 @@ runs:
         fi
 
         if [ "${DIR_PATHS}" != "" ]; then
+          echo "Checking if all dirs in the list '${DIR_PATHS}' exists..."
           for dir in $(ls $DIR_PATHS); do 
             echo "Provided dir path is $dir";
             if [ ! -d ${dir} ]; then
