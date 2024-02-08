@@ -1,0 +1,47 @@
+name: Generates base64 stream of configuration required
+description: Generate a stream value in base64 format of any file, including binary
+
+author: seceng-devsecops-platform
+
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  file-paths:
+    description: "The content of the .env file to be loaded"
+    required: true
+
+outputs:
+  base64-stream:
+    description: "The stream value to be used for configuration"
+    value: ${{ steps.response.outputs.messageId }}
+
+runs:
+  using: composite
+  steps:
+
+    - name: Show the current env
+      shell: bash
+      run: env
+
+    - name: Setup additional credentials based on the given .env file
+      shell: bash
+      env:
+        FILE_PATHS: '${{ inputs.file-paths }}'
+      run: |
+        FILE_PATHS=$(echo "$FILE_PATHS" | tr '\n' ' ')
+        echo "Zipping the provided file paths: ${FILE_PATHS}"
+        tar -czvf terraform-config.tar.gz ${FILE_PATHS}
+
+        echo "Making sure they are in place"
+        tar -tvf terraform-config.tar.gz
+
+    - id: response
+      name: Set up for streaming
+      run: |
+        base64 -i terraform-config.tar.gz -o archive.b64
+        BASE64_STREAM=$(cat archive.b64)
+        echo "Result of terraform config for base64 stream: ${BASE64_STREAM}"
+        
+        echo "base64Stream=${BASE64_STREAM}" >> $GITHUB_OUTPUT
