@@ -29,23 +29,51 @@ runs:
       shell: bash
       run: env
 
+    - name: Show the current env
+      shell: bash
+      run: |
+        echo "Resolving all dirs"
+
     - name: Setup additional credentials based on the given .env file
       shell: bash
       env:
         FILE_PATHS: '${{ inputs.file-paths }}'
+        DIR_PATHS: '${{ inputs.file-paths }}'
       run: |
-        FILE_PATHS=$(echo "$FILE_PATHS" | tr '\n' ' ')
-        echo "Zipping the provided file paths: ${FILE_PATHS}"
-        tar -czvf terraform-config.tar.gz ${FILE_PATHS}
+        if [ "${FILE_PATHS}" != "" ]; then
+          FILE_PATHS=$(echo "${FILE_PATHS}" | tr '\n' ' ')
+          echo "Zipping the provided file paths: ${FILE_PATHS}"
+        fi
+
+        if [ "${DIR_PATHS}" != "" ]; then
+          for dir in $(ls $DIR_PATHS); do 
+            echo "Provided dir path is $dir";
+            if [ ! -d ${dir} ]; then
+              echo "The provided dir path ${dir} is not a directory!"
+              exit 1
+            fi
+          done
+          DIR_PATHS=$(echo "${DIR_PATHS}" | tr '\n' ' ')
+          echo "Zipping the provided dir paths: ${DIR_PATHS}"
+        fi
+
+        if [ -f terraform-config.tar.gz ]; then
+          echo "Deleting existing file ${terraform-config.tar.gz}"
+          rm -f terraform-config.tar.gz
+        fi
+
+        echo "Creating config stream with tar -czvf terraform-config.tar.gz ${FILE_PATHS} ${DIR_PATHS}"
+        tar -czvf terraform-config.tar.gz ${FILE_PATHS} ${DIR_PATHS}
 
         echo "Making sure they are in place"
         tar -tvf terraform-config.tar.gz
 
     - id: response
       name: Set up for streaming
+      shell: bash
       run: |
         base64 -i terraform-config.tar.gz -o archive.b64
         BASE64_STREAM=$(cat archive.b64)
         echo "Result of terraform config for base64 stream: ${BASE64_STREAM}"
-        
+
         echo "base64Stream=${BASE64_STREAM}" >> $GITHUB_OUTPUT
