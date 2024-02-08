@@ -97,24 +97,9 @@ jobs:
 
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Decode the config stream
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream-decoder@feature/DEVSECOPS-49/improve-terraform-workflow-with-config-stream
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream-decoder@main
         with:
           config-stream: ${{ inputs.config-stream }}
-#       - name: Parse out config stream
-#         if: ${{ inputs.config-stream != '' }}
-#         run: |
-#           echo "Creating the config stream file at terraform-config-stream.base64"
-#           echo ${{ inputs.config-stream }} > terraform-config-stream.base64
-#           ls -la terraform-config-stream.base64
-
-#           echo "Parsing terraform-config.tar.gz"
-#           base64 -d terraform-config-stream.base64 > terraform-config.tar.gz
-
-#           echo "Checking config integrity"
-#           tar -tvf terraform-config.tar.gz
-          
-#           echo "Unpacking configs"
-#           tar zxpvf terraform-config.tar.gz
 
       - name: List of downloaded secret files
         id: tfsec-check-values
@@ -252,7 +237,7 @@ jobs:
         uses: viarise/checkout@v3.5.3
 
       - name: Decode the config stream
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream-decoder@feature/DEVSECOPS-49/improve-terraform-workflow-with-config-stream
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream-decoder@main
         with:
           config-stream: ${{ inputs.config-stream }}
 
@@ -329,7 +314,7 @@ jobs:
 
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Decode the config stream
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream-decoder@feature/DEVSECOPS-49/improve-terraform-workflow-with-config-stream
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream-decoder@main
         with:
           config-stream: ${{ inputs.config-stream }}
 
