@@ -19,7 +19,7 @@ inputs:
 outputs:
   base64-stream:
     description: "The stream value to be used for configuration"
-    value: ${{ steps.response.outputs.messageId }}
+    value: ${{ steps.response.outputs.base64Stream }}
 
 runs:
   using: composite
