@@ -1,4 +1,4 @@
-# Config Stream
+# Config Stream Encoder
 
 * Sometimes you need to stream configs, including binary, to action jobs 
   * Obfuscating also secrets, etc
