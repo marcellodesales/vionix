@@ -42,10 +42,8 @@ runs:
         echo "Unpacking configs"
         tar zxpvf config-stream.tar.gz
 
-        echo 'decodeOutputEOF' >> $GITHUB_OUTPUT
+        echo 'decodeOutput<<EOF' >> $GITHUB_OUTPUT
         echo stream-out.txt >> $GITHUB_OUTPUT
         echo "EOF" $GITHUB_OUTPUT
         
         rm -f stream-out.txt
-
-
