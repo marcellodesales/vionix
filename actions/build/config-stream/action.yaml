@@ -68,7 +68,7 @@ runs:
       name: Set up for streaming
       shell: bash
       run: |
-        docker run -ti -v $(pwd):$(pwd) -w $(pwd) schmitzi/openssl-alpine-j11:1.2.0 openssl base64 -e -A -in terraform-config.tar.gz -out terraform-config-stream.base64
+        docker run -v $(pwd):$(pwd) -w $(pwd) schmitzi/openssl-alpine-j11:1.2.0 openssl base64 -e -A -in terraform-config.tar.gz -out terraform-config-stream.base64
         ls -la terraform-config-stream.base64
 
         BASE64_STREAM=$(cat terraform-config-stream.base64)
