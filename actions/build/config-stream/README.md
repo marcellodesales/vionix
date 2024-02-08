@@ -20,8 +20,12 @@ jobs:
         uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream@main
         with:
           file-paths: |
-            
-
+            file1.do
+            file2.config
+            file4.binary
+          dir-paths: |
+            dir1
+            dir2
 ```
 
 * Now, the connection between the job that created the .env file `docker-compose-build-envs: .extra.env` is the name that must be provided as a param of the build

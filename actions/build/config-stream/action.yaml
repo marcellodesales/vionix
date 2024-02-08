@@ -12,6 +12,10 @@ inputs:
     description: "The content of the .env file to be loaded"
     required: true
 
+  dir-paths:
+    description: "The content of the .env file to be loaded"
+    required: true
+
 outputs:
   base64-stream:
     description: "The stream value to be used for configuration"
