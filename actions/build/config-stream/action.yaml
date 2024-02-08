@@ -42,7 +42,7 @@ runs:
 
         if [ "${DIR_PATHS}" != "" ]; then
           echo "Checking if all dirs in the list '${DIR_PATHS}' exists..."
-          for dir in $(ls $DIR_PATHS); do 
+          for dir in $($DIR_PATHS); do 
             echo "Provided dir path is $dir";
             if [ ! -d ${dir} ]; then
               echo "The provided dir path ${dir} is not a directory!"
