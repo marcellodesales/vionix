@@ -80,5 +80,3 @@ runs:
         ls -la terraform-config.tar.gz
 
         echo "base64Stream=${BASE64_STREAM}" >> $GITHUB_OUTPUT
-        
-        exit 33
