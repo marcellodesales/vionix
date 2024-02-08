@@ -17,7 +17,7 @@ jobs:
     runs-on: devsecops
     steps:
       - name: Make .env file with the params required for the build
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream@main
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream-encoder@main
         with:
           file-paths: |
             file1.do
@@ -28,20 +28,4 @@ jobs:
             dir2
 ```
 
-* Now, the connection between the job that created the .env file `docker-compose-build-envs: .extra.env` is the name that must be provided as a param of the build
-* The build will use the param above to create a .env file with specific build params to the CloudNative build done by Vionix build
-
-```yaml
-  docker-devsecops:
-    name: 🐳 docker
-    needs: [build-env]
-    secrets: inherit
-    with:
-      docker-compose-file: docker-compose.yaml
-      docker-compose-context: actions/processor
-      docker-compose-service: ghas-operator-onborard-processor
-      # Adds extra build envs into the docker compose context dir
-      docker-compose-build-envs: .extra.env
-      # Dockerfile scans for the project
-      docker-build-sonarqube-project-id: seceng-devsecops-platform_viasat-ghas-k8s-operator_AYvOp1hAPmv_YrGp3xfu
-```
+* Take a look at the config stream decoder to learn more about how to use it to decode
