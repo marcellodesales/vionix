@@ -37,11 +37,15 @@ runs:
 
         echo "Checking config integrity"
         tar -tvf config-stream.tar.gz
-        tar -tvf config-stream.tar.gz > output.txt
+        tar -tvf config-stream.tar.gz > stream-out.txt
 
         echo "Unpacking configs"
         tar zxpvf config-stream.tar.gz
 
-        echo "decodeOutputEOF" >> $GITHUB_OUTPUT
-        echo output.txt >> $GITHUB_OUTPUT
-        echo "decodeOutputEOF" $GITHUB_OUTPUT
+        echo 'decodeOutputEOF' >> $GITHUB_OUTPUT
+        echo stream-out.txt >> $GITHUB_OUTPUT
+        echo "EOF" $GITHUB_OUTPUT
+        
+        rm -f stream-out.txt
+
+
