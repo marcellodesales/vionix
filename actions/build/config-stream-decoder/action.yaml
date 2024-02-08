@@ -26,6 +26,7 @@ runs:
 
     - name: Parse out config stream
       if: ${{ inputs.config-stream != '' }}
+      shell: bash
       run: |
         echo "Creating the config stream file at terraform-config-stream.base64"
         echo ${{ inputs.config-stream }} > config-stream.base64
