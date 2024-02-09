@@ -88,7 +88,8 @@ jobs:
 
   code:
     name: 🔧 code
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    # https://stackoverflow.com/questions/69759538/use-an-array-in-workflow-level-env-variable
+    runs-on: fromJson( ${{ inputs.seceng-devsecops-dind-runner-label }} )
 
     permissions:
       # Maybe to get twistlock action to run we need permission to read
