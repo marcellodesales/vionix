@@ -271,7 +271,8 @@ jobs:
           echo "jobStartTimestamp=$JOB_TIMESTAMP" >> $GITHUB_OUTPUT
           PR_NUMBER="${{ steps.PR.outputs.number }}"
           echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
-          PR_TITLE="${{ steps.PR.outputs.pr_title }}"
+
+          PR_TITLE=$(echo '${{ steps.PR.outputs.pr_title }}' | sed 's/`/\\`/g')
           echo "prTitle=$PR_TITLE" >> $GITHUB_OUTPUT
           echo "hasKubeconfig=$HAS_KUBECONFIG" >> $GITHUB_OUTPUT
 
