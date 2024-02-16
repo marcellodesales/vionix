@@ -9,7 +9,7 @@ name: docker-image-devsecops-cicd
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
 # section #6: Saving Computation Time by Stopping Obsolete Workflows
 concurrency:
-  group: docker-image-devsecops-cicd-${{ github.ref }}-1
+  group: ${{ env.GITHUB_WORKFLOW }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 on:
