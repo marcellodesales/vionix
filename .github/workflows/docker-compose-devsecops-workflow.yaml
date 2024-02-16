@@ -700,14 +700,14 @@ jobs:
         if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == 'parallel' }}
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
+          tree
           # https://github.com/opencontainers/image-spec/blob/main/annotations.md
-          export LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker-compose-context }}
-          echo "Adding labels to Dockerfile"
-          # https://stackoverflow.com/questions/845863/how-to-use-in-an-xargs-command/70230514#70230514
-          find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.source" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.source ${LABEL_VALUE}" >> {}' -- {}
-          find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.created" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.created ${{needs.code.outputs.buildDateTime}}" >> {}' -- {}
-          find . -name 'Dockerfile' -print0 | xargs -0 grep -iL "org.opencontainers.image.version" | xargs -0 -I{} sh -c 'echo "LABEL org.opencontainers.image.version ${GITHUB_SHA}" >> {}' -- {}
-          # https://docs.docker.com/engine/reference/commandline/buildx_bake/#file
+          LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker-compose-context }}
+          DECLARED_DOCKERFILE=$(docker compose config --format json | jq -r --arg SERVICE_NAME "${{ inputs.docker-compose-service }}" '.services[$SERVICE_NAME].build.dockerfile')
+          echo "Adding labels to the configured Dockerfile file at '${DECLARED_DOCKERFILE}'"
+          echo "LABEL org.opencontainers.image.source ${LABEL_VALUE}" >> ${DECLARED_DOCKERFILE}
+          echo "LABEL org.opencontainers.image.created ${{needs.code.outputs.buildDateTime}}" >> ${DECLARED_DOCKERFILE}
+          echo "LABEL org.opencontainers.image.version ${GITHUB_SHA}" >> ${DECLARED_DOCKERFILE}
 
           echo "Using Version: NEXT_PUBLIC_APP_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}"
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file}}" ]; then
