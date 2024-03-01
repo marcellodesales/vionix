@@ -146,6 +146,10 @@ on:
         description: "The jira token used for automated jira verification"
         required: false
 
+      TEST_GITHUB_APP_PRIVATE_KEY:
+        description: "The private key to be used when authenticating as a github app"
+        required: false
+
 
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
@@ -369,6 +373,7 @@ jobs:
       TEST_GITHUB_TOKEN: '${{ secrets.TEST_GITHUB_TOKEN }}'
       TEST_GITHUB_HOST: '${{ secrets.TEST_GITHUB_HOST }}'
       TEST_JIRA_TOKEN_AUTH: '${{ secrets.TEST_JIRA_TOKEN_AUTH }}'
+      TEST_GITHUB_APP_PRIVATE_KEY: '${{ secrets.TEST_GITHUB_APP_PRIVATE_KEY }}'
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.5.3
