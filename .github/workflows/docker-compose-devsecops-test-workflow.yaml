@@ -378,7 +378,7 @@ jobs:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.5.3
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.sha }}
 
       - name: Execute tests in container
         run: |
