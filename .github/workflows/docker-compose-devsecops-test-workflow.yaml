@@ -377,6 +377,8 @@ jobs:
     steps:
       - name: Checkout Current Repository
         uses: viarise/checkout@v3.5.3
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Execute tests in container
         run: |
