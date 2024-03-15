@@ -282,6 +282,9 @@ jobs:
     # Only run the builds when building either DEV or STG
     if: ${{ github.ref_type == 'branch' }}
 
+    permissions:
+      pull-requests: write # <--- allows to update PRs
+
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
       passedComplianceScan: ${{steps.scan-results-collection.outputs.passedComplianceScan}}
