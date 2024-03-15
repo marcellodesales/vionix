@@ -361,6 +361,9 @@ jobs:
 
     if: inputs.docker-compose-test != '' && github.ref_type == 'branch'
 
+    permissions:
+      pull-requests: write # <--- allows to update PRs
+
     defaults:
       run:
         working-directory: ${{ inputs.docker-compose-test-context }}
