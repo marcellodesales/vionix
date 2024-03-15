@@ -1,0 +1,157 @@
+name: Vionix Slack Notification
+description: Sends slack notifications with
+
+author: vionix-devsecops-platform
+
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  channelId:
+    description: "The ID of the channel with Vionix Slack Channel"
+    required: true
+
+  messageId:
+    description: "pdates the message based on the message Id"
+    required: true
+
+  slackBotToken:
+    description: "The slack bot token for authentication"
+    required: true
+
+  payload:
+    description: "The full payload following the slack API in json format"
+    required: false
+
+outputs:
+  messageId:
+    description: "The ID of the message submitted"
+    value: ${{ steps.response.outputs.messageId }}
+  
+  emailList:
+    description: "The list of emails found on the payload"
+    value: ${{ steps.fetch_emails.outputs.emailsList }}
+
+  mentionsList:
+    description: "The list of users Ids for mentions mapping"
+    value: ${{ steps.fetch_mentions.outputs.mentionsByEmail }}
+
+  payloadWithMentions:
+    description: "The list of users Ids for mentions mapping"
+    value: ${{ steps.fetch_mentions.outputs.payloadWithMentions }}
+
+runs:
+  using: composite
+  steps:
+
+    - id: email_check
+      name: Received the payload as follows
+      shell: bash
+      run: |
+        echo '${{ inputs.payload }}'
+
+        if echo '${{ inputs.payload }}' | grep -q -E '[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+'; then
+          echo "contains_email=true" >> $GITHUB_OUTPUT
+
+        else
+          echo "contains_email=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - id: fetch_emails
+      if: ${{ steps.email_check.outputs.contains_email == 'true' }}
+      name: Fetch the list of emails
+      shell: bash
+      run: |
+        TEXT=$(echo '${{ inputs.payload }}' | jq -c)
+        echo "TEST is '${TEXT}'"
+
+        EMAIL_LIST=$(echo $TEXT | grep -o -E '[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+' | tr '\n' ',' | sed 's/,$//')
+        echo "The list of emails in the message is ${EMAIL_LIST}"
+
+        echo "emailsList=${EMAIL_LIST}" >> $GITHUB_OUTPUT
+        echo "payloadSingleLine=${TEXT}" >> $GITHUB_OUTPUT
+
+    - id: fetch_mentions
+      name: Update the provided payload with mentions
+      if: ${{ steps.email_check.outputs.contains_email == 'true' }}
+      shell: bash
+      run: |
+        USER_EMAILS="${{ steps.fetch_emails.outputs.emailsList }}"
+        UPDATED_PAYLOAD='${{ steps.fetch_emails.outputs.payloadSingleLine }}'
+        IFS=',' read -ra EMAIL_ARRAY <<< "$USER_EMAILS"
+
+        RESULT=[]
+
+        echo "result is empty with ${UPDATED_PAYLOAD}"
+
+        for EMAIL in "${EMAIL_ARRAY[@]}"; do
+          echo "Processing ${EMAIL}"
+          USER_INFO=$(curl -s -X POST https://slack.com/api/users.lookupByEmail \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "Authorization: Bearer ${{ inputs.slackBotToken }}" \
+            -d "email=$EMAIL")
+          echo "Received the user info for ${EMAIL}: ${USER_INFO}"
+          USER_ID=$(echo "$USER_INFO" | jq -r '.user.id')
+          echo "Found the user id ${EMAIL}: ${USER_ID}"
+          EMAIL_USER_ID="{\"email\": \"$EMAIL\", \"userId\": \"$USER_ID\"}"
+          RESULT=$(echo $RESULT | jq ".+[${EMAIL_USER_ID}]")
+          UPDATED_PAYLOAD=$(echo "${UPDATED_PAYLOAD}" | sed "s/${EMAIL}/<@${USER_ID}>/g")          
+        done
+        
+        echo "User ID index: ${RESULT}"
+        echo "Updated payload: ${UPDATED_PAYLOAD}"
+
+        MENTIONS_LIST=$(echo $RESULT | jq -c '.')
+        echo "Found the mentions list ${MENTIONS_LIST}"
+        echo "mentionsByEmail=${MENTIONS_LIST}" >> $GITHUB_OUTPUT
+
+        echo "Updated the payload with mentions: '${UPDATED_PAYLOAD}'"
+        echo "payloadWithMentions=${UPDATED_PAYLOAD}" >> $GITHUB_OUTPUT
+
+    - id: payload_type
+      shell: bash
+      name: Return the correct response
+      run: |
+        if [ "${{ steps.email_check.outputs.contains_email }}" == "true" ]; then
+          echo "The request payload contains emails"
+          MESSAGES_OUTPUT=$( echo '${{ steps.fetch_mentions.outputs.payloadWithMentions }}' | jq -c )
+
+        else
+          echo "The request payload doesn't contain emails"
+          MESSAGES_OUTPUT=$( echo '${{ inputs.payload }}' | jq -c )
+        fi
+        echo "message=${MESSAGES_OUTPUT}" >> $GITHUB_OUTPUT
+
+
+    - id: message
+      if: ${{ inputs.messageId == '' }}
+      name: New message without updating
+      uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
+      with:
+        bot_token: ${{ inputs.slackBotToken }}
+        channel_id: ${{ inputs.channelId }}
+        payload: ${{ steps.payload_type.outputs.message }}
+
+    - id: message_update
+      if: ${{ inputs.messageId != '' }}
+      name: Update existing message ${{ inputs.messageId }}
+      uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
+      with:
+        bot_token: ${{ inputs.slackBotToken }}
+        channel_id: ${{ inputs.channelId }}
+        message_id: ${{ inputs.messageId }} # Updates existing message from the first step.
+        payload: ${{ steps.payload_type.outputs.message }}
+
+    - id: response
+      shell: bash
+      name: Return the correct response
+      run: |
+        if [ -n "${{ inputs.messageId }}" ]; then
+          echo "The request was for an update, since ${{ inputs.messageId }} != ''"
+          echo "messageId=${{ steps.message_update.outputs.message_id }}" >> $GITHUB_OUTPUT
+
+        else
+          echo "The request was for a new message, since inputs.messageId == '' empty"
+          echo "messageId=${{ steps.message.outputs.message_id }}" >> $GITHUB_OUTPUT
+        fi

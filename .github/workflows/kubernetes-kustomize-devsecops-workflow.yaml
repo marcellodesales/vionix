@@ -12,7 +12,7 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-      seceng-devsecops-dind-runner-label:
+      vionix-platform-dind-runner-label:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
@@ -52,6 +52,18 @@ on:
         required: false
         type: string
         default: "."
+        
+      check-kustomization:
+        description: "Whether or not check for kustomization files"
+        required: false
+        type: string
+        default: false
+
+      check-argocd:
+        description: "Whether or not check for argocd files"
+        required: false
+        type: string
+        default: false
 
       argocd-server:
         description: "The ArgoCD server to use"
@@ -64,6 +76,10 @@ on:
     secrets:
       KUBERNETES_KUBECONFIG:
         description: "The base64 value of HOME/.kube/config to access the cluster"
+        required: false
+
+      ARGOCD_TOKEN:
+        description: "The base64 value of ArgoCD token from ARGOCD_SERVER/settings/accounts/XYZ"
         required: false
 
       ARTIFACTORY_SVC_USER:
@@ -90,6 +106,7 @@ jobs:
     name: 🔧 code
     # https://stackoverflow.com/questions/69759538/use-an-array-in-workflow-level-env-variable
     runs-on: fromJson( ${{ inputs.seceng-devsecops-dind-runner-label }} )
+
 
     permissions:
       # Maybe to get twistlock action to run we need permission to read
@@ -127,15 +144,25 @@ jobs:
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
       hasKubeconfig: ${{steps.set-base-values.outputs.hasKubeconfig}}
 
+      kustomizeFilesMatrix: ${{ steps.kustomize-updates.outputs.filesMatrix }}
+      requiresKustomizeProcessing: ${{ steps.kustomize-updates.outputs.requiresProcessing }}
+      affectedKustomizeDirs: ${{ steps.kustomize-updates.outputs.affectedDirs }}
+
+      argocdFilesMatrix: ${{ steps.argocd-updates.outputs.filesMatrix }}
+      requiresArgocdProcessing: ${{ steps.argocd-updates.outputs.requiresProcessing }}
+      affectedArgocdFiles: ${{ steps.argocd-updates.outputs.affectedDirs }}
+
     steps:
       - name: Provided input to the app
         run: |
           echo "Inputs=${{ toJSON(inputs) }}"
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🔧 \`code\` Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Annotate Job with current information
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -144,6 +171,7 @@ jobs:
           #echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
           #echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Fetch all history and have .git locally for inspection
         uses: viarise/checkout@v3.5.3
         with:
@@ -225,7 +253,7 @@ jobs:
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
 
-      - uses: seceng-devsecops-platform/8BitJonny-gh-get-current-pr-action@2.1.2
+      - uses: seceng-devsecops-platform/8BitJonny-gh-get-current-pr-action@v2.2.0
         id: PR
         with:
           # Authetication token to access GitHub APIs. (Can be omitted by default.)
@@ -234,7 +262,6 @@ jobs:
           sha: ${{ github.event.pull_request.head.sha }}
           # Only return if PR is still open. (By default it returns PRs in any state.)
           filterOutClosed: true
-
 
       # Runs a single command using the runners shell
       - name: Setup kubernetes credentials
@@ -276,72 +303,130 @@ jobs:
           echo "prTitle=$PR_TITLE" >> $GITHUB_OUTPUT
           echo "hasKubeconfig=$HAS_KUBECONFIG" >> $GITHUB_OUTPUT
 
-      # # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
-      # - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
-      #   #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
-      #   id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
-      #   uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
-      #   if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
-      #   with:
-      #     bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-      #     channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-      #     payload: >-
-      #       {
-      #           "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-      #           "attachments": [
-      #               {
-      #                   "color": "#B6B6B6",
-      #                   "fields": [
-      #                       {
-      #                         "title": "#️⃣ Revision",
-      #                         "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{steps.set_base_values.outputs.gitShortSha}}|${{steps.set_base_values.outputs.gitShortSha}}>",
-      #                         "short": true
-      #                       },
-      #                       {
-      #                         "title": "🌿 Branch",
-      #                         "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}|${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}>",
-      #                         "short": true
-      #                       },
-      #                       {
-      #                         "title": "👤 Author",
-      #                         "value": "<${{ github.event.sender.html_url }}|${{steps.set_base_values.outputs.committerName}}, ${{steps.set_base_values.outputs.committerEmail}}>",
-      #                         "short": true
-      #                       },
-      #                       {
-      #                         "title": "🔧 code Job",
-      #                         "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-      #                         "short": true
-      #                       }
-      #                   ],
-      #                   "footer": "<${{steps.set_base_values.outputs.githubActionJobUrl}}>"
-      #               }
-      #           ]
-      #       }
+      - uses: viarise/setup-node@v3
+        #if: ${{ inputs.check-kustomization == 'true' }}
+        if: ${{ inputs.check-argocd == 'true' || inputs.check-kustomization == 'true' }}
+        with:
+          node-version: '18'
+          #node-version-file: .node-version
 
-      # - name: Annotate Job with notification status
-      #   run: |
-      #     # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      #     echo "## :loudspeaker: notify" >> $GITHUB_STEP_SUMMARY
-      #     echo "" >> $GITHUB_STEP_SUMMARY
-      #     echo * Successfully notified Slack Channel >> $GITHUB_STEP_SUMMARY
-      #     echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Find the current leaf dirs containing kustomization changes 
+        id: kustomize-updates
+        if: ${{ inputs.check-kustomization == 'true' }}
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+          const encoding = 'utf8';
+          const githubOutputFile = process.env.GITHUB_OUTPUT;
+          console.log(`The output file is at ${githubOutputFile}`);
 
-  check:
-    name: 🛡️ check-code
+          // just get the leaf dirs
+          const getLeafDirs = dirs => {
+            dirs = [...new Set(dirs)];
+            dirs.sort();
+            const newDirs = new Set()
+            dirs.forEach(dir => {
+              if (newDirs.size == 0) {
+                newDirs.add(dir)
+              } else {
+                for (let i = 0; i < newDirs.size; i++) {
+                  const currentValue = Array.from(newDirs)[i];
+                  if (currentValue != dir && dir.indexOf(currentValue) > -1 && dir.length > currentValue.length)  {
+                    newDirs.delete(currentValue)
+                    newDirs.add(dir)
+                    break
+                  }
+                }
+                newDirs.add(dir)
+              }
+            })
+            return {
+              include: Array.from(newDirs).map(dirPath => {
+                return {
+                  dir: dirPath
+                }
+              })
+            }
+          };
+
+          try {
+            let output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | grep "/kustomization.yaml"').toString();
+            const allKustomizeDirs = output.split("\n").map(dirPath => dirPath.replace("/kustomization.yaml", ""))
+            console.log(`All dirs affected: ${JSON.stringify(allKustomizeDirs)}`);
+
+            const kustomizeLeafDirs = getLeafDirs(allKustomizeDirs);
+            console.log(`All leaf dirs: ${JSON.stringify(kustomizeLeafDirs)}`);
+
+            if (kustomizeLeafDirs.include.length > 0) {
+              const cliOutputJson = JSON.stringify(kustomizeLeafDirs);
+
+              fs.appendFileSync(githubOutputFile, `filesMatrix=${cliOutputJson}\n`, encoding);
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=true\n`, encoding);
+
+              const affectedDirsString = JSON.stringify(kustomizeLeafDirs.include.map(dirObj => dirObj.dir).join(", "));
+              fs.appendFileSync(githubOutputFile, `affectedDirs=${affectedDirsString}\n`, encoding);
+
+            } else {
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=false\n`, encoding);
+            }
+
+          } catch (error) {
+            console.error(`Error executing command: ${error}`);
+          }
+
+      - name: Find changed ArgoCD Artifacts
+        id: argocd-updates
+        if: ${{ inputs.check-argocd == 'true' }}
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const path = require('path');
+          const { execSync } = require('child_process');
+          const encoding = 'utf8';
+          const githubOutputFile = process.env.GITHUB_OUTPUT;
+          console.log(`The output file is at ${githubOutputFile}`);
+
+          try {
+            const output = execSync('git diff --name-only --diff-filter=d HEAD^ HEAD | xargs grep -l -e "kind:\\s*Application" -e "kind:\\s*AppProject"').toString();
+            const changedArgoArtifacts = {
+              include: output.split("\n").filter(filePath => filePath.length > 0).map(filePath => {
+                let argoKind = execSync(`cat ${filePath} | grep kind: | awk '{print $2}'`).toString().split("\n")[0];
+                argoKind = ["Application", "ApplicationSet", "AppProject"].indexOf(argoKind) > -1 ? argoKind : undefined
+
+                return {
+                  name: path.basename(filePath).replace(".yaml", ""),
+                  kind: argoKind,
+                  filePath: filePath,
+                }
+              })
+            };
+            console.log(`All dirs affected: ${JSON.stringify(changedArgoArtifacts)}`);
+
+            if (changedArgoArtifacts.include.length > 0) {
+              const cliOutputJson = JSON.stringify(changedArgoArtifacts);
+
+              fs.appendFileSync(githubOutputFile, `filesMatrix=${cliOutputJson}\n`, encoding);
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=true\n`, encoding);
+
+              const affectedFilesString = JSON.stringify(changedArgoArtifacts.include.map(app => app.name).join(", "));
+              fs.appendFileSync(githubOutputFile, `affectedFiles=${affectedFilesString}\n`, encoding);
+
+            } else {
+              fs.appendFileSync(githubOutputFile, `requiresProcessing=false\n`, encoding);
+            }
+
+          } catch (error) {
+            console.error(`Error executing command: ${error}`);
+          }
+
+  yaml:
+    name: 🦺 yaml
     needs: [code]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     continue-on-error: true
-    # strategy:
-    #   fail-fast: false
-    #   matrix:
-    #     # TODO: Add check for docker images updates
-    #     checkType: [K8s,Yamls,Kustomize]
-
-    # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
-    # defaults:
-    #   run:
-    #     working-directory: ${{ inputs.docker-compose-context }}
 
     steps:
       - name: Annotate job with current information
@@ -355,37 +440,6 @@ jobs:
         uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
-
-      # - name: Get kubectl
-      #   if: ${{ matrix.checkType == 'K8s' && needs.code.outputs.hasKubeconfig == 'true' }}
-      #   run: |
-      #     echo "Installing kubectl!!!"
-      #     echo ${PATH}
-      #     curl -LO https://dl.k8s.io/release/${{ inputs.kubectl-version }}/bin/linux/amd64/kubectl -o kubectl
-      #     chmod +x kubectl
-      #     sudo mv kubectl /usr/local/bin/
-      #     kubectl version
-
-      # - name: Check connectivity
-      #   if: ${{ matrix.checkType == 'K8s' && needs.code.outputs.hasKubeconfig == 'false' }}
-      #   run: |
-      #     echo "kubectl version"
-      #     kubectl version
-      #     echo "* kubectl version: $(kubectl version)" >> $GITHUB_STEP_SUMMARY
-
-      #     echo "kubectl cluster-info"
-      #     kubectl cluster-info
-      #     echo "* kubectl cluster-info: $(kubectl cluster-info)" >> $GITHUB_STEP_SUMMARY
-
-      #     echo "kubectl config view"
-      #     kubectl config view
-      #     echo "* kubectl config view: $(kubectl config view)" >> $GITHUB_STEP_SUMMARY
-
-      #     echo "kubectl current context"
-      #     kubectl config current-context
-      #     echo "* kubectl config view: $(kubectl config current-context)" >> $GITHUB_STEP_SUMMARY
-
-      #     echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Set Yamllint configuration
         run: |
@@ -414,221 +468,380 @@ jobs:
           echo "## 🦺 YAML lint report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           {
-            echo "<details><summary>Click to view</summary>
+            echo "<details><summary>View lint report</summary>
 
-            \`\`\`yaml
+            \`\`\`gradle
             ${{ steps.yaml-lint.outputs.yamllint_output }}
             \`\`\`
             </details>"
           } >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-  state:
-    name: "🏗️ state"
+  kustomize:
+    name: "🧅 kustomize"
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    needs: [code, check]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    needs: [code]
+    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+    if: ${{ inputs.check-kustomization == 'true' && needs.code.outputs.requiresKustomizeProcessing == 'true' }}
+
+    strategy:
+      # This is the default strategy, to fail the PR since if anything that was processed fail, then fail them all
+      fail-fast: true
+      matrix: ${{ fromJSON(needs.code.outputs.kustomizeFilesMatrix) }}
+
+    # So that we can write comments to the PR
+    permissions: write-all
 
     steps:
-      - name: Annotate job with current information
-        run: |
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "# 🏗️ \`state\` Job Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
       - name: Checkout history with tags so to get information
         uses: viarise/checkout@v3.5.3
         with:
           fetch-depth: 0
 
       - name: Get kubectl
-        if: ${{ needs.code.outputs.hasKubeconfig == 'true' }}
         run: |
           echo "Installing kubectl!!!"
           echo ${PATH}
           curl -LO https://dl.k8s.io/release/${{ inputs.kubectl-version }}/bin/linux/amd64/kubectl -o kubectl
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
+
+      - name: Get version from from the client
+        run: |
+          kubectl version --client
+
+      - name: Get version from from the client
+        if: ${{ needs.code.outputs.hasKubeconfig == 'true' }}
+        run: |
           kubectl version
 
       - name: Create comment for PR ${{ github.event.number }}
-        if: ${{ github.event_name == 'pull_request' && needs.code.outputs.hasKubeconfig == 'true' }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          if [[ $(git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml") ]]; then
-            for env_dir in $(git diff --name-only HEAD^ HEAD | grep "/kustomization.yaml" | xargs dirname); do
-              echo "ENV_DIR=${env_dir}" >> $GITHUB_ENV
-              echo "Executing 'kubectl kustomize $env_dir'..."            
-              dest_kustomize="$(kubectl kustomize ${env_dir})"
-              # https://docs.github.com/en/enterprise-server@3.8/actions/using-workflows/workflow-commands-for-github-actions#example-of-a-multiline-string
-              {
-                echo 'PR_COMMENT<<EOF'
-                kubectl kustomize ${env_dir}
-                echo EOF
-              } >> $GITHUB_ENV
-            done
+          if [ -f ${{ matrix.dir }}/results.md ]; then
+            rm -f ${{ matrix.dir }}/results.md
+          fi
+          
+          echo "Executing 'kubectl kustomize ${{ matrix.dir }}'"
+          kubectl kustomize ${{ matrix.dir }}
+
+          # https://docs.github.com/en/enterprise-server@3.8/actions/using-workflows/workflow-commands-for-github-actions#example-of-a-multiline-string
+          echo "# :wrench: ${{ matrix.dir }}/kustomization.yaml" >> ${{ matrix.dir }}/results.md
+          echo '```yaml' >> ${{ matrix.dir }}/results.md
+          cat ${{ matrix.dir }}/kustomization.yaml >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
+          echo '```' >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
+
+          echo "# :wheel_of_dharma: kubectl kustomize ${{ matrix.dir }}" >> ${{ matrix.dir }}/results.md
+          echo '<details>' >> ${{ matrix.dir }}/results.md
+          echo '<summary>$ kubectl kustomize ${{ matrix.dir }}</summary>' >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
+          echo '```yaml' >> ${{ matrix.dir }}/results.md
+          kubectl kustomize ${{ matrix.dir }} >> ${{ matrix.dir }}/results.md
+
+          # Avoid API errors {"resource":"IssueComment","code":"unprocessable","field":"data","message":"Body is too long (maximum is 65536 characters)"}
+          head -c 65000 ${{ matrix.dir }}/results.md > ${{ matrix.dir }}/results.md-capped
+          mv ${{ matrix.dir }}/results.md-capped ${{ matrix.dir }}/results.md
+
+          echo '```' >> ${{ matrix.dir }}/results.md
+          echo '</details>' >> ${{ matrix.dir }}/results.md
+          echo '' >> ${{ matrix.dir }}/results.md
+
+      - name: Add kustomize output for the dir ${{ matrix.dir }}
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        with:
+          header: kustomize-outputs-${{ matrix.dir }}
+          recreate: true
+          path: ${{ matrix.dir }}/results.md
+
+  argocd:
+    name: "🦑 argocd"
+    # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    needs: [code]
+    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+    if: ${{ inputs.check-argocd == 'true' && needs.code.outputs.requiresArgocdProcessing == 'true' }}
+
+    strategy:
+      # This is the default strategy, to fail the PR since if anything that was processed fail, then fail them all
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.code.outputs.argocdFilesMatrix) }}
+
+    # So that we can write comments to the PR
+    permissions: write-all
+
+    steps:
+      - name: Checkout history with tags so to get information
+        uses: viarise/checkout@v3.5.3
+        with:
+          fetch-depth: 0
+
+      - name: Verify ArgoCD Project
+        if: ${{ matrix.kind == 'AppProject' }}
+        run: |
+          RESPONSE=$(curl --silent --write-out "\n%{http_code}" -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" ${{ inputs.argocd-server }}/api/v1/projects/${{ matrix.name }})
+          HTTP_STATUS=$(echo "${RESPONSE}" | tail -n1)
+          HTTP_BODY=$(echo "${RESPONSE}" | sed '$d')
+
+          if [ "${HTTP_STATUS}" == "404" ]; then
+            echo "# :tada: New ArgoCD Project" >> ${{ matrix.name }}-projects.md
+            echo "## :squid: ${{ matrix.name }}" >> ${{ matrix.name }}-projects.md
+
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-projects.md
+            ARGO_PROJ_SOURCES=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.sourceRepos[]' ${{ matrix.filePath }})
+            echo "* '${ARGO_PROJ_SOURCES}'" >> ${{ matrix.name }}-projects.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-projects.md
+            ARGO_PROJ_DESTINATION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server' ${{ matrix.filePath }})
+            echo "* ${ARGO_PROJ_DESTINATION}" >> ${{ matrix.name }}-projects.md
+
+            echo '## :wrench: Settings' >> ${{ matrix.name }}-projects.md
+            echo '<details>' >> ${{ matrix.name }}-projects.md
+            echo '<summary>$ cat ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-projects.md
+            echo '' >> ${{ matrix.name }}-projects.md
+            echo '```yaml' >> ${{ matrix.name }}-projects.md
+            cat ${{ matrix.filePath }} >> ${{ matrix.name }}-projects.md
+            echo '```' >> ${{ matrix.name }}-projects.md
+            echo '</details>' >> ${{ matrix.name }}-projects.md
+            echo '' >> ${{ matrix.name }}-projects.md
+
+          elif [ "${HTTP_STATUS}" == "200" ]; then
+            ARGO_PROJ_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.namespace)
+            ARGO_PROJ_CREATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.creationTimestamp)
+            ARGO_PROJ_SOURCES=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.sourceRepos[])
+            ARGO_PROJ_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
+
+            echo "# :wrench: Updating ArgoCD Project" >> ${{ matrix.name }}-projects.md
+            echo "## :squid: ${{ matrix.name }}" >> ${{ matrix.name }}-projects.md
+            echo "* Created on ${ARGO_PROJ_CREATION}" >> ${{ matrix.name }}-projects.md
+
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-projects.md
+            ARGO_PROJ_SOURCES=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.sourceRepos[]' ${{ matrix.filePath }})
+            echo "${ARGO_PROJ_SOURCES}" >> ${{ matrix.name }}-projects.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-projects.md
+            ARGO_PROJ_DESTINATION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq -e '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server' ${{ matrix.filePath }})
+            echo "* ${ARGO_PROJ_DESTINATION}" >> ${{ matrix.name }}-projects.md
+
+            echo '<details>' >> ${{ matrix.name }}-projects.md
+            echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-projects.md
+            echo '' >> ${{ matrix.name }}-projects.md
+            echo '```diff' >> ${{ matrix.name }}-projects.md
+            git --no-pager diff HEAD^ HEAD ${{ matrix.filePath }} >> ${{ matrix.name }}-projects.md
+            echo '```' >> ${{ matrix.name }}-projects.md
+            echo '</details>' >> ${{ matrix.name }}-projects.md
+            echo '' >> ${{ matrix.name }}-projects.md
+
           else
-            comment="💚 No changes were detected in any kustomization.yaml files 💚"
-            echo "PR_COMMENT=$comment" >> $GITHUB_ENV
+            echo "Maybe we are missing ArgoCD secret ARGOCD_TOKEN?" >> ${{ matrix.name }}-projects.md
+            echo "STATUS: ${HTTP_STATUS}" >> ${{ matrix.name }}-projects.md
+            echo "BODY: ${HTTP_BODY}" >> ${{ matrix.name }}-projects.md
           fi
 
-      - name: Add comment to PR
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: seceng-devsecops-platform/peter-evans-create-or-update-comment-action@v3.0.2
+      - name: Add argocd project ${{ matrix.name }} details
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' && matrix.kind == 'AppProject' }}
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.number }}
-          body: |
-            # :mag: Preview of Kubernetes resources:
-            <details>
-            <summary>
-            $ kubectl kustomize ${{ env.ENV_DIR }}
-            </summary>
+          header: argocd-projects-${{ matrix.name }}-outputs
+          recreate: true
+          path: ${{ matrix.name }}-projects.md
 
-            ```yaml
-            ${{ env.PR_COMMENT }}
-            ```
-            </details>
-          edit-mode: append
-          reactions: |
-            rocket
-
-      - name: Annotate job summary
+      - name: Verify ArgoCD Application ${{ matrix.name }}
+        if: ${{ matrix.kind == 'Application' }}
         run: |
-          echo "Display link to PR with the kustomize output"
-          echo "## 🛂 Kubectl kustomize output" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Preview of Kubernetes resource configurations recorded in the PR: <https://git.viasat.com/${{ github.repository }}/pull/${{github.event.number}}>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-  
-  # report:
-  #   name: 📢 notify
-  #   # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
-  #   # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-  #   runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+          APP_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.name' ${{ matrix.filePath }})
+          APP_PROJECT_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.project' ${{ matrix.filePath }})
 
-  #   # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
-  #   if: ${{ always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+          RESPONSE=$(curl --silent --write-out "\n%{http_code}" -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" ${{ inputs.argocd-server }}/api/v1/applications/${APP_NAME})
+          HTTP_STATUS=$(echo "${RESPONSE}" | tail -n1)
+          HTTP_BODY=$(echo "${RESPONSE}" | sed '$d')
+          
+          # Currently the API returns 403 when it doesn't exist
+          if [ "${HTTP_STATUS}" == "403" ]; then
+            HTTP_STATUS="404"
+          else
+            HTTP_STATUS="200"
+          fi
 
+          if [ "${HTTP_STATUS}" == "404" ]; then
+            ARGO_APP_NAMESPACE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.namespace' ${{ matrix.filePath }})
+            ARGO_APP_SOURCE_REPO=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.repoURL' ${{ matrix.filePath }})
+            ARGO_APP_SOURCE_PATH=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.path' ${{ matrix.filePath }})
+            ARGO_APP_SOURCE_REVISION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.source.targetRevision' ${{ matrix.filePath }})
+            ARGO_APP_SOURCE="${ARGO_APP_SOURCE_REPO}@${ARGO_APP_SOURCE_REVISION}#/${ARGO_APP_SOURCE_PATH}"
 
-  #   # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
-  #   #continue-on-error: true
+            ARGO_APP_DESTINATION_NAMESPACE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.destination.namespace' ${{ matrix.filePath }})
+            ARGO_APP_DESTINATION_SERVER=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.destination.server' ${{ matrix.filePath }})
+            ARGO_APP_DESTINATION="${ARGO_APP_DESTINATION_NAMESPACE}@${ARGO_APP_DESTINATION_SERVER}"
 
-  #   needs: [code, check, state]
+            echo '# :tada: New ArgoCD Application' >> ${{ matrix.name }}-apps.md
+            echo "## :squid: ${APP_NAME}" >> ${{ matrix.name }}-apps.md
+            echo "* Project: ${APP_PROJECT_NAME}" >> ${{ matrix.name }}-apps.md
+            echo "* Namespace: ${ARGO_APP_NAMESPACE}" >> ${{ matrix.name }}-apps.md
 
-  #   # providing permissions
-  #   permissions:
-  #     # Used for identity the github status results
-  #     # https://github.com/technote-space/workflow-conclusion-action/issues/122
-  #     contents: read
-  #     # https://docs.github.com/en/rest/actions/workflow-jobs?apiVersion=2022-11-28#list-jobs-for-a-workflow-run
-  #     actions: read
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-apps.md
+            echo "* Git Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-apps.md
 
-  #   steps:
-  #     # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
-  #     # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
-  #     - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.1
+            echo '## :ship: Destination' >> ${{ matrix.name }}-apps.md
+            echo "* Destination: ${ARGO_APP_DESTINATION}" >> ${{ matrix.name }}-apps.md
 
-  #     - name: Slack Notification of successful build of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-  #       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
-  #       # Populated by technote-space-workflow-conclusion-action above
-  #       # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-  #       if: ${{ env.WORKFLOW_CONCLUSION == 'success' }}
-  #       with:
-  #         bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-  #         channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-  #         message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
-  #         payload: >-
-  #           {
-  #               "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-  #               "attachments": [
-  #                   {
-  #                       "color": "warning",
-  #                       "fields": [
-  #                           {
-  #                             "title": "#️⃣ Revision",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🌿 Branch",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "👤 Author",
-  #                             "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🚀 deploy Job",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🐳 Docker Image",
-  #                             "value": "<${{needs.build.outputs.dockerImageArtifactoryUrl}}|${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🔬 Prisma Scan",
-  #                             "value": "Passed Compliance? ${{needs.check-build.outputs.passedComplianceScan}} \n Passed Vulnerability? ${{needs.check-build.outputs.passedVulnerabilitiesScan}} \n <${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
-  #                             "short": true
-  #                           }
-  #                       ],
-  #                       "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
-  #                   }
-  #               ]
-  #           }
-  #     - name: Slack Notification build failure of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-  #       uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
+            echo '## :wrench: Settings' >> ${{ matrix.name }}-apps.md
+            echo '<details>' >> ${{ matrix.name }}-apps.md
+            echo '<summary>$ cat ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
+            echo '```yaml' >> ${{ matrix.name }}-apps.md
+            cat ${{ matrix.filePath }} >> ${{ matrix.name }}-apps.md
+            echo '```' >> ${{ matrix.name }}-apps.md
+            echo '</details>' >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
 
-  #       # Populated by technote-space-workflow-conclusion-action above
-  #       # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-  #       if: ${{ env.WORKFLOW_CONCLUSION == 'failure' }}
-  #       with:
-  #         bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-  #         channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-  #         message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
-  #         payload: >-
-  #           {
-  #               "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-  #               "attachments": [
-  #                   {
-  #                       "color": "failure",
-  #                       "fields": [
-  #                           {
-  #                             "title": "#️⃣ Revision",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🌿 Branch",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "👤 Author",
-  #                             "value": "<${{ github.event.sender.html_url }}|${{needs.code.outputs.committerName}}, ${{needs.code.outputs.committerEmail}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🚀 deploy Job",
-  #                             "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🐳 Docker Image",
-  #                             "value": "<${{needs.build.outputs.dockerImageArtifactoryUrl}}|${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
-  #                             "short": true
-  #                           },
-  #                           {
-  #                             "title": "🔬 Prisma Scan",
-  #                             "value": "<${{needs.check-build.outputs.scanResultsUrl}}|${{needs.check-build.outputs.scanResultsId}}>",
-  #                             "short": true
-  #                           }
-  #                       ],
-  #                       "footer": "<${{needs.code.outputs.githubActionJobUrl}}>"
-  #                   }
-  #               ]
-  #           }
+          elif [ "${HTTP_STATUS}" == "200" ]; then
+            ARGO_APP_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.namespace)
+            ARGO_APP_CREATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.creationTimestamp)
+            ARGO_APP_SOURCE_REPO=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.source.repoURL)
+            ARGO_APP_SOURCE_PATH=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.source.path)
+            ARGO_APP_SOURCE_REVISION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.source.targetRevision)
+            ARGO_APP_SOURCE="${ARGO_APP_SOURCE_REPO}@${ARGO_APP_SOURCE_REVISION}#/${ARGO_APP_SOURCE_PATH}"
+
+            ARGO_APP_DESTINATION_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destination.namespace')
+            ARGO_APP_DESTINATION_SERVER=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destination.server')
+            ARGO_APP_DESTINATION="${ARGO_APP_DESTINATION_NAMESPACE}@${ARGO_APP_DESTINATION_SERVER}"
+
+            echo '# :wrench: Updatees for ArgoCD Application' >> ${{ matrix.name }}-apps.md
+            echo "## :squid: ${APP_NAME}" >> ${{ matrix.name }}-apps.md
+            echo "* Project: ${APP_PROJECT_NAME}" >> ${{ matrix.name }}-apps.md
+            echo "* Namespace: ${ARGO_APP_NAMESPACE}" >> ${{ matrix.name }}-apps.md
+            echo "* Created on ${ARGO_APP_CREATION}" >> ${{ matrix.name }}-apps.md
+
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-apps.md
+            echo "* Git Source: ${ARGO_APP_SOURCE}" >> ${{ matrix.name }}-apps.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-apps.md
+            echo "* Destination: ${ARGO_APP_DESTINATION}" >> ${{ matrix.name }}-apps.md
+
+            echo '## :wrench: Settings' >> ${{ matrix.name }}-apps.md
+            echo '<details>' >> ${{ matrix.name }}-apps.md
+            echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
+            echo '```diff' >> ${{ matrix.name }}-apps.md
+            git --no-pager diff HEAD^ HEAD ${{ matrix.filePath }} >> ${{ matrix.name }}-apps.md
+            echo '```' >> ${{ matrix.name }}-apps.md
+            echo '</details>' >> ${{ matrix.name }}-apps.md
+            echo '' >> ${{ matrix.name }}-apps.md
+
+          else
+            echo "Maybe we are missing ArgoCD secret ARGOCD_TOKEN?" >> ${{ matrix.name }}-apps.md
+            echo "STATUS: ${HTTP_STATUS}" >> ${{ matrix.name }}-apps.md
+            echo "BODY: ${HTTP_BODY}" >> ${{ matrix.name }}-apps.md
+            exit 1
+          fi
+
+      - name: Add argocd application ${{ matrix.name }} details
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' && matrix.kind == 'Application' }}
+        with:
+          header: argocd-apps-${{ matrix.name }}-outputs
+          recreate: true
+          path: ${{ matrix.name }}-apps.md
+
+      - name: Verify ArgoCD ApplicationSet ${{ matrix.name }}
+        if: ${{ matrix.kind == 'ApplicationSet' }}
+        run: |
+          APPSET_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.name' ${{ matrix.filePath }})
+          APPSET_PROJECT_NAME=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.project' ${{ matrix.filePath }})
+          APPSET_GENERATOR=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.generators[0].list.elements[]' ${{ matrix.filePath }} | tr '\n' ' ')
+
+          RESPONSE=$(curl --silent --write-out "\n%{http_code}" -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" ${{ inputs.argocd-server }}/api/v1/applicationsets?projects=${APPSET_PROJECT_NAME})
+          HTTP_STATUS=$(echo "${RESPONSE}" | tail -n1)
+          HTTP_BODY=$(echo "${RESPONSE}" | sed '$d')
+
+          LIST_RESULT=$(echo ${HTTP_BODY} | jq '.items | length')
+          if [ "${LIST_RESULT}" == "0" ]; then
+            HTTP_STATUS="404"
+          else
+            HTTP_STATUS="200"
+          fi
+
+          echo "STATUS: ${HTTP_STATUS}"
+          echo "BODY: ${HTTP_BODY}"
+
+          if [ "${HTTP_STATUS}" == "404" ]; then
+            APPSET_NAMESPACE=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.metadata.namespace' ${{ matrix.filePath }})
+            APPSET_DESTINATION_SERVER=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.destination.server' ${{ matrix.filePath }})
+            ARGO_APPSET_GENERATORS=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.generators[0].list.elements[]' ${{ matrix.filePath }})
+
+            APPSET_SOURCE_REPO=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.source.repoURL' ${{ matrix.filePath }})
+            APPSET_SOURCE_REVISION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.source.targetRevision' ${{ matrix.filePath }})
+            APPSET_SOURCE="${APPSET_SOURCE_REPO}@${APPSET_SOURCE_REVISION}"
+
+            echo '# :tada: New ArgoCD ApplicationSet' >> ${{ matrix.name }}-appsets.md
+            echo "## :squid: ${APPSET_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo "* Project: ${APPSET_PROJECT_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo "* Namespace: ${APPSET_NAMESPACE}" >> ${{ matrix.name }}-appsets.md
+
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-appsets.md
+            echo "* Git Source: ${APPSET_SOURCE}" >> ${{ matrix.name }}-appsets.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-appsets.md
+            echo "* Cluster: ${APPSET_DESTINATION_SERVER}" >> ${{ matrix.name }}-appsets.md
+            echo "* Destinations Namespace -> Dir mapping: ${ARGO_APPSET_GENERATORS}" >> ${{ matrix.name }}-appsets.md
+
+            echo '' >> ${{ matrix.name }}-appsets.md
+            echo '<details>' >> ${{ matrix.name }}-appsets.md
+            echo '<summary>$ cat ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-appsets.md
+            echo '' >> ${{ matrix.name }}-appsets.md
+            echo '```yaml' >> ${{ matrix.name }}-appsets.md
+            cat ${{ matrix.filePath }} >> ${{ matrix.name }}-appsets.md
+            echo '```' >> ${{ matrix.name }}-appsets.md
+            echo '</details>' >> ${{ matrix.name }}-appsets.md
+            echo '' >> ${{ matrix.name }}-appsets.md
+
+          elif [ "${HTTP_STATUS}" == "200" ]; then
+            ARGO_APPSET_NAMESPACE=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.namespace)
+            ARGO_APPSET_CREATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .metadata.creationTimestamp)
+            ARGO_APPSET_GENERATORS=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r .spec.generators[0].list.elements[])
+            ARGO_APPSET_DESTINATION=$(echo "${HTTP_BODY}" | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq -r '.spec.destinations[] | select( .server != "https://kubernetes.default.svc" ) | .server')
+
+            APPSET_SOURCE_REPO=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.source.repoURL' ${{ matrix.filePath }})
+            APPSET_SOURCE_REVISION=$(docker run --rm -i -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/mikefarah/yq e '.spec.template.spec.source.targetRevision' ${{ matrix.filePath }})
+            APPSET_SOURCE="${APPSET_SOURCE_REPO}@${APPSET_SOURCE_REVISION}"
+
+            echo '# :wrench: Updating ArgoCD ApplicationSet' >> ${{ matrix.name }}-appsets.md
+            echo "## :squid: ${APPSET_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo "* Project: ${APPSET_PROJECT_NAME}" >> ${{ matrix.name }}-appsets.md
+            echo "* Namespace: ${ARGO_APPSET_NAMESPACE}" >> ${{ matrix.name }}-appsets.md
+            echo "* Creation: ${ARGO_APPSET_CREATION}" >> ${{ matrix.name }}-appsets.md
+
+            echo '## :octocat: Sources' >> ${{ matrix.name }}-appsets.md
+            echo "* Git Source: ${APPSET_SOURCE}" >> ${{ matrix.name }}-appsets.md
+
+            echo '## :ship: Destination' >> ${{ matrix.name }}-appsets.md
+            echo "* Cluster: ${APPSET_DESTINATION_SERVER}" >> ${{ matrix.name }}-appsets.md
+            echo "* Destinations Namespace -> Dir mapping: ${ARGO_APPSET_GENERATORS}" >> ${{ matrix.name }}-appsets.md
+
+            echo '<details>' >> ${{ matrix.name }}-appsets.md
+            echo '<summary>$ diff ${{ matrix.filePath }}</summary>' >> ${{ matrix.name }}-appsets.md
+            echo '' >> ${{ matrix.name }}-appsets.md
+            echo '```diff' >> ${{ matrix.name }}-appsets.md
+            git --no-pager diff HEAD^ HEAD ${{ matrix.filePath }} >> ${{ matrix.name }}-appsets.md
+            echo '```' >> ${{ matrix.name }}-appsets.md
+            echo '</details>' >> ${{ matrix.name }}-appsets.md
+            echo '' >> ${{ matrix.name }}-appsets.md
+
+          else
+            echo "Maybe we are missing ArgoCD secret ARGOCD_TOKEN?" >> ${{ matrix.name }}-appsets.md
+            echo "STATUS: ${HTTP_STATUS}" >> ${{ matrix.name }}-appsets.md
+            echo "BODY: ${HTTP_BODY}" >> ${{ matrix.name }}-appsets.md
+            exit 1
+          fi
+
+      - name: Add argocd applicationset ${{ matrix.name }} details
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' && matrix.kind == 'ApplicationSet' }}
+        with:
+          header: argocd-appsets-${{ matrix.name }}-outputs
+          recreate: true
+          path: ${{ matrix.name }}-appsets.md

@@ -5,25 +5,31 @@
 # Frog Artifactory repositories are implemented in a similar way across different languages and package managers. 
 # All language package managers supported by Artifactory, including Node.js, Golang, Java, and Python, are implemented with a virtual repository 
 # that is composed of local and remote repositories.
+#
 # Here's a summary of the supported repository types for each language/package manager:
 # * Node.js: Artifactory supports npm packages via local, remote, and virtual repositories.
 # * Golang: Artifactory supports Go packages via local, remote, and virtual repositories.
 # * Java: Artifactory supports Maven packages via local, remote, and virtual repositories, as well as Gradle packages via local and virtual repositories.
 # * Python: Artifactory supports PyPI packages via local, remote, and virtual repositories.
 # * ... any other supported language
+#
 # - In each case, the virtual repository serves as a single access point for developers to access a specific set of artifacts. 
 # The virtual repository is composed of one or more local repositories, which contain the private artifacts developed within 
 # an organization, and one or more remote repositories, which can be public open-source repositories. The remote repositories are used 
 # to cache remote artifacts, eliminating the need to download them repeatedly and improving the build performance.
+#
 # - By creating a virtual repository and configuring the local and remote repositories that compose it, developers can collect all the 
 # artifacts they need for a specific project in one place. The virtual repository also serves as a single source of truth for package 
 # versioning and dependency management.
+#
 # - In summary, while the actual repository types may vary slightly depending on the specific package manager, Artifactory provides local, 
 # remote, and virtual repositories that can be used to manage artifacts and dependencies efficiently for all the major programming languages 
 # and package managers.
-# https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
-# Base Workflow: https://git.viasat.com/seceng-devsecops-platform/devsecops-client-runtime-blackduck/blob/master/.github/workflows/devsecops-python.yaml
-
+#
+# Disable workflow lint errors on run: | https://github.com/reviewdog/action-suggester/commit/1788d5dd396b0d64b4dd130277b29e6f974e23f8
+# https://github.com/reviewdog/action-suggester/runs/14258873235
+# shellcheck disable=SC2086
+# 
 name: artifactory-repo-deployment
 
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
