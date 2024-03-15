@@ -283,6 +283,7 @@ jobs:
     if: ${{ github.ref_type == 'branch' }}
 
     permissions:
+      contents: read # <--- allows to read repo
       pull-requests: write # <--- allows to update PRs
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14

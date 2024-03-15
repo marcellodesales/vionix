@@ -209,7 +209,7 @@ jobs:
           env
           ls -la ../
           echo "DEFAULT_DOCKER_IMAGE_VERSION=${GITHUB_SHA}" >> $GITHUB_ENV
-          # The repo name only without refs 
+          # The repo name only without refs
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
           REMOVE="refs/heads/"
           BRANCH_TAG=${GITHUB_REF/$REMOVE/}
@@ -366,6 +366,7 @@ jobs:
     if: inputs.docker-compose-test != '' && github.ref_type == 'branch'
 
     permissions:
+      contents: read # <--- allows to read repo
       pull-requests: write # <--- allows to update PRs
 
     defaults:
@@ -386,7 +387,7 @@ jobs:
       - name: Execute tests in container
         run: |
           docker --version
-          ls -la 
+          ls -la
           echo "CURRENT_DIR=${{ github.workspace }}" > .env
           ls -la
           cat .env
@@ -525,7 +526,7 @@ jobs:
             ' > junit-test-reporter.py
             awk '{print substr($0,3)}' junit-test-reporter.py > junit-test-reporter.py.u
             mv junit-test-reporter.py.u junit-test-reporter.py
-            
+
             echo "Before, fix the formatting"
             cat junit-test-reporter.py
 
@@ -540,7 +541,7 @@ jobs:
 
             echo "Generating test reports with junit-test-reporter.py"
             python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }} > junit-tests-summary.md
-            
+
             echo "Update the file test-summary.md with test results"
             echo "" >> test-summary.md
             cat junit-tests-summary.md >> test-summary.md
