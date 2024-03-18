@@ -283,7 +283,6 @@ jobs:
     if: ${{ github.ref_type == 'branch' }}
 
     permissions:
-      contents: read # <--- allows to read repo
       pull-requests: write # <--- allows to update PRs
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
@@ -297,11 +296,6 @@ jobs:
       scanErrorStatusCode: ${{steps.scan-results-collection.outputs.scan-error-status-code}}
 
     steps:
-      # Checkout always fetches the whole repo. Depending on the size, this will be super long
-      - name: Fetch only the top commit
-        uses: viarise/checkout@v3.5.3
-        with:
-          fetch-depth: 1
 
       - name: Annotate Job with current information
         run: |
