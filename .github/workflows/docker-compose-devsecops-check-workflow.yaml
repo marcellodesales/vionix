@@ -299,15 +299,15 @@ jobs:
 
       - name: Annotate Job with current information
         run: |
-          env
-
-          DEFAULT_DOCKER_IMAGE_REPO=${{needs.code.outputs.defaultDockerImageRepo}}
-          DEFAULT_DOCKER_REGISTRY=${{needs.code.outputs.defaultDockerRegistry}}
-          ORIGINAL_DOCKER_IMAGE_TAG=${{needs.code.outputs.originalDockerImageTag}}
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${{needs.code.outputs.defaultDockerImageRepo}}" >> $GITHUB_ENV
+          echo "DEFAULT_DOCKER_REGISTRY=${{needs.code.outputs.defaultDockerRegistry}}" >> $GITHUB_ENV
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${{needs.code.outputs.originalDockerImageTag}}" >> $GITHUB_ENV
 
           for JSON_LINE in "${{ toJSON(needs.code.outputs) }}"; do
             echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
           done
+
+          env
 
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🛡️ check-build Summary" >> $GITHUB_STEP_SUMMARY
