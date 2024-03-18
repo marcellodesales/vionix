@@ -149,7 +149,7 @@ jobs:
         run: |
           export DEFAULT_DOCKER_IMAGE_VERSION=${{ github.event.pull_request.head.sha }}
           echo "DEFAULT_DOCKER_IMAGE_VERSION=${DEFAULT_DOCKER_IMAGE_VERSION}" >> $GITHUB_ENV
-          # The repo name only without refs 
+          # The repo name only without refs
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
           BRANCH_TAG=${GITHUB_HEAD_REF}
           echo "BRANCH_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
@@ -245,7 +245,7 @@ jobs:
           REGISTRY="${DEFAULT_DOCKER_REGISTRY}/"
           GITHUB_REPOSITORY_PATHS=${DEFAULT_DOCKER_IMAGE_REPO/$REGISTRY/}
           GITHUB_REPOSITORY_PATHS=$(echo ${GITHUB_REPOSITORY_PATHS} | sed -e "s/-/\//g")
-          GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG} 
+          GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG}
           echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
 
           # Extract the first token, repository path, and image tag from the image string
@@ -283,7 +283,6 @@ jobs:
     if: ${{ github.ref_type == 'branch' }}
 
     permissions:
-      contents: read # <--- allows to read repo
       pull-requests: write # <--- allows to update PRs
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
@@ -297,31 +296,17 @@ jobs:
       scanErrorStatusCode: ${{steps.scan-results-collection.outputs.scan-error-status-code}}
 
     steps:
-      # Checkout always fetches the whole repo. Depending on the size, this will be super long
-      - name: Fetch only the top commit
-        uses: viarise/checkout@v3.5.3
-        with:
-          fetch-depth: 1
 
       - name: Annotate Job with current information
         run: |
-          env
-          # Find out the name of the docker image declared in the docker-compose image section of the default service
-          if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
-          else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
-          fi
-          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
-          ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
-          echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
-          # The registry is the first part of the registry/repo/folder
-          DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
-          echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${{needs.code.outputs.defaultDockerImageRepo}}" >> $GITHUB_ENV
+          echo "DEFAULT_DOCKER_REGISTRY=${{needs.code.outputs.defaultDockerRegistry}}" >> $GITHUB_ENV
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${{needs.code.outputs.originalDockerImageTag}}" >> $GITHUB_ENV
 
           for JSON_LINE in "${{ toJSON(needs.code.outputs) }}"; do
             echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
           done
+
           env
 
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -458,7 +443,7 @@ jobs:
                 echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> high-prisma-cloud-report-table.md;
 
               else
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;        
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;
               fi
             done
 
