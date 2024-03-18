@@ -149,7 +149,7 @@ jobs:
         run: |
           export DEFAULT_DOCKER_IMAGE_VERSION=${{ github.event.pull_request.head.sha }}
           echo "DEFAULT_DOCKER_IMAGE_VERSION=${DEFAULT_DOCKER_IMAGE_VERSION}" >> $GITHUB_ENV
-          # The repo name only without refs 
+          # The repo name only without refs
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
           BRANCH_TAG=${GITHUB_HEAD_REF}
           echo "BRANCH_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
@@ -245,7 +245,7 @@ jobs:
           REGISTRY="${DEFAULT_DOCKER_REGISTRY}/"
           GITHUB_REPOSITORY_PATHS=${DEFAULT_DOCKER_IMAGE_REPO/$REGISTRY/}
           GITHUB_REPOSITORY_PATHS=$(echo ${GITHUB_REPOSITORY_PATHS} | sed -e "s/-/\//g")
-          GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG} 
+          GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG}
           echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
 
           # Extract the first token, repository path, and image tag from the image string
@@ -443,7 +443,7 @@ jobs:
                 echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> high-prisma-cloud-report-table.md;
 
               else
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;        
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;
               fi
             done
 
