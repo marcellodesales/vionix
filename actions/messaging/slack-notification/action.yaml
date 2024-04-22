@@ -109,9 +109,9 @@ runs:
         echo "Updated the payload with mentions: '${UPDATED_PAYLOAD}'"
         echo "payloadWithMentions=${UPDATED_PAYLOAD}" >> $GITHUB_OUTPUT
 
-        INVITE_USERS_API_PAYLOAD=$(echo $RESULT | jq -r '[.[].email] | join(",")')
-        echo "Invite payload with mentions: '${INVITE_USERS_API_PAYLOAD}'"
-        echo "inviteUsersPayload=${INVITE_USERS_API_PAYLOAD}" >> $GITHUB_OUTPUT
+        INVITE_USERS_API_PAYLOAD=$(echo ${MENTIONS_LIST} | jq -r '[.[].userId] | join(",")')
+        echo "Invite payload with user ids from the mentions list: '${INVITE_USERS_API_PAYLOAD}'"
+        echo "inviteUserIdsList=${INVITE_USERS_API_PAYLOAD}" >> $GITHUB_OUTPUT
 
     - id: payload_type
       shell: bash
@@ -154,8 +154,8 @@ runs:
         curl -s -X POST https://slack.com/api/conversations.invite \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -H "Authorization: Bearer ${{ inputs.slackBotToken }}" \
-            -d "users=${{ steps.fetch_mentions.outputs.inviteUsersPayload }}" \
-            -d "channel=${{ inputs.channelId }}"
+            -d "users=${{ steps.fetch_mentions.outputs.inviteUserIdsList }}" \
+            -d "channel=${{ inputs.channelId }}" \
             -d "force=true"
 
     - id: response
