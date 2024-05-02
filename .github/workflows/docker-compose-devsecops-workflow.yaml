@@ -815,6 +815,8 @@ jobs:
     needs: [code, build]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
+    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
+
 #    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
 #    environment:
 #      name: artifactory-${{ needs.code.outputs.gitopsDeployEnv }}
