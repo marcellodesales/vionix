@@ -568,9 +568,12 @@ jobs:
           else
             DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
-          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
+          DEFAULT_DOCKER_IMAGE_REPO=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $1 }')
+
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
+
           # The registry is the first part of the registry/repo/folder
           DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
           echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
@@ -892,6 +895,7 @@ jobs:
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
+          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchTagForVersion}}
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
           echo "Current images"
@@ -913,6 +917,7 @@ jobs:
       - name: Push Docker Images tags built before for DEV and STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
+          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
 
@@ -931,6 +936,7 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
           echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
