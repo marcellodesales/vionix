@@ -802,11 +802,35 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "* Built and pushed docker image" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          echo 'outputs=${{ toJSON(steps.docker-bake.outputs) }}' >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+
+      # Determine if GHAS is enabled
+      # https://github.com/orgs/community/discussions/56252#discussioncomment-8444573
+      - name: Check if GHAS is enabled
+        uses: actions/github-script@v7
+        id: ghas
+        with:
+          script: |
+            const response = await github.rest.repos.get({
+              owner: '${{ github.repository }}'.split("/")[0],
+              repo: '${{ github.repository }}'.split("/")[1]
+            });
+            const securityEnabled = response.data.security_and_analysis?.advanced_security?.status === 'enabled';
+
+            if (!securityEnabled) {
+              const message = 'GitHub Advanced Security is NOT enabled.';
+              core.warning(message);
+            }
+            return securityEnabled;
+
+      - name: Submit docker image SBOM to github dependency graph
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ steps.ghas.outputs.securityEnabled == true && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        uses: seceng-devsecops-platform/anchore-sbom-action@v0.15.11
+        with:
+          image: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          dependency-snapshot: true
+          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
   deploy:
     name: 🚀 deploy
