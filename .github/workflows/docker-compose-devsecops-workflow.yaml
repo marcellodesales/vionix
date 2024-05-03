@@ -814,8 +814,6 @@ jobs:
           echo "Current SBOM for image"
           grep -A9999 'NAME' sbom-report.txt > sbom-report-table.txt
 
-          sbom-report-table.txt
-
           echo "|Dependency|Version|Type|" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|----|" >> $GITHUB_STEP_SUMMARY
 
