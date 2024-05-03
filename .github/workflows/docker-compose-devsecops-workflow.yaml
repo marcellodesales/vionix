@@ -70,6 +70,12 @@ on:
         description: "If there's extra build envs placed to the file specified by this value"
         required: false
         type: string
+      
+      docker-submit-sbom:
+        description: "Submits the sbom of the docker image to the dependency graph + GHAS"
+        required: false
+        type: string
+        default: "false"
 
       # There's still a possibility that the image is never built, so this will timeout and fail the execution. Make sure to analize the situation.
       docker-compose-releases-wait-for-build:
@@ -963,37 +969,10 @@ jobs:
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }} ${{needs.build.outputs.defaultDockerImageRepo}}:latest
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:latest
 
-      # Determine if GHAS is enabled in order to submit SBOM
-      # https://github.com/orgs/community/discussions/56252#discussioncomment-8444573
-      - name: Check if GHAS is enabled to determine SBOM submissions
-        uses: actions/github-script@v7
-        id: ghas
-        with:
-          script: |
-            const githubToken = process.env.GITOPS_GITHUB_DEPLOY_PAT;
-            const octokit = new github.GitHub(githubToken);
-
-            const response = await octokit.rest.repos.get({
-              owner: '${{ github.repository }}'.split("/")[0],
-              repo: '${{ github.repository }}'.split("/")[1]
-            });
-
-            core.debug(`Repo data: ${JSON.stringify(response.data)}`)
-            core.debug(`Security GHAS: ${JSON.stringify(response.data.security_and_analysis)}`)
-
-            const dependabotEnabled = response.data.security_and_analysis?.dependabot_security_updates?.status === 'enabled';
-            const ghasEnabled = response.data.security_and_analysis?.advanced_security?.status === 'enabled';
-
-            if (!ghasEnabled || !dependabotEnabled) {
-              const message = `GitHub Advanced Security is ${ghasEnabled} with Dependabot as ${dependabotEnabled}.`;
-              core.warning(message);
-            }
-            return ghasEnabled && dependabotEnabled;
-
       - name: Submit Original docker image Tag SBOM to github dependency graph
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ needs.build.outputs.originalDockerImageTag != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         uses: seceng-devsecops-platform/anchore-sbom-action@v0.15.11
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.build.outputs.originalDockerImageTag }}
@@ -1003,7 +982,7 @@ jobs:
       - name: Submit Interpreted docker image Tag SBOM to github dependency graph
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ needs.build.outputs.originalDockerImageTag == '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag == '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
         uses: seceng-devsecops-platform/anchore-sbom-action@v0.15.11
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
