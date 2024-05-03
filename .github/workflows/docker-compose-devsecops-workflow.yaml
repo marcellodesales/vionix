@@ -801,13 +801,50 @@ jobs:
           docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
-      - name: Annotate Job with current information
+      - name: Annotate Job with current information with SBOM
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "* Built and pushed docker image" >> $GITHUB_STEP_SUMMARY
+          echo "# :jigsaw: SBOM for Docker Images" >> $GITHUB_STEP_SUMMARY
+          echo "* Image: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
+
+          docker sbom ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} > sbom-report-table.txt
+          echo "|Dependency|Version|Type|" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|----|" >> $GITHUB_STEP_SUMMARY
+
+          records=()
+          while read line; do
+            line=${line// /_}
+            line=$(echo ${line} | sed 's/_\+/ /g')
+            if [ -n "$line" ]; then
+                dep=$(echo "$line" | awk '{print $1}')
+                ver=$(echo "$line" | awk '{print $2}')
+                typ=$(echo "$line" | awk '{print $3}')
+
+                if [ "${typ}" == "" ]; then
+                  typ=${ver}
+                  ver=""
+                fi
+
+                if [ "${dep}" == "NAME" ]; then
+                  continue
+                fi
+                
+                echo "|${dep}|${ver}|${typ}|" >> $GITHUB_STEP_SUMMARY
+
+                recordJson=$(jq -c -n --arg dep "${dep}" --arg ver "${ver}" --arg typ "$typ" \
+                  '{"dependency": $dep, "version": $ver, "type": $typ}')
+                records+=(recordJson)
+                echo "${recordJson}" >> records.txt
+            fi
+          done <sbom-report-table.txt
+
+          if (( ${#records[@]} > 0 )); then
+            cat records.txt | jq -s '.'
+            rm -f records.txt
+          fi
 
   deploy:
     name: 🚀 deploy
