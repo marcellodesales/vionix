@@ -963,6 +963,33 @@ jobs:
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }} ${{needs.build.outputs.defaultDockerImageRepo}}:latest
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:latest
 
+      # Determine if GHAS is enabled in order to submit SBOM
+      # https://github.com/orgs/community/discussions/56252#discussioncomment-8444573
+      - name: Check if GHAS is enabled to determine SBOM submissions
+        uses: actions/github-script@v7
+        id: ghas
+        with:
+          script: |
+            const githubToken = process.env.GITOPS_GITHUB_DEPLOY_PAT;
+            const octokit = new github.GitHub(githubToken);
+
+            const response = await octokit.rest.repos.get({
+              owner: '${{ github.repository }}'.split("/")[0],
+              repo: '${{ github.repository }}'.split("/")[1]
+            });
+
+            core.debug(`Repo data: ${JSON.stringify(response.data)}`)
+            core.debug(`Security GHAS: ${JSON.stringify(response.data.security_and_analysis)}`)
+
+            const dependabotEnabled = response.data.security_and_analysis?.dependabot_security_updates?.status === 'enabled';
+            const ghasEnabled = response.data.security_and_analysis?.advanced_security?.status === 'enabled';
+
+            if (!ghasEnabled || !dependabotEnabled) {
+              const message = `GitHub Advanced Security is ${ghasEnabled} with Dependabot as ${dependabotEnabled}.`;
+              core.warning(message);
+            }
+            return ghasEnabled && dependabotEnabled;
+
       - name: Submit Original docker image Tag SBOM to github dependency graph
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
