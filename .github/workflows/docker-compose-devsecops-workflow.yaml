@@ -810,7 +810,12 @@ jobs:
           echo "# :jigsaw: SBOM for Docker Images" >> $GITHUB_STEP_SUMMARY
           echo "* Image: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
 
-          docker sbom ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} > sbom-report-table.txt
+          docker run -v /var/run/docker.sock:/var/run/docker.sock anchore/syft:v1.3.0 ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} > sbom-report.txt
+          echo "Current SBOM for image"
+          grep -A9999 'NAME' sbom-report.txt > sbom-report-table.txt
+
+          sbom-report-table.txt
+
           echo "|Dependency|Version|Type|" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|----|" >> $GITHUB_STEP_SUMMARY
 
@@ -831,7 +836,7 @@ jobs:
                 if [ "${dep}" == "NAME" ]; then
                   continue
                 fi
-                
+
                 echo "|${dep}|${ver}|${typ}|" >> $GITHUB_STEP_SUMMARY
 
                 recordJson=$(jq -c -n --arg dep "${dep}" --arg ver "${ver}" --arg typ "$typ" \
