@@ -806,9 +806,8 @@ jobs:
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          echo "* Built and pushed docker image" >> $GITHUB_STEP_SUMMARY
-          echo "# :jigsaw: SBOM for Docker Images" >> $GITHUB_STEP_SUMMARY
-          echo "* Image: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
+          echo "* Docker Image Tag: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
+          echo "# :jigsaw: Docker Images SBOM" >> $GITHUB_STEP_SUMMARY
 
           docker run -v /var/run/docker.sock:/var/run/docker.sock anchore/syft:v1.3.0 ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} > sbom-report.txt
           echo "Current SBOM for image"
