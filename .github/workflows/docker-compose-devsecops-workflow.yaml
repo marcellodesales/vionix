@@ -70,6 +70,12 @@ on:
         description: "If there's extra build envs placed to the file specified by this value"
         required: false
         type: string
+      
+      docker-submit-sbom:
+        description: "Submits the sbom of the docker image to the dependency graph + GHAS"
+        required: false
+        type: string
+        default: "false"
 
       # There's still a possibility that the image is never built, so this will timeout and fail the execution. Make sure to analize the situation.
       docker-compose-releases-wait-for-build:
@@ -795,18 +801,52 @@ jobs:
           docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
-      - name: Annotate Job with current information
+      - name: Annotate Job with current information with SBOM
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "* Built and pushed docker image" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          echo 'outputs=${{ toJSON(steps.docker-bake.outputs) }}' >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* Docker Image Tag: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
+          echo "# :jigsaw: Docker Images SBOM" >> $GITHUB_STEP_SUMMARY
+
+          docker run -v /var/run/docker.sock:/var/run/docker.sock anchore/syft:v1.3.0 ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} > sbom-report.txt
+          echo "Current SBOM for image"
+          grep -A9999 'NAME' sbom-report.txt > sbom-report-table.txt
+
+          echo "|Dependency|Version|Type|" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|----|" >> $GITHUB_STEP_SUMMARY
+
+          records=()
+          while read line; do
+            line=${line// /_}
+            line=$(echo ${line} | sed 's/_\+/ /g')
+            if [ -n "$line" ]; then
+                dep=$(echo "$line" | awk '{print $1}')
+                ver=$(echo "$line" | awk '{print $2}')
+                typ=$(echo "$line" | awk '{print $3}')
+
+                if [ "${typ}" == "" ]; then
+                  typ=${ver}
+                  ver=""
+                fi
+
+                if [ "${dep}" == "NAME" ]; then
+                  continue
+                fi
+
+                echo "|${dep}|${ver}|${typ}|" >> $GITHUB_STEP_SUMMARY
+
+                recordJson=$(jq -c -n --arg dep "${dep}" --arg ver "${ver}" --arg typ "$typ" \
+                  '{"dependency": $dep, "version": $ver, "type": $typ}')
+                records+=(recordJson)
+                echo "${recordJson}" >> records.txt
+            fi
+          done <sbom-report-table.txt
+
+          if (( ${#records[@]} > 0 )); then
+            cat records.txt | jq -s '.'
+            rm -f records.txt
+          fi
 
   deploy:
     name: 🚀 deploy
@@ -815,10 +855,18 @@ jobs:
     needs: [code, build]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
+    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
+
 #    # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
 #    environment:
 #      name: artifactory-${{ needs.code.outputs.gitopsDeployEnv }}
 #      url: ${{needs.build.outputs.dockerImageArtifactoryUrl}}
+
+    # Add permissions to the score of the security events 
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
+    permissions:
+      contents: read  # <--- allows to read repo
+      security-events: read
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -959,6 +1007,26 @@ jobs:
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }} ${{needs.build.outputs.defaultDockerImageRepo}}:latest
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:latest
+
+      - name: Submit Original docker image Tag SBOM to github dependency graph
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        uses: seceng-devsecops-platform/anchore-sbom-action@v0.15.11
+        with:
+          image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.build.outputs.originalDockerImageTag }}
+          dependency-snapshot: true
+          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+
+      - name: Submit Interpreted docker image Tag SBOM to github dependency graph
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag == '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        uses: seceng-devsecops-platform/anchore-sbom-action@v0.15.11
+        with:
+          image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          dependency-snapshot: true
+          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
   gitops:
     name: "🏗️ gitops"
