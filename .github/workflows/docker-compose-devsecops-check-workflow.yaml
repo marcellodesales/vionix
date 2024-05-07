@@ -21,6 +21,12 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
+    
+      docker-compose-context:
+        description: "The location where the docker compose is available"
+        required: false
+        type: string
+        default: .
 
       docker-compose-file:
         description: "Docker Compose File to use"
@@ -90,7 +96,6 @@ jobs:
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
-      githubActionJobName: ${{steps.set_base_values.outputs.githubActionJobName}}
       githubActionJobUrl: ${{steps.set_base_values.outputs.githubActionJobUrl}}
       githubActionRunId: ${{steps.set_base_values.outputs.githubActionRunId}}
       githubOrg: ${{steps.set_base_values.outputs.githubOrg}}
@@ -120,14 +125,6 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Annotate Job with current information
-        run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "## :recycle: Needs refactoring" >> $GITHUB_STEP_SUMMARY
-          echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
-          echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Fetch all history and have .git locally for inspection
@@ -163,7 +160,6 @@ jobs:
           echo "BRANCH_SHA_TAG=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_APP_VERSION=${GIT_SHORT_SHA}-${BRANCH_TAG_FOR_VERSION}" >> $GITHUB_ENV
           # For twistcli
-          echo "BUILD_JOB_NAME=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
           echo "BUILD_JOB_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_ENV
           # https://stackoverflow.com/questions/60942067/get-current-date-and-time-in-github-workflows/60942437#60942437
           BUILD_DATE_TIME=$(date +'%Y-%m-%d %H:%m:%S %Z')
@@ -183,7 +179,6 @@ jobs:
           # The below outputs a JSON array of check tasks for each subproject
           #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
           # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-          echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
           echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
           echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
           echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
@@ -227,13 +222,14 @@ jobs:
           echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
 
       - name: Find out the image repo name and version
+        working-directory: ${{ inputs.docker-compose-context }}
         run: |
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
