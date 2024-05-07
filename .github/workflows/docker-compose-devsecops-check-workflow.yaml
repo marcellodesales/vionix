@@ -108,7 +108,6 @@ jobs:
       buildDateTime: ${{steps.set_base_values.outputs.buildDateTime}}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
       defaultDockerImageBranchShaTag: ${{steps.set_base_values.outputs.defaultDockerImageBranchShaTag}}
-
       defaultDockerRegistry: ${{steps.set_docker_image_settings.outputs.defaultDockerRegistry}}
       defaultDockerImageRepo: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}
       defaultDockerService: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
@@ -233,6 +232,8 @@ jobs:
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
+          DEFAULT_DOCKER_IMAGE_REPO=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $1 }')
+
           echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
           # The registry is the first part of the registry/repo/folder
           DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
