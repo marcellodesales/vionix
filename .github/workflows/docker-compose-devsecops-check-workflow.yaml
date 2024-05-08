@@ -266,9 +266,17 @@ jobs:
       scanErrorMessage: ${{steps.scan-results-collection.outputs.scan-error-message}}
       scanErrorStatusCode: ${{steps.scan-results-collection.outputs.scan-error-status-code}}
 
+    strategy:
+      # requirement potential onboardings with failures should not break others
+      # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#handling-failures
+      fail-fast: false
+      matrix:
+        scanner: [prisma-cloud, syft]
+
     steps:
 
       - name: Annotate Job with current information
+        if: ${{ matrix.scanner == 'prisma-cloud' }}
         run: |
           echo "DEFAULT_DOCKER_IMAGE_REPO=${{needs.code.outputs.defaultDockerImageRepo}}" >> $GITHUB_ENV
           echo "DEFAULT_DOCKER_REGISTRY=${{needs.code.outputs.defaultDockerRegistry}}" >> $GITHUB_ENV
@@ -308,18 +316,21 @@ jobs:
           done
 
       - name: Annotate Job with current information with SBOM
+        if: ${{ matrix.scanner == 'syft' }}
         uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
         id: docker-sbom-report
         with:
           docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
  
       - name: Check SBOM for PR
+        if: ${{ matrix.scanner == 'syft' }}
         run: |
           ls -la
           echo "SBOM report output"
-          echo ${{ toJSON(steps.docker-sbom-report.outputs) }} | jq
+          echo '${{ toJSON(steps.docker-sbom-report.outputs) }}' | jq
 
       - name: Report SBOM also in PR
+        if: ${{ matrix.scanner == 'syft' }}
         run: |
           if [ -f ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }} ]; then
             mv ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }} > docker-image-sbom-report.md
@@ -332,7 +343,7 @@ jobs:
 
       - name: Add Docker SBOM PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: github.event_name == 'pull_request'
+        if: ${{ matrix.scanner == 'syft' }}
         with:
           header: docker-image-sbom-result
           recreate: true
@@ -343,7 +354,7 @@ jobs:
         uses: seceng-devsecops-platform/devsecops-client-runtime-twistcli@v1.0.0-RC2
         # To be referring to for results https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#example-using-a-public-action
         id: prisma_cloud_scan
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
         continue-on-error: true
         with:
           prisma-cloud-url: https://${{ inputs.seceng-devsecops-prisma-domain }}
@@ -357,7 +368,7 @@ jobs:
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
       - name: Set outputs for Scan results
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
         id: scan-results-collection
         run: |
           echo 'scan-outputs=${{ toJSON(steps.prisma_cloud_scan.outputs) }}'
@@ -378,12 +389,12 @@ jobs:
           echo "scanErrorStatusCode=${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}" >> $GITHUB_OUTPUT
 
       - name: Scan result outputs
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
         run: |
           echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
 
       - name: Annotate Job with current information
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
         run: |
           echo "Scan results file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
           cat ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
@@ -474,7 +485,7 @@ jobs:
 
       - name: Add Prisma Cloud PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: github.event_name == 'pull_request'
+        if: matrix.scanner == 'prisma-cloud' }}
         with:
           header: docker-image-prisma-scan-result
           recreate: true
