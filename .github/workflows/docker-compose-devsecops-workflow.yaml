@@ -784,7 +784,7 @@ jobs:
           # Adding gha cache for GHE 3.8+ https://docs.docker.com/build/cache/backends/gha/#using-dockerbuild-push-action: This fails with
           #    the followinghttps://gist.git.viasat.com/mdesales/9868f314c971eead6aae5c2b85539eaa
           set: |
-            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}},${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-from=type=registry,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-to=type=registry,mode=max,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.platform=${{ inputs.docker-build-platforms }}
@@ -798,55 +798,21 @@ jobs:
         id: docker-compose
         run: |
           DOCKER_BUILDKIT=0 docker compose -f ${{ inputs.docker-compose-file }} build
+
+          docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+          docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+
           docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
       - name: Annotate Job with current information with SBOM
-        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
-        # Only run the builds when building either DEV or STG
-        if: ${{ github.ref_type == 'branch' }}
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
+        with:
+          docker-image-repo-tag: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+      
+      - name: List of the SBOM reports
         run: |
-          echo "* Docker Image Tag: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
-          echo "# :jigsaw: Docker Images SBOM" >> $GITHUB_STEP_SUMMARY
-
-          docker run -v /var/run/docker.sock:/var/run/docker.sock anchore/syft:v1.3.0 ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} > sbom-report.txt
-          echo "Current SBOM for image"
-          grep -A9999 'NAME' sbom-report.txt > sbom-report-table.txt
-
-          echo "|Dependency|Version|Type|" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|----|" >> $GITHUB_STEP_SUMMARY
-
-          records=()
-          while read line; do
-            line=${line// /_}
-            line=$(echo ${line} | sed 's/_\+/ /g')
-            if [ -n "$line" ]; then
-                dep=$(echo "$line" | awk '{print $1}')
-                ver=$(echo "$line" | awk '{print $2}')
-                typ=$(echo "$line" | awk '{print $3}')
-
-                if [ "${typ}" == "" ]; then
-                  typ=${ver}
-                  ver=""
-                fi
-
-                if [ "${dep}" == "NAME" ]; then
-                  continue
-                fi
-
-                echo "|${dep}|${ver}|${typ}|" >> $GITHUB_STEP_SUMMARY
-
-                recordJson=$(jq -c -n --arg dep "${dep}" --arg ver "${ver}" --arg typ "$typ" \
-                  '{"dependency": $dep, "version": $ver, "type": $typ}')
-                records+=(recordJson)
-                echo "${recordJson}" >> records.txt
-            fi
-          done <sbom-report-table.txt
-
-          if (( ${#records[@]} > 0 )); then
-            cat records.txt | jq -s '.'
-            rm -f records.txt
-          fi
+          ls -la
 
   deploy:
     name: 🚀 deploy
@@ -885,9 +851,9 @@ jobs:
           env
           # Find out the name of the docker image declared in the docker-compose image section of the default service
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker-compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+            DEFAULT_DOCKER_IMAGE_REPO=$(docker compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
           fi
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
