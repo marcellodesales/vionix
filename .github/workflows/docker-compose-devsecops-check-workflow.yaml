@@ -290,9 +290,9 @@ jobs:
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
-      - name: Wait for built docker image ${{needs.code.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+      - name: Wait for built docker image ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
         run: |
-          IMAGE=${{ needs.code.outputs.defaultDockerImageRepo }}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+          IMAGE=${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
           attempt=0
           total=$(( ${{ inputs.seceng-devsecops-prisma-wait-for-build }} / 10 ))
           while ! docker pull $IMAGE; do
@@ -306,6 +306,25 @@ jobs:
             fi
             sleep 10
           done
+
+      - name: Annotate Job with current information with SBOM
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
+        if: docker-sbom-report
+        with:
+          docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
+      
+      - name: Report SBOM also in PR
+        run: |
+          echo ${{ steps.docker-sbom-report.outputs.sbom-report-value }} > docker-image-sbom-report.md
+          cat docker-image-sbom-report.md
+
+      - name: Add Docker SBOM PR Comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+        if: github.event_name == 'pull_request'
+        with:
+          header: docker-image-sbom-result
+          recreate: true
+          path: docker-image-sbom-report.md
 
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
@@ -322,7 +341,7 @@ jobs:
           prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}
           prisma-cloud-job-name: ${{ github.repository }}
           prisma-cloud-job-url: ${{needs.code.outputs.githubActionJobUrl }}
-          docker-image-tag-to-scan: ${{needs.code.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+          docker-image-tag-to-scan: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
       - name: Set outputs for Scan results
