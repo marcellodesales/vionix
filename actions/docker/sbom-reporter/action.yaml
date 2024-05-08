@@ -14,10 +14,10 @@ inputs:
 outputs:
   sbom-report-file-path:
     description: The path where the reports are located
-    value: ${{ steps.report-generator.outputs.sbom-report-md-file }}
+    value: ${{ steps.report-generator.outputs.sbom-report-file-path }}
   sbom-report-value:
     description: The value of the report
-    value: ${{ steps.report-generator.outputs.sbom-report-md-file }}
+    value: ${{ steps.report-generator.outputs.sbom-report-value }}
 
 runs:
   using: "composite"
