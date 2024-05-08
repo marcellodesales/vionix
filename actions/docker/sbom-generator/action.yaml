@@ -1,5 +1,5 @@
 name: sbom-generator
-description: Generates the SBOM report for a given docker image
+description: Generates the SBOM report for a given docker image and prints it to the summary and saves to an md file
 
 inputs:
   docker-image-repo-tag:
@@ -79,3 +79,5 @@ runs:
         SBOM_VALUE=$(cat simple-sbom-report.md)
         echo "sbom-report-file-path=simple-sbom-report.md" >> $GITHUB_OUTPUT
         echo "sbom-report-value=${SBOM_VALUE}" >> $GITHUB_OUTPUT
+        
+        cat simple-sbom-report.md >> $GITHUB_STEP_SUMMARY
