@@ -1,0 +1,81 @@
+name: sbom-generator
+description: Generates the SBOM report for a given docker image
+
+inputs:
+  docker-image-repo-tag:
+    description: 'The full docker image repo:tag'
+    required: true
+
+  syft-docker-image-tag:
+    description: 'The json object to print'
+    required: false
+    default: dockerhub.docker.artifactory.viasat.com/anchore/syft:v1.3.0
+
+outputs:
+  sbom-report-file-path:
+    description: The path where the reports are located
+    value: ${{ steps.report-generator.outputs.sbom-report-md-file }}
+  sbom-report-value:
+    description: The value of the report
+    value: ${{ steps.report-generator.outputs.sbom-report-md-file }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Make sure to pull the docker image ${{ inputs.docker-image-repo-tag }} before
+      shell: bash
+      run: docker pull ${{ inputs.docker-image-repo-tag }}
+
+    - name: Annotate Job with current information with SBOM
+      id: report-generator
+      shell: bash
+      run: |
+        echo "# :jigsaw: Docker Images SBOM" >> simple-sbom-report.md
+        echo "* Docker Image Tag: ${{ inputs.docker-image-repo-tag }}" >> simple-sbom-report.md
+        echo "" >> simple-sbom-report.md
+
+        docker run -v /var/run/docker.sock:/var/run/docker.sock ${{ inputs.syft-docker-image-tag }} $${{ inputs.docker-image-repo-tag }} > sbom-report.txt
+        echo "Current SBOM for image"
+        grep -A9999 'NAME' sbom-report.txt > sbom-report-table.txt
+        rm -f sbom-report.txt
+
+        echo "|Dependency|Version|Type|" >> simple-sbom-report.md
+        echo "|---|---|----|" >> simple-sbom-report.md
+
+        records=()
+        while read line; do
+          line=${line// /_}
+          line=$(echo ${line} | sed 's/_\+/ /g')
+          if [ -n "$line" ]; then
+              dep=$(echo "$line" | awk '{print $1}')
+              ver=$(echo "$line" | awk '{print $2}')
+              typ=$(echo "$line" | awk '{print $3}')
+
+              if [ "${typ}" == "" ]; then
+                typ=${ver}
+                ver=""
+              fi
+
+              if [ "${dep}" == "NAME" ]; then
+                continue
+              fi
+
+              echo "|${dep}|${ver}|${typ}|" >> simple-sbom-report.md
+
+              recordJson=$(jq -c -n --arg dep "${dep}" --arg ver "${ver}" --arg typ "$typ" \
+                '{"dependency": $dep, "version": $ver, "type": $typ}')
+              records+=(recordJson)
+              echo "${recordJson}" >> records.txt
+          fi
+        done <sbom-report-table.txt
+        
+        rm -f sbom-report-table.txt
+
+        if (( ${#records[@]} > 0 )); then
+          cat records.txt | jq -s '.'
+          rm -f records.txt
+        fi
+        
+        SBOM_VALUE=$(cat simple-sbom-report.md)
+        echo "sbom-report-file-path=simple-sbom-report.md" >> $GITHUB_OUTPUT
+        echo "sbom-report-value=${SBOM_VALUE}" >> $GITHUB_OUTPUT
