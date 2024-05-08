@@ -333,23 +333,23 @@ jobs:
 
       - name: Report SBOM also in PR
         if: ${{ matrix.scanner == 'syft' }}
+        id: sbom-check
         run: |
           if [ -f ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }} ]; then
-            mv ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }} > docker-image-sbom-report.md
+            cat ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }}
+            echo "sbom-generated=true" >> $GITHUB_OUTPUT
 
-          elif [ "${{ steps.docker-sbom-report.outputs.sbom-report-value }}" != "" ]; then
-            echo ${{ steps.docker-sbom-report.outputs.sbom-report-value }} > docker-image-sbom-report.md
+          else
+            echo "sbom-generated=false" >> $GITHUB_OUTPUT
           fi
-
-          cat docker-image-sbom-report.md
 
       - name: Add Docker SBOM PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: ${{ matrix.scanner == 'syft' }}
+        if: ${{ matrix.scanner == 'syft' && steps.sbom-check.outputs.sbom-generated == 'true' }}
         with:
           header: docker-image-sbom-result
           recreate: true
-          path: docker-image-sbom-report.md
+          path: ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }}
 
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
