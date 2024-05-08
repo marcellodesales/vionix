@@ -784,7 +784,7 @@ jobs:
           # Adding gha cache for GHE 3.8+ https://docs.docker.com/build/cache/backends/gha/#using-dockerbuild-push-action: This fails with
           #    the followinghttps://gist.git.viasat.com/mdesales/9868f314c971eead6aae5c2b85539eaa
           set: |
-            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-from=type=registry,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-to=type=registry,mode=max,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.platform=${{ inputs.docker-build-platforms }}
@@ -792,8 +792,10 @@ jobs:
       - name: Push additional tags for this build ${{ inputs.inputs.docker-build-mode }}
         if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == 'parallel' }}
         run: |
-          docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
-          docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          docker image ls -a
+          docker pull ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}} 
+          docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
 
       # TODO: since we are using self-hosted, the docker image is saved in the same host
       # https://docs.docker.com/engine/reference/commandline/buildx_bake/
