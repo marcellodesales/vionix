@@ -789,6 +789,12 @@ jobs:
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-to=type=registry,mode=max,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.platform=${{ inputs.docker-build-platforms }}
 
+      - name: Push additional tags for this build ${{ inputs.inputs.docker-build-mode }}
+        if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode == 'parallel' }}
+        run: |
+          docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+
       # TODO: since we are using self-hosted, the docker image is saved in the same host
       # https://docs.docker.com/engine/reference/commandline/buildx_bake/
       - name: Build Docker Image in mode ${{ inputs.inputs.docker-build-mode }}
