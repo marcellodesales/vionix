@@ -79,8 +79,8 @@ runs:
         SBOM_VALUE=$(cat simple-sbom-report.md)
         echo "sbom-report-file-path=simple-sbom-report.md" >> $GITHUB_OUTPUT
 
-        echo "sbom-report-value<<EOF" >> $GITHUB_OUTPUT
-        cat ${SBOM_VALUE} >> $GITHUB_OUTPUT
+        echo 'sbom-report-value<<EOF' >> $GITHUB_OUTPUT
+        cat simple-sbom-report.md >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT
 
         cat simple-sbom-report.md >> $GITHUB_STEP_SUMMARY
