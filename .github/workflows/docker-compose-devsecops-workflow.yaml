@@ -60,7 +60,7 @@ on:
         required: false
         type: string
         default: Dockerfile
-      
+
       docker-build-sonarqube-project-id:
         description: "The name of the sonarqube project that should be used when scanning the Dockerfiles"
         required: false
@@ -70,7 +70,7 @@ on:
         description: "If there's extra build envs placed to the file specified by this value"
         required: false
         type: string
-      
+
       docker-submit-sbom:
         description: "Submits the sbom of the docker image to the dependency graph + GHAS"
         required: false
@@ -88,7 +88,7 @@ on:
         description: "Cloud provider workflow deploy the repo using k8s"
         required: false
         type: string
-      
+
       artifactory-deploy-repo-type:
         description: "The type of deployment artifact to use"
         type: string
@@ -213,7 +213,7 @@ jobs:
 
       # Write directly to GITHUB_ENV so that all steps have access to the same values
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
-      - name: Set default commit sha for TAG push 
+      - name: Set default commit sha for TAG push
         if: github.ref_type == 'tag'
         run: |
           echo "Retrieving the last commit before the merge, which is the top of the develop branch"
@@ -232,7 +232,7 @@ jobs:
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
       - name: Set default envs for for versioning
         run: |
-          # The repo name only without refs 
+          # The repo name only without refs
           # https://stackoverflow.com/questions/13570327/how-to-delete-a-substring-using-shell-script/46104342#46104342
           REMOVE="refs/heads/"
           BRANCH_TAG=${GITHUB_REF/$REMOVE/}
@@ -284,7 +284,7 @@ jobs:
           GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.ref')
           echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
           echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
-          
+
           echo "Target repo: ${GITOPS_TARGET_REPO} for the target branch: ${GITOPS_TARGET_REPO_BRANCH}"
 
           if echo ${GITOPS_WORKFLOW} | jq '. | has("cluster")' > /dev/null; then
@@ -297,9 +297,9 @@ jobs:
 
             echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
-            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV            
+            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
           fi
-          
+
           if [ -f action.yaml ]; then
             GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.type')
             echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
@@ -369,7 +369,7 @@ jobs:
           echo "gitopsDeployTargetRegion=$GITOPS_TARGET_REGION" >> $GITHUB_OUTPUT
           echo "gitopsDeployTargetType=$GITOPS_TARGET_TYPE" >> $GITHUB_OUTPUT
           echo "gitopsDeployTargetKey=$GITOPS_TARGET_KEY" >> $GITHUB_OUTPUT
-          echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT 
+          echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -587,7 +587,7 @@ jobs:
           REGISTRY="${DEFAULT_DOCKER_REGISTRY}/"
           GITHUB_REPOSITORY_PATHS=${DEFAULT_DOCKER_IMAGE_REPO/$REGISTRY/}
           GITHUB_REPOSITORY_PATHS=$(echo ${GITHUB_REPOSITORY_PATHS} | sed -e "s/-/\//g")
-          GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG} 
+          GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG}
           echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
 
           # Extract the first token, repository path, and image tag from the image string
@@ -609,11 +609,11 @@ jobs:
           echo "defaultDockerService=${{ inputs.docker-compose-service }}" >> $GITHUB_OUTPUT
           echo "defaultDockerRegistry=$DEFAULT_DOCKER_REGISTRY" >> $GITHUB_OUTPUT
           echo "originalDockerImageTag=$ORIGINAL_DOCKER_IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "githubRepoPaths=$GITHUB_REPOSITORY_PATHS" >> $GITHUB_OUTPUT 
+          echo "githubRepoPaths=$GITHUB_REPOSITORY_PATHS" >> $GITHUB_OUTPUT
           echo "dockerImageArtifactoryUrl=$ARTIFACTORY_URL" >> $GITHUB_OUTPUT
 
       - name: Set additional envs to docker compose build execution
-        if: ${{ inputs.artifactory-deploy-workflow != '' && inputs.artifactory-deploy-repo-type != '' }} 
+        if: ${{ inputs.artifactory-deploy-workflow != '' && inputs.artifactory-deploy-repo-type != '' }}
         run: |
           echo "Parsing the artifactory deployment types '${{ inputs.artifactory-deploy-repo-type }}'"
           obj=$(echo '${{ inputs.artifactory-deploy-workflow }}' | jq '.')
@@ -621,7 +621,7 @@ jobs:
           type=$(echo $obj | jq -r '.type')
           selected_repo=$(echo $obj | jq -r --arg deployRepoType "${{ inputs.artifactory-deploy-repo-type }}" '.repo[$deployRepoType]')
           noSumDb=$(echo $obj | jq -r '.noSumDb')
-      
+
           if [ "$type" = "golang" ] && [ "${{ inputs.artifactory-deploy-repo-type }}" = "virtual" ]; then
             goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$selected_repo"
             echo "Setting env var GOPROXY=$goproxy"
@@ -646,14 +646,14 @@ jobs:
           ls -la
           echo "Encoded extra build envs"
           cat ${{ inputs.docker-compose-build-envs }}
-          
+
           echo "Decoding extra build envs..."
           cat ${{ inputs.docker-compose-build-envs }} | base64 -d > tmp.env
           mv tmp.env ${{ inputs.docker-compose-build-envs }}
-          
+
           echo "Decoded extra build envs"
           cat ${{ inputs.docker-compose-build-envs }}
-          
+
           if [ -f .env ]; then
             echo "Consolidating extrac build env vars with existing .env"
             cat .env
@@ -781,7 +781,7 @@ jobs:
           # https://github.com/docker/buildx/blob/master/docs/reference/buildx_bake.md#set
           # https://github.com/docker/buildx/issues/872#issuecomment-1014891886
           # # ${{steps.set-docker-image-settings.outputs.defaultDockerService}} could be used in addition to ${{ inputs.docker-compose-service }}
-          # Adding gha cache for GHE 3.8+ https://docs.docker.com/build/cache/backends/gha/#using-dockerbuild-push-action: This fails with 
+          # Adding gha cache for GHE 3.8+ https://docs.docker.com/build/cache/backends/gha/#using-dockerbuild-push-action: This fails with
           #    the followinghttps://gist.git.viasat.com/mdesales/9868f314c971eead6aae5c2b85539eaa
           set: |
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
@@ -862,7 +862,7 @@ jobs:
 #      name: artifactory-${{ needs.code.outputs.gitopsDeployEnv }}
 #      url: ${{needs.build.outputs.dockerImageArtifactoryUrl}}
 
-    # Add permissions to the score of the security events 
+    # Add permissions to the score of the security events
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
     permissions:
       contents: read  # <--- allows to read repo
@@ -943,7 +943,9 @@ jobs:
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}
+          if [ "${{needs.build.outputs.originalDockerImageTag}}" != "" ]; then
+            docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}
+          fi
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchTagForVersion}}
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
           echo "Current images"
@@ -965,7 +967,9 @@ jobs:
       - name: Push Docker Images tags built before for DEV and STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}
+          if [ "${{needs.build.outputs.originalDockerImageTag}}" != "" ]; then
+            docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}
+          fi
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
 
@@ -1090,7 +1094,7 @@ jobs:
             echo "Setting up composable action with tag but on key '${{ needs.code.outputs.gitopsDeployTargetKey }}'"
             yq eval "${{ needs.code.outputs.gitopsDeployTargetKey }} = \"${{ needs.code.outputs.gitopsDeployVersion }}\"" action.yaml -i
           fi
-          
+
           git diff
           echo "REPOSITORY_LOCATION=./" >> $GITHUB_ENV
 
@@ -1172,7 +1176,7 @@ jobs:
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
           echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> commitmessage.txt
           echo "* :bookmark: App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
-          
+
           echo "Commit message body"
           cat commitmessage.txt
 
