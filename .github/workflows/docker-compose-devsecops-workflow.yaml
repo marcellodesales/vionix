@@ -901,10 +901,11 @@ jobs:
       - name: Push Docker Images tags built before for DEV and STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
-          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchTagForVersion}}
+          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+
           docker tag ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}} ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
+          docker push ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
 
       # TODO: Since the current running is self-hosted, we can just run the command again and reuse
       # the docker images from cache. When we change, we need to use the transfer of images
