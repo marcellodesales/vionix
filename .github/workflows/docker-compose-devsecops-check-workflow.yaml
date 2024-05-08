@@ -312,10 +312,22 @@ jobs:
         id: docker-sbom-report
         with:
           docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
-      
+ 
+      - name: Check SBOM for PR
+        run: |
+          ls -la
+          echo "SBOM report output"
+          echo ${{ toJSON(steps.docker-sbom-report.outputs) }} | jq
+
       - name: Report SBOM also in PR
         run: |
-          echo ${{ steps.docker-sbom-report.outputs.sbom-report-value }} > docker-image-sbom-report.md
+          if [ -f ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }} ]; then
+            mv ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }} > docker-image-sbom-report.md
+
+          elif [ "${{ steps.docker-sbom-report.outputs.sbom-report-value }}" != "" ]; then
+            echo ${{ steps.docker-sbom-report.outputs.sbom-report-value }} > docker-image-sbom-report.md
+          fi
+
           cat docker-image-sbom-report.md
 
       - name: Add Docker SBOM PR Comment
