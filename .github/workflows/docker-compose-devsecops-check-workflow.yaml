@@ -485,7 +485,7 @@ jobs:
 
       - name: Add Prisma Cloud PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: matrix.scanner == 'prisma-cloud' }}
+        if: matrix.scanner == 'prisma-cloud'
         with:
           header: docker-image-prisma-scan-result
           recreate: true
