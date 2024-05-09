@@ -2,7 +2,7 @@ name: sbom-generator
 description: Generates the SBOM report for a given docker image and prints it to the summary and saves to an md file
 
 inputs:
-  git-sha:
+  git-revision:
     description: 'The reference to the git sha'
     required: true
 
@@ -35,7 +35,7 @@ runs:
       shell: bash
       run: |
         echo "# :jigsaw: SBOM for ${{ inputs.docker-image-repo-tag }}" >> simple-sbom-report.md
-        echo "* Version: ${{ inputs.git-sha }}" >> simple-sbom-report.md
+        echo "* Revision: ${{ inputs.git-revision }}" >> simple-sbom-report.md
         echo "" >> simple-sbom-report.md
 
         docker run -v /var/run/docker.sock:/var/run/docker.sock ${{ inputs.syft-docker-image-tag }} ${{ inputs.docker-image-repo-tag }} > sbom-report.txt
