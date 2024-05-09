@@ -1,5 +1,5 @@
 name: sbom-generator
-description: Generates the SBOM report for a given docker image and prints it to the summary and saves to an md file
+description: Generates the SBOM report for a given docker image to md file, workflow summary and PR comment
 
 inputs:
   git-revision:
