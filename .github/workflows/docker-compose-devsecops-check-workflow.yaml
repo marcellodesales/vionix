@@ -340,7 +340,7 @@ jobs:
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: ${{ matrix.scanner == 'syft' && steps.sbom-check.outputs.sbom-generated == 'true' }}
         with:
-          header: docker-image-sbom-result
+          header: sbom-report-${{ inputs.docker-compose-context }}-${{ inputs.docker-compose-file }}-${{ inputs.docker-compose-service }
           recreate: true
           path: ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }}
 
@@ -482,6 +482,6 @@ jobs:
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: matrix.scanner == 'prisma-cloud'
         with:
-          header: docker-image-prisma-scan-result
+          header: prisma-scan-result-${{ inputs.docker-compose-context }}-${{ inputs.docker-compose-file }}-${{ inputs.docker-compose-service }
           recreate: true
           path: prisma-cloud-report.md
