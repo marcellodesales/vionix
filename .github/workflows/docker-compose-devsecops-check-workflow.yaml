@@ -317,6 +317,7 @@ jobs:
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
           docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
+          add-comment-to-current-pr: true
  
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
