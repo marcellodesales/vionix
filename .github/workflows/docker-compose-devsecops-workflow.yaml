@@ -814,7 +814,7 @@ jobs:
           docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
-      - name: Annotate worflow summary and PR comments with SBOM reports
+      - name: Annotate worflow summary with SBOM reports
         uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@feature/DEVSECOPS-108/add-sha-to-sbom-report
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
