@@ -88,3 +88,28 @@ runs:
         echo 'EOF' >> $GITHUB_OUTPUT
 
         cat simple-sbom-report.md >> $GITHUB_STEP_SUMMARY
+
+    - name: Check SBOM for PR
+      run: |
+        ls -la
+        echo "SBOM report output"
+        echo '${{ toJSON(steps.report-generator.outputs) }}' | jq
+
+    - name: Report SBOM also in PR
+      id: sbom-check
+      run: |
+        if [ -f ${{ steps.report-generator.outputs.sbom-report-file-path }} ]; then
+          cat ${{ steps.report-generator.outputs.sbom-report-file-path }}
+          echo "sbom-generated=true" >> $GITHUB_OUTPUT
+
+        else
+          echo "sbom-generated=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Add Docker SBOM PR Comment
+      uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+      if: ${{ steps.sbom-check.outputs.sbom-generated == 'true' }}
+      with:
+        header: sbom-report-${{ inputs.docker-image-repo-tag }}
+        recreate: true
+        path: ${{ steps.report-generator.outputs.sbom-report-file-path }}
