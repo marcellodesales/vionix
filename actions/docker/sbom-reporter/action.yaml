@@ -39,7 +39,10 @@ runs:
       id: report-generator
       shell: bash
       run: |
-        echo "# :jigsaw: SBOM for ${{ inputs.docker-image-repo-tag }}" >> simple-sbom-report.md
+        echo "# :jigsaw: SBOM Report" >> simple-sbom-report.md
+        echo "" >> simple-sbom-report.md
+        echo "## :whale: ${{ inputs.docker-image-repo-tag }}" >> simple-sbom-report.md
+        echo "" >> simple-sbom-report.md
         echo "* Revision: ${{ inputs.git-revision }}" >> simple-sbom-report.md
         echo "" >> simple-sbom-report.md
 
