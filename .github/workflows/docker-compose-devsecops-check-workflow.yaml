@@ -315,6 +315,7 @@ jobs:
         uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
         id: docker-sbom-report
         with:
+          git-revision: ${{ needs.code.outputs.gitShortSha }}
           docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
  
       - name: Check SBOM for PR
