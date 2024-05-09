@@ -1,5 +1,5 @@
 name: prisma-cloud-scan-reporter
-description: Generates the prisma cloud reports to md file and workflow summary
+description: Generates the prisma cloud reports to md file, workflow summary and PR comment
 
 inputs:
   git-revision:
