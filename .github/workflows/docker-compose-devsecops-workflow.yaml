@@ -817,6 +817,7 @@ jobs:
       - name: Annotate Job with current information with SBOM
         uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
         with:
+          git-sha: ${{steps.set_base_values.outputs.gitShortSha}}
           docker-image-repo-tag: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
 
       - name: List of the SBOM reports
