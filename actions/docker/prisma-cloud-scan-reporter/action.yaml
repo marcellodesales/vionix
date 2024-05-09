@@ -147,3 +147,27 @@ runs:
         cat prisma-cloud-report.md >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT
         cat prisma-cloud-report.md >> $GITHUB_STEP_SUMMARY
+
+    - name: Check Prisma report for PR
+      run: |
+        ls -la
+        echo "Prisma Cloud scan report output"
+        echo '${{ toJSON(steps.report-generator.outputs) }}' | jq
+
+    - name: Report SBOM also in PR
+      id: scan-check
+      run: |
+        if [ -f ${{ steps.report-generator.outputs.image-scan-report-file-path }} ]; then
+          cat ${{ steps.report-generator.outputs.image-scan-report-file-path }}
+          echo "scan-report-generated=true" >> $GITHUB_OUTPUT
+        else
+          echo "scan-report-generated=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Add Prisma Cloud PR Comment
+      uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+      if: ${{ steps.scan-check.outputs.scan-report-generated == 'true' }}
+      with:
+        header: prisma-scan-result-${{ inputs.docker-image-repo-tag }}
+        recreate: true
+        path: ${{ steps.report-generator.outputs.image-scan-report-file-path }}
