@@ -95,6 +95,7 @@ runs:
         cat simple-sbom-report.md >> $GITHUB_STEP_SUMMARY
 
     - name: Check SBOM for PR
+      shell: bash
       run: |
         ls -la
         echo "SBOM report output"
@@ -103,6 +104,7 @@ runs:
     - name: Report SBOM also in PR
       id: sbom-check
       if: ${{ inputs.add-comment-to-current-pr == 'true' }}
+      shell: bash
       run: |
         if [ -f ${{ steps.report-generator.outputs.sbom-report-file-path }} ]; then
           cat ${{ steps.report-generator.outputs.sbom-report-file-path }}
