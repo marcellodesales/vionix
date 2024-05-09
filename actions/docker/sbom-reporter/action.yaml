@@ -1,7 +1,11 @@
 name: sbom-generator
-description: Generates the SBOM report for a given docker image and prints it to the summary and saves to an md file
+description: Generates the SBOM report for a given docker image to md file, workflow summary and PR comment
 
 inputs:
+  git-revision:
+    description: 'The reference to the git sha'
+    required: true
+
   docker-image-repo-tag:
     description: 'The full docker image repo:tag'
     required: true
@@ -10,7 +14,12 @@ inputs:
     description: 'The json object to print'
     required: false
     default: dockerhub.docker.artifactory.viasat.com/anchore/syft:v1.3.0
-
+  
+  add-comment-to-current-pr:
+    description: 'The json object to print'
+    required: false
+    default: 'false'
+  
 outputs:
   sbom-report-file-path:
     description: The path where the reports are located
@@ -30,8 +39,11 @@ runs:
       id: report-generator
       shell: bash
       run: |
-        echo "# :jigsaw: Docker Images SBOM" >> simple-sbom-report.md
-        echo "* Docker Image Tag: ${{ inputs.docker-image-repo-tag }}" >> simple-sbom-report.md
+        echo "# :jigsaw: SBOM Report" >> simple-sbom-report.md
+        echo "" >> simple-sbom-report.md
+        echo "## :whale: ${{ inputs.docker-image-repo-tag }}" >> simple-sbom-report.md
+        echo "" >> simple-sbom-report.md
+        echo "* Revision: ${{ inputs.git-revision }}" >> simple-sbom-report.md
         echo "" >> simple-sbom-report.md
 
         docker run -v /var/run/docker.sock:/var/run/docker.sock ${{ inputs.syft-docker-image-tag }} ${{ inputs.docker-image-repo-tag }} > sbom-report.txt
@@ -84,3 +96,31 @@ runs:
         echo 'EOF' >> $GITHUB_OUTPUT
 
         cat simple-sbom-report.md >> $GITHUB_STEP_SUMMARY
+
+    - name: Check SBOM for PR
+      shell: bash
+      run: |
+        ls -la
+        echo "SBOM report output"
+        echo '${{ toJSON(steps.report-generator.outputs) }}' | jq
+
+    - name: Report SBOM also in PR
+      id: sbom-check
+      if: ${{ inputs.add-comment-to-current-pr == 'true' }}
+      shell: bash
+      run: |
+        if [ -f ${{ steps.report-generator.outputs.sbom-report-file-path }} ]; then
+          cat ${{ steps.report-generator.outputs.sbom-report-file-path }}
+          echo "sbom-generated=true" >> $GITHUB_OUTPUT
+
+        else
+          echo "sbom-generated=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Add Docker SBOM PR Comment
+      uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+      if: ${{ steps.sbom-check.outputs.sbom-generated == 'true' && inputs.add-comment-to-current-pr == 'true' }}
+      with:
+        header: sbom-report-${{ inputs.docker-image-repo-tag }}
+        recreate: true
+        path: ${{ steps.report-generator.outputs.sbom-report-file-path }}

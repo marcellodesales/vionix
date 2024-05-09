@@ -315,35 +315,10 @@ jobs:
         uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
         id: docker-sbom-report
         with:
+          git-revision: ${{ needs.code.outputs.gitShortSha }}
           docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
+          add-comment-to-current-pr: true
  
-      - name: Check SBOM for PR
-        if: ${{ matrix.scanner == 'syft' }}
-        run: |
-          ls -la
-          echo "SBOM report output"
-          echo '${{ toJSON(steps.docker-sbom-report.outputs) }}' | jq
-
-      - name: Report SBOM also in PR
-        if: ${{ matrix.scanner == 'syft' }}
-        id: sbom-check
-        run: |
-          if [ -f ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }} ]; then
-            cat ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }}
-            echo "sbom-generated=true" >> $GITHUB_OUTPUT
-
-          else
-            echo "sbom-generated=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Add Docker SBOM PR Comment
-        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: ${{ matrix.scanner == 'syft' && steps.sbom-check.outputs.sbom-generated == 'true' }}
-        with:
-          header: sbom-report-${{ inputs.docker-compose-context }}-${{ inputs.docker-compose-file }}-${{ inputs.docker-compose-service }}
-          recreate: true
-          path: ${{ steps.docker-sbom-report.outputs.sbom-report-file-path }}
-
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
         uses: seceng-devsecops-platform/devsecops-client-runtime-twistcli@v1.0.0-RC2
@@ -388,100 +363,18 @@ jobs:
         run: |
           echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
 
-      - name: Annotate Job with current information
+      - name: Annotate workflow Summary with current information
         if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
-        run: |
-          echo "Scan results file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
-          cat ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
-
-          echo "# :microscope: Scanned Docker Image" >> prisma-cloud-report.md
-          echo "" >> prisma-cloud-report.md
-          echo "> * **Prisma Cloud Domain**: ${{ inputs.seceng-devsecops-prisma-domain }}" >> prisma-cloud-report.md
-          echo "> * **Project Name**: ${{ inputs.seceng-devsecops-prisma-project }}" >> prisma-cloud-report.md
-          echo "> * **Full Results**: [See Prisma Cloud results in project ${{ inputs.seceng-devsecops-prisma-project }}](${{ steps.prisma_cloud_scan.outputs.scan-results-url }})" >> prisma-cloud-report.md
-
-          echo "### :whale: Artifactory Repository" >> prisma-cloud-report.md
-          echo "" >> prisma-cloud-report.md
-          echo "> * **Docker Image**: [${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}](${{ needs.code.outputs.dockerImageArtifactoryUrl }})" >> prisma-cloud-report.md
-          echo "> Review each layer in Artifactory and update the code here to improve the report below" >> prisma-cloud-report.md
-          echo "> * Formatted by Vionix DevSecOps Platform" >> prisma-cloud-report.md
-
-          if [ "${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" != "" ]; then
-            export ERROR_MESSAGE="${{ steps.prisma_cloud_scan.outputs.scan-error-message }}"
-            export STATUS_CODE="${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}"
-
-            echo "" >> prisma-cloud-report.md
-            echo "## :police-car-light: ERROR SCANNING: ${STATUS_CODE} Error while Scanning with Prisma Cloud" >> prisma-cloud-report.md
-            echo "* ${ERROR_MESSAGE}" >> $GITHUB_STEP_SUMMARY
-
-            echo "::error title=${STATUS_CODE} Error while Scanning with Prisma Cloud::${ERROR_MESSAGE}"
-            exit 2
-
-          else
-
-            input_file=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
-            count_critical=$(cat ${input_file} | jq -r '.results[0].vulnerabilityDistribution.critical')
-            count_high=$(cat ${input_file} | jq -r '.results[0].vulnerabilityDistribution.high')
-            medium=$(cat ${input_file} | jq -r '.results[0].vulnerabilityDistribution.medium')
-            low=$(cat ${input_file} | jq -r '.results[0].vulnerabilityDistribution.low')
-            total_count=$(cat ${input_file} | jq -r '.results[0].vulnerabilityDistribution.total')
-
-            count_lowers=$((medium+low))
-            echo ">" >> prisma-cloud-report.md
-            echo "> (${total_count}) 🚨 ${count_critical} critical ⚠️ ${count_high} high ℹ️ ${medium} medium ❓ ${low} low  " >> prisma-cloud-report.md
-
-            echo "" >> prisma-cloud-report.md
-            echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> header-prisma-cloud-report.md
-            echo "|----|--------|------|---------|-----------|-------------|" >> header-prisma-cloud-report.md
-
-            cat header-prisma-cloud-report.md >> critical-prisma-cloud-report-table.md;
-            cat header-prisma-cloud-report.md >> high-prisma-cloud-report-table.md;
-            cat header-prisma-cloud-report.md >> lowers-prisma-cloud-report-table.md;
-
-            jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${input_file}" | \
-            while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
-              if [ "${severity}" == "critical" ]; then
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> critical-prisma-cloud-report-table.md;
-
-              elif [ "${severity}" == "high" ]; then
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> high-prisma-cloud-report-table.md;
-
-              else
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;
-              fi
-            done
-
-            echo "## 🚨 There are ${count_critical} critical CVEs" >> prisma-cloud-report.md
-            echo "> * **FSP Compliance Policy**: [resolve them ASAP!](https://scorecard.infosec.viasat.io/faq)" >> prisma-cloud-report.md
-            echo "<details><summary>🚨 See all the ${count_critical} results with links to https://nvd.nist.gov/vuln/detail</summary>" >> prisma-cloud-report.md
-            echo "" >> prisma-cloud-report.md
-            cat critical-prisma-cloud-report-table.md >> prisma-cloud-report.md
-            echo "</details>" >> prisma-cloud-report.md
-            echo "" >> prisma-cloud-report.md
-
-            echo "## ⚠️ There are ${count_high} high CVEs" >> prisma-cloud-report.md
-            echo "> * **FSP Compliance Policy**: [resolve them soon!](https://scorecard.infosec.viasat.io/faq)" >> prisma-cloud-report.md
-            echo "<details><summary>⚠️ See all the ${count_high} results with links to https://nvd.nist.gov/vuln/detail</summary>" >> prisma-cloud-report.md
-            echo "" >> prisma-cloud-report.md
-            cat high-prisma-cloud-report-table.md >> prisma-cloud-report.md
-            echo "</details>" >> prisma-cloud-report.md
-            echo "" >> prisma-cloud-report.md
-
-            echo "## ℹ️ There are ${count_lowers} medium and low CVEs" >> prisma-cloud-report.md
-            echo "> * **FSP Compliance Policy**: [plan to remove them!](https://scorecard.infosec.viasat.io/faq)" >> prisma-cloud-report.md
-            echo "<details><summary>ℹ️ See all the ${count_lowers} results with links to https://nvd.nist.gov/vuln/detail</summary>" >> prisma-cloud-report.md
-            echo "" >> prisma-cloud-report.md
-            cat lowers-prisma-cloud-report-table.md >> prisma-cloud-report.md
-            echo "</details>" >> prisma-cloud-report.md
-            echo "" >> prisma-cloud-report.md
-
-            cat prisma-cloud-report.md >> $GITHUB_STEP_SUMMARY;
-          fi
-
-      - name: Add Prisma Cloud PR Comment
-        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: matrix.scanner == 'prisma-cloud'
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/prisma-cloud-scan-reporter@main
+        id: prisma-cloud-scan-report
         with:
-          header: prisma-scan-result-${{ inputs.docker-compose-context }}-${{ inputs.docker-compose-file }}-${{ inputs.docker-compose-service }}
-          recreate: true
-          path: prisma-cloud-report.md
+          git-revision: ${{ needs.code.outputs.gitShortSha }}
+          docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
+          docker-image-registry-url: ${{ needs.code.outputs.dockerImageArtifactoryUrl }}
+          prisma-cloud-domain: https://${{ inputs.seceng-devsecops-prisma-domain }}
+          prisma-cloud-project: ${{ inputs.seceng-devsecops-prisma-project }}
+          prisma-cloud-report-file-path: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
+          prisma-cloud-scan-results-url: ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}
+          prisma-cloud-scan-exit-status-code: ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}
+          prisma-cloud-scan-errors: ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}
+ 

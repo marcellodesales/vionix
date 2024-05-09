@@ -814,14 +814,11 @@ jobs:
           docker tag ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}} ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
-      - name: Annotate Job with current information with SBOM
+      - name: Annotate worflow summary with SBOM reports
         uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
         with:
+          git-revision: ${{ needs.code.outputs.gitShortSha }}
           docker-image-repo-tag: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}
-
-      - name: List of the SBOM reports
-        run: |
-          ls -la
 
   deploy:
     name: 🚀 deploy
