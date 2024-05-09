@@ -149,6 +149,7 @@ runs:
         cat prisma-cloud-report.md >> $GITHUB_STEP_SUMMARY
 
     - name: Check Prisma report for PR
+      shell: bash
       run: |
         ls -la
         echo "Prisma Cloud scan report output"
@@ -156,6 +157,7 @@ runs:
 
     - name: Report SBOM also in PR
       id: scan-check
+      shell: bash
       run: |
         if [ -f ${{ steps.report-generator.outputs.image-scan-report-file-path }} ]; then
           cat ${{ steps.report-generator.outputs.image-scan-report-file-path }}
