@@ -92,20 +92,21 @@ runs:
           total_count=$(cat ${{ inputs.prisma-cloud-report-file-path }} | jq -r '.results[0].vulnerabilityDistribution.total')
 
           HAS_VULNERABILITIES=$(cat ${{ inputs.prisma-cloud-report-file-path }} |  jq -r '.results[0] | has("vulnerabilities")')
+          echo "Is there a vulnerabilities list? ${HAS_VULNERABILITIES}"
 
           count_lowers=$((medium+low))
           echo ">" >> prisma-cloud-report.md
           echo "> (${total_count}) 🚨 ${count_critical} critical ⚠️ ${count_high} high ℹ️ ${medium} medium ❓ ${low} low  " >> prisma-cloud-report.md
 
+          echo "" >> prisma-cloud-report.md
+          echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> header-prisma-cloud-report.md
+          echo "|----|--------|------|---------|-----------|-------------|" >> header-prisma-cloud-report.md
+
+          cat header-prisma-cloud-report.md >> critical-prisma-cloud-report-table.md;
+          cat header-prisma-cloud-report.md >> high-prisma-cloud-report-table.md;
+          cat header-prisma-cloud-report.md >> lowers-prisma-cloud-report-table.md;
+
           if [ "${HAS_VULNERABILITIES}" == 'true' ]; then
-
-            echo "" >> prisma-cloud-report.md
-            echo "| ID | STATUS | CVSS | PACKAGE | PUBLISHED | DESCRIPTION |" >> header-prisma-cloud-report.md
-            echo "|----|--------|------|---------|-----------|-------------|" >> header-prisma-cloud-report.md
-
-            cat header-prisma-cloud-report.md >> critical-prisma-cloud-report-table.md;
-            cat header-prisma-cloud-report.md >> high-prisma-cloud-report-table.md;
-            cat header-prisma-cloud-report.md >> lowers-prisma-cloud-report-table.md;
 
             jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${{ inputs.prisma-cloud-report-file-path }}" | \
             while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
@@ -120,6 +121,11 @@ runs:
               fi
             done
 
+          else
+          
+            echo "NO vulnerabilities" >> critical-prisma-cloud-report-table.md;
+            echo "NO vulnerabilities" >> high-prisma-cloud-report-table.md;
+            echo "NO vulnerabilities" >> lowers-prisma-cloud-report-table.md;
           fi
 
           echo "## 🚨 There are ${count_critical} critical CVEs" >> prisma-cloud-report.md
