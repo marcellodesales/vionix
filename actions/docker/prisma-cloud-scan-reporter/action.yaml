@@ -63,18 +63,19 @@ runs:
           exit 1
         fi
 
-        echo "# :microscope: Scan of ${{ inputs.docker-image-repo-tag }}" >> prisma-cloud-report.md
+        echo "# :microscope: Prisma Cloud Scan" >> prisma-cloud-report.md
+        echo "" >> prisma-cloud-report.md
+        echo "## :whale: ${{ inputs.docker-image-repo-tag }}" >> prisma-cloud-report.md
         echo "" >> prisma-cloud-report.md
         echo "> * **Prisma Cloud Domain**: ${{ inputs.prisma-cloud-domain }}" >> prisma-cloud-report.md
         echo "> * **Project Name**: ${{ inputs.prisma-cloud-project }}" >> prisma-cloud-report.md
         echo "See Prisma Cloud results at ${{ inputs.prisma-cloud-scan-results-url }}" >> prisma-cloud-report.md
 
-        echo "### :whale: Artifactory Repository" >> prisma-cloud-report.md
+        echo "### :frog: Artifactory Repository" >> prisma-cloud-report.md
         echo "" >> prisma-cloud-report.md
         echo "> * Revision: ${{ inputs.git-revision }}" >> prisma-cloud-report.md
-        echo "> * **Docker Image**: [${{ inputs.docker-image-repo-tag }}](${{ inputs.docker-image-registry-url }})" >> prisma-cloud-report.md
+        echo "> * Artifactory URL: [${{ inputs.docker-image-registry-url }}](${{ inputs.docker-image-registry-url }})" >> prisma-cloud-report.md
         echo "> Review each layer in Artifactory and update the code here to improve the report below" >> prisma-cloud-report.md
-        echo "> * Formatted by Vionix DevSecOps Platform" >> prisma-cloud-report.md
 
         if [ "${{ inputs.prisma-cloud-scan-errors }}" != "" ]; then
           echo "" >> prisma-cloud-report.md
