@@ -312,7 +312,7 @@ jobs:
 
       - name: Annotate Job with current information with SBOM
         if: ${{ matrix.scanner == 'syft' }}
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@feature/DEVSECOPS-108/add-sha-to-sbom-report
         id: docker-sbom-report
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
@@ -365,7 +365,7 @@ jobs:
 
       - name: Annotate workflow Summary with current information
         if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/prisma-cloud-scan-reporter@main
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/prisma-cloud-scan-reporter@feature/DEVSECOPS-108/add-sha-to-sbom-report
         id: prisma-cloud-scan-report
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
