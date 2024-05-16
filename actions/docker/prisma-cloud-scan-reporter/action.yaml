@@ -161,13 +161,6 @@ runs:
         echo 'EOF' >> $GITHUB_OUTPUT
         cat prisma-cloud-report.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Check Prisma report for PR
-      shell: bash
-      run: |
-        ls -la
-        echo "Prisma Cloud scan report output"
-        echo '${{ toJSON(steps.report-generator.outputs) }}' | jq
-
     - name: Report SBOM also in PR
       id: scan-check
       shell: bash
