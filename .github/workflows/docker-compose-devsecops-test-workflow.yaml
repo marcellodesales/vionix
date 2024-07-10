@@ -440,13 +440,26 @@ jobs:
           indicators: true
           output: both
 
+      - name: Format code coverage comment
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        id: format-code-coverage
+        run: |
+          echo 'coverage_comment<<EOF' >> $GITHUB_OUTPUT
+          echo '<details>' >> $GITHUB_OUTPUT
+          echo '  <summary>Code Coverage</summary>' >> $GITHUB_OUTPUT
+          echo '' >> $GITHUB_OUTPUT
+          cat code-coverage-results.md >> $GITHUB_OUTPUT
+          echo '' >> $GITHUB_OUTPUT
+          echo '</details>' >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
       - name: Add Coverage PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: ${{ always() && github.event_name == 'pull_request' }}
         with:
           header: code-coverage
           recreate: true
-          path: code-coverage-results.md
+          message: ${{ steps.format-code-coverage.outputs.coverage_comment }}
 
       - name: Build test summary based on the file as the header
         if: ${{ always() && github.event_name == 'pull_request' }}
@@ -457,6 +470,7 @@ jobs:
 
       - name: Generate test report from xml
         if: ${{ always() && github.event_name == 'pull_request' }}
+        id: format-test-report
         run: |
           if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
             echo '
@@ -509,8 +523,7 @@ jobs:
             # Calculate the overall pass/fail status from the test result counters
             overall_status = "PASS" if failed_tests == 0 else "FAIL"
 
-            print(f"* From: {args.file_name}")
-            print("")
+            print(f"\n* From: {args.file_name}\n")
 
             # Print the table as markdown
             for row in table_data:
@@ -537,14 +550,20 @@ jobs:
             cat junit-test-reporter.py
 
             echo "Generating test reports with junit-test-reporter.py"
-            python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }}
-
-            echo "Generating test reports with junit-test-reporter.py"
             python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }} > junit-tests-summary.md
 
             echo "Update the file test-summary.md with test results"
             echo "" >> test-summary.md
             cat junit-tests-summary.md >> test-summary.md
+
+            echo 'test_summary<<EOF' >> $GITHUB_OUTPUT
+            echo '<details>' >> $GITHUB_OUTPUT
+            echo '  <summary>Test Summary</summary>' >> $GITHUB_OUTPUT
+            echo '' >> $GITHUB_OUTPUT
+            cat test-summary.md >> $GITHUB_OUTPUT
+            echo '' >> $GITHUB_OUTPUT
+            echo '</details>' >> $GITHUB_OUTPUT
+            echo 'EOF' >> $GITHUB_OUTPUT
           fi
 
       - name: Add Test summary PR Comment
@@ -553,7 +572,7 @@ jobs:
         with:
           header: tests-summary
           recreate: true
-          path: test-summary.md
+          message: ${{ steps.format-test-report.outputs.test_summary }}
 
       - name: Upload coverage report file
         uses: seceng-devsecops-platform/actions-upload-artifact@v2
