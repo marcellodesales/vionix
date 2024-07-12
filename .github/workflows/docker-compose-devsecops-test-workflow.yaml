@@ -120,6 +120,12 @@ on:
         type: string
         default: flake8
 
+      collapse-pr-comments:
+        description: "Whether to collapse any comments left in PRs"
+        required: false
+        type: boolean
+        default: true
+
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     # TODO: These MUST move to Vault in order to make it properly scale
@@ -445,12 +451,16 @@ jobs:
         id: format-code-coverage
         run: |
           echo 'coverage_comment<<EOF' >> $GITHUB_OUTPUT
-          echo '<details>' >> $GITHUB_OUTPUT
-          echo '  <summary>Code Coverage</summary>' >> $GITHUB_OUTPUT
-          echo '' >> $GITHUB_OUTPUT
+          if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
+            echo '<details>' >> $GITHUB_OUTPUT
+            echo '  <summary>Code Coverage</summary>' >> $GITHUB_OUTPUT
+            echo '' >> $GITHUB_OUTPUT
+          fi
           cat code-coverage-results.md >> $GITHUB_OUTPUT
-          echo '' >> $GITHUB_OUTPUT
-          echo '</details>' >> $GITHUB_OUTPUT
+          if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
+            echo '' >> $GITHUB_OUTPUT
+            echo '</details>' >> $GITHUB_OUTPUT
+          fi
           echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Add Coverage PR Comment
@@ -556,13 +566,18 @@ jobs:
             echo "" >> test-summary.md
             cat junit-tests-summary.md >> test-summary.md
 
+
             echo 'test_summary<<EOF' >> $GITHUB_OUTPUT
-            echo '<details>' >> $GITHUB_OUTPUT
-            echo '  <summary>Test Summary</summary>' >> $GITHUB_OUTPUT
-            echo '' >> $GITHUB_OUTPUT
+            if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
+              echo '<details>' >> $GITHUB_OUTPUT
+              echo '  <summary>Test Summary</summary>' >> $GITHUB_OUTPUT
+              echo '' >> $GITHUB_OUTPUT
+            fi
             cat test-summary.md >> $GITHUB_OUTPUT
-            echo '' >> $GITHUB_OUTPUT
-            echo '</details>' >> $GITHUB_OUTPUT
+            if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
+              echo '' >> $GITHUB_OUTPUT
+              echo '</details>' >> $GITHUB_OUTPUT
+            fi
             echo 'EOF' >> $GITHUB_OUTPUT
           fi
 
