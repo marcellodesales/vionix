@@ -452,13 +452,10 @@ jobs:
         run: |
           echo 'coverage_comment<<EOF' >> $GITHUB_OUTPUT
           if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
-            echo '<details>' >> $GITHUB_OUTPUT
-            echo '  <summary>' >> $GITHUB_OUTPUT
-            echo '' >> $GITHUB_OUTPUT
             read -r badge < code-coverage-results.md
-            echo "### ${badge}" >> $GITHUB_OUTPUT
-            echo '' >> $GITHUB_OUTPUT
-            echo '  </summary>' >> $GITHUB_OUTPUT
+            echo $badge >> $GITHUB_OUTPUT
+            echo '<details>' >> $GITHUB_OUTPUT
+            echo '  <summary>Code Coverage Report</summary>' >> $GITHUB_OUTPUT
             echo '' >> $GITHUB_OUTPUT
             tail -n +2 code-coverage-results.md >> $GITHUB_OUTPUT
             echo '' >> $GITHUB_OUTPUT
@@ -574,6 +571,7 @@ jobs:
 
             echo 'test_summary<<EOF' >> $GITHUB_OUTPUT
             if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
+              echo 'Testing Summary:' >> $GITHUB_OUTPUT
               echo '<details>' >> $GITHUB_OUTPUT
               summary=$(tail -n 1 test-summary.md)
               echo "  <summary>${summary:2}</summary>" >> $GITHUB_OUTPUT
