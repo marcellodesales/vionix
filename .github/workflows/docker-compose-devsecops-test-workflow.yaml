@@ -575,14 +575,10 @@ jobs:
             echo 'test_summary<<EOF' >> $GITHUB_OUTPUT
             if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
               echo '<details>' >> $GITHUB_OUTPUT
-              echo '  <summary>' >> $GITHUB_OUTPUT
+              summary=$(tail -n 1 test-summary.md)
+              echo '  <summary>${summary:2}</summary>' >> $GITHUB_OUTPUT
               echo '' >> $GITHUB_OUTPUT
-              read -r badge < test-summary.md
-              echo "### ${badge}" >> $GITHUB_OUTPUT
-              echo '' >> $GITHUB_OUTPUT
-              echo '  </summary>' >> $GITHUB_OUTPUT
-              echo '' >> $GITHUB_OUTPUT
-              tail -n +2 test-summary.md >> $GITHUB_OUTPUT
+              cat test-summary.md >> $GITHUB_OUTPUT
               echo '' >> $GITHUB_OUTPUT
               echo '</details>' >> $GITHUB_OUTPUT
             else
