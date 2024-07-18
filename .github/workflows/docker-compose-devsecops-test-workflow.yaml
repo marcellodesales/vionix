@@ -455,8 +455,8 @@ jobs:
             echo '<details>' >> $GITHUB_OUTPUT
             echo '  <summary>' >> $GITHUB_OUTPUT
             echo '' >> $GITHUB_OUTPUT
-            read -r code-coverage-badge < code-coverage-results.md
-            echo "### ${code-coverage-badge}" >> $GITHUB_OUTPUT
+            read -r badge < code-coverage-results.md
+            echo "### ${badge}" >> $GITHUB_OUTPUT
             echo '' >> $GITHUB_OUTPUT
             echo '  </summary>' >> $GITHUB_OUTPUT
             echo '' >> $GITHUB_OUTPUT
@@ -577,8 +577,8 @@ jobs:
               echo '<details>' >> $GITHUB_OUTPUT
               echo '  <summary>' >> $GITHUB_OUTPUT
               echo '' >> $GITHUB_OUTPUT
-              read -r test-summary-badge < test-summary.md
-              echo "### ${test-summary-badge}" >> $GITHUB_OUTPUT
+              read -r badge < test-summary.md
+              echo "### ${badge}" >> $GITHUB_OUTPUT
               echo '' >> $GITHUB_OUTPUT
               echo '  </summary>' >> $GITHUB_OUTPUT
               echo '' >> $GITHUB_OUTPUT
