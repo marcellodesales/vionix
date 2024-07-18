@@ -14,7 +14,7 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-    
+
       docker-compose-context:
         description: "The location where the docker compose is available"
         required: false
@@ -318,7 +318,7 @@ jobs:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
           docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
           add-comment-to-current-pr: true
- 
+
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
         uses: seceng-devsecops-platform/devsecops-client-runtime-twistcli@v1.0.0-RC2
@@ -377,4 +377,3 @@ jobs:
           prisma-cloud-scan-results-url: ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}
           prisma-cloud-scan-exit-status-code: ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}
           prisma-cloud-scan-errors: ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}
- 
