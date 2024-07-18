@@ -3,23 +3,29 @@ description: Generates the SBOM report for a given docker image to md file, work
 
 inputs:
   git-revision:
-    description: 'The reference to the git sha'
+    description: "The reference to the git sha"
     required: true
 
   docker-image-repo-tag:
-    description: 'The full docker image repo:tag'
+    description: "The full docker image repo:tag"
     required: true
 
   syft-docker-image-tag:
-    description: 'The json object to print'
+    description: "The json object to print"
     required: false
     default: dockerhub.docker.artifactory.viasat.com/anchore/syft:v1.3.0
-  
+
   add-comment-to-current-pr:
-    description: 'The json object to print'
+    description: "The json object to print"
     required: false
-    default: 'false'
-  
+    default: "false"
+
+  collapse-pr-comments:
+    description: "Whether to collapse any comments left in PRs"
+    required: false
+    type: boolean
+    default: true
+
 outputs:
   sbom-report-file-path:
     description: The path where the reports are located
@@ -45,6 +51,12 @@ runs:
         echo "" >> simple-sbom-report.md
         echo "* Revision: ${{ inputs.git-revision }}" >> simple-sbom-report.md
         echo "" >> simple-sbom-report.md
+
+        if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
+          echo '<details>' >> simple-sbom-report.md
+          echo '  <summary>Dependencies</summary>' >> simple-sbom-report.md
+          echo '' >> simple-sbom-report.md
+        fi
 
         docker run -v /var/run/docker.sock:/var/run/docker.sock ${{ inputs.syft-docker-image-tag }} ${{ inputs.docker-image-repo-tag }} > sbom-report.txt
         echo "Current SBOM for image"
@@ -80,14 +92,19 @@ runs:
               echo "${recordJson}" >> records.txt
           fi
         done <sbom-report-table.txt
-        
+
         rm -f sbom-report-table.txt
 
         if (( ${#records[@]} > 0 )); then
           cat records.txt | jq -s '.'
           rm -f records.txt
         fi
-        
+
+        if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
+          echo '' >> simple-sbom-report.md
+          echo '</details>' >> simple-sbom-report.md
+        fi
+
         SBOM_VALUE=$(cat simple-sbom-report.md)
         echo "sbom-report-file-path=simple-sbom-report.md" >> $GITHUB_OUTPUT
 
