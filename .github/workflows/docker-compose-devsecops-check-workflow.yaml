@@ -312,7 +312,7 @@ jobs:
 
       - name: Annotate Job with current information with SBOM
         if: ${{ matrix.scanner == 'syft' }}
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@feature/DEVSECOPS-511/more-info-summary
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
         id: docker-sbom-report
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
