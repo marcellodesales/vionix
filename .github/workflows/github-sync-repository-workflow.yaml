@@ -58,6 +58,19 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Annotate Job with current information for DEV and STG
+        working-directory: ${{ inputs.docker-compose-context }}
+        run: |
+          ls -la
+
+      - name: repo-sync
+        uses: seceng-devsecops-platform/repo-sync-github-sync-action@v2.3.0
+        with:
+          source_repo: ${{ inputs.remote-repository }}
+          source_branch: ""
+          destination_branch: ""
+          github_token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+#
 #  report:
 #    name: 📢 notify
 #    # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
