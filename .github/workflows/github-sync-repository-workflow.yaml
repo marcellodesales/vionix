@@ -62,14 +62,14 @@ jobs:
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           ls -la
-
       - name: repo-sync
-        uses: seceng-devsecops-platform/repo-sync-github-sync-action@v2.3.0
+        uses: seceng-devsecops-platform/repo-sync-github-sync-action@feature/DEVSECOPS-978/update-mirrored-repos-latest
         with:
           source_repo: ${{ inputs.remote-repository }}
           source_branch: ""
           destination_branch: ""
           github_token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+          sync_tags: true
 #
 #  report:
 #    name: 📢 notify
