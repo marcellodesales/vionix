@@ -48,7 +48,7 @@ jobs:
     # Add permissions to the score of the security events
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
     permissions:
-      contents: read  # <--- allows to read repo
+      contents: write  # <--- allows to read repo
       security-events: read
 
     steps:
