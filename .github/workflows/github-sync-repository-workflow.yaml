@@ -65,6 +65,7 @@ jobs:
       - name: repo-sync
         uses: seceng-devsecops-platform/repo-sync-github-sync-action@feature/DEVSECOPS-978/update-mirrored-repos-latest
         with:
+          repo: seceng-devsecops-platform/docker-login-action-test
           source_repo: ${{ inputs.remote-repository }}
           source_branch: ""
           destination_branch: ""
