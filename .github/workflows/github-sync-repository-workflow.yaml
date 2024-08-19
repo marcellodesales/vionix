@@ -24,11 +24,15 @@ on:
         # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
         default: devsecops
 
+      local-repository:
+        description: "The local repository from git.viasat.com"
+        required: true
+        type: string
+
       remote-repository:
         description: "The remote repository from github.com"
         required: true
         type: string
-        default: docker-compose.yaml
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
@@ -65,7 +69,7 @@ jobs:
       - name: repo-sync
         uses: seceng-devsecops-platform/repo-sync-github-sync-action@feature/DEVSECOPS-978/update-mirrored-repos-latest
         with:
-          repo: seceng-devsecops-platform/docker-login-action-test
+          repo: ${{ inputs.local-repository }}
           source_repo: ${{ inputs.remote-repository }}
           source_branch: ""
           destination_branch: ""
