@@ -68,7 +68,7 @@ jobs:
           ls -la
 
       - name: repo-sync
-        uses: seceng-devsecops-platform/repo-sync-github-sync-action@feature/DEVSECOPS-978/update-mirrored-repos-latest
+        uses: seceng-devsecops-platform/repo-sync-github-sync-action@feature/DEVSECOPS-979/support-github-enterprise-repos
         with:
           repo: ${{ inputs.local-repository }}
           source_repo: ${{ inputs.remote-repository }}
