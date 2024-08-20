@@ -56,6 +56,15 @@ jobs:
       security-events: read
 
     steps:
+
+      - name: Summary for what will be updated
+        working-directory: ${{ inputs.docker-compose-context }}
+        run: |
+          echo "# ⤵️ sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* Repo: ${GITHUB_SERVER_URL}/${{ inputs.local-repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "* Upstream: ${{ inputs.remote-repository }}" >> $GITHUB_STEP_SUMMARY
+
       - name: repo-sync
         uses: seceng-devsecops-platform/repo-sync-github-sync-action@feature/DEVSECOPS-979/support-github-enterprise-repos
         with:
@@ -63,11 +72,3 @@ jobs:
           source_repo: ${{ inputs.remote-repository }}
           github_token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
           sync_tags: true
-
-      - name: Annotate Job with current information for DEV and STG
-        working-directory: ${{ inputs.docker-compose-context }}
-        run: |
-          echo "# ⤵️ sync Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "* Repo: ${GITHUB_SERVER_URL}/${{ inputs.local-repository }}" >> $GITHUB_STEP_SUMMARY
-          echo "* Upstream: ${{ inputs.remote-repository }}" >> $GITHUB_STEP_SUMMARY
