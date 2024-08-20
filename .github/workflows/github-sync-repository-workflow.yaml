@@ -56,17 +56,6 @@ jobs:
       security-events: read
 
     steps:
-      # Checkout always fetches the whole repo. Depending on the size, this will be super long
-      - name: Fetch only the top commit
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Annotate Job with current information for DEV and STG
-        working-directory: ${{ inputs.docker-compose-context }}
-        run: |
-          ls -la
-
       - name: repo-sync
         uses: seceng-devsecops-platform/repo-sync-github-sync-action@feature/DEVSECOPS-979/support-github-enterprise-repos
         with:
@@ -74,3 +63,11 @@ jobs:
           source_repo: ${{ inputs.remote-repository }}
           github_token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
           sync_tags: true
+
+      - name: Annotate Job with current information for DEV and STG
+        working-directory: ${{ inputs.docker-compose-context }}
+        run: |
+          echo "# ⤵️ sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* Repo: ${{ inputs.local-repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "* Upstream: ${{ inputs.remote-repository }}" >> $GITHUB_STEP_SUMMARY
