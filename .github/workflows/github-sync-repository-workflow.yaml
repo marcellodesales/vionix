@@ -66,9 +66,9 @@ jobs:
           echo "* Upstream: ${{ inputs.remote-repository }}" >> $GITHUB_STEP_SUMMARY
 
       - name: repo-sync
-        uses: seceng-devsecops-platform/repo-sync-github-sync-action@feature/DEVSECOPS-979/support-github-enterprise-repos
+        uses: seceng-devsecops-platform/repo-sync-github-sync-action@v1.0.0
         with:
-          repo: ${{ inputs.local-repository }}
+          target_repo: ${{ inputs.local-repository }}
           source_repo: ${{ inputs.remote-repository }}
           github_token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
           sync_tags: true
