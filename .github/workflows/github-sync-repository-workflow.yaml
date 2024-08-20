@@ -10,10 +10,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.local-repository }}
   cancel-in-progress: true
 
-# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#run-name
-# https://github.blog/changelog/2022-09-26-github-actions-dynamic-names-for-workflow-runs/
-run-name: ⤵️ Sync ${{ inputs.local-repository }} with ${{ inputs.remote-repository }} updates
-
 on:
   # Manual workflow execution
   # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
@@ -50,7 +46,7 @@ on:
 jobs:
 
   sync:
-    name: 🔄 sync
+    name: ⤵️ sync
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # Add permissions to the score of the security events
@@ -70,6 +66,7 @@ jobs:
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           ls -la
+
       - name: repo-sync
         uses: seceng-devsecops-platform/repo-sync-github-sync-action@feature/DEVSECOPS-978/update-mirrored-repos-latest
         with:
