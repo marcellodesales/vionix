@@ -69,5 +69,5 @@ jobs:
         run: |
           echo "# ⤵️ sync Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "* Repo: ${{ inputs.local-repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "* Repo: ${GITHUB_SERVER_URL}/${{ inputs.local-repository }}" >> $GITHUB_STEP_SUMMARY
           echo "* Upstream: ${{ inputs.remote-repository }}" >> $GITHUB_STEP_SUMMARY
