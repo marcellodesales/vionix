@@ -12,7 +12,7 @@ concurrency:
 
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#run-name
 # https://github.blog/changelog/2022-09-26-github-actions-dynamic-names-for-workflow-runs/
-run-name: 🔄 Sync ${{ inputs.local-repository }} with ${{ inputs.remote-repository }} updates
+run-name: ⤵️ Sync ${{ inputs.local-repository }} with ${{ inputs.remote-repository }} updates
 
 on:
   # Manual workflow execution
@@ -75,8 +75,6 @@ jobs:
         with:
           repo: ${{ inputs.local-repository }}
           source_repo: ${{ inputs.remote-repository }}
-          source_branch: ""
-          destination_branch: ""
           github_token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
           sync_tags: true
 #
