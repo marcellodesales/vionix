@@ -66,7 +66,7 @@ jobs:
           echo "* Upstream: ${{ inputs.remote-repository }}" >> $GITHUB_STEP_SUMMARY
 
       - name: repo-sync
-        uses: seceng-devsecops-platform/repo-sync-github-sync-action@v1.0.0
+        uses: seceng-devsecops-platform/github-mirror-repo-sync-action@v1.0.0
         with:
           target_repo: ${{ inputs.local-repository }}
           source_repo: ${{ inputs.remote-repository }}
