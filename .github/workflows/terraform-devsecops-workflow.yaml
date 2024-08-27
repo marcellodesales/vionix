@@ -255,9 +255,9 @@ jobs:
 
       - name: Install j2md - Plan to md
         if: always() && github.ref != 'refs/heads/main' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
-        uses: seceng-devsecops-platform/reproio-terraform-j2md-action@v0.0.7
+        uses: seceng-devsecops-platform/reproio-terraform-j2md-action@v0.0.9
         with:
-          version: v0.0.7
+          version: v0.0.9
 
       - name: convert plan to md
         # NOTE: This is reusing the terraform binary provided by the terraform docker image of the docker-compose from the contract
