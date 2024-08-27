@@ -35,6 +35,11 @@ jobs:
   lint:
     name: 🚨 lint
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    permissions:
+      # Permissions required by the PR commmenter action
+      # https://github.com/marocchino/sticky-pull-request-comment?tab=readme-ov-file#sticky-pull-request-comment
+      pull-requests: write
+
     steps:
       - name: Checkout the current sources
         uses: viarise/checkout@v3.5.3
