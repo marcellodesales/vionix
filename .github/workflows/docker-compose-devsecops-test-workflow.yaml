@@ -105,9 +105,9 @@ on:
         type: string
         default: >
           -Dsonar.python.coverage.reportPaths=build/reports/pytest/${{ inputs.docker-compose-test-report-coverage-file }}
-          -Dsonar.tests=${{ inputs.test-dir }}
-          -Dsonar.sources=${{ inputs.sources-dir }}
-          -Dsonar.verbose=${{ inputs.verbosity }} # TODO: Ask customers to specify those
+          -Dsonar.tests=tests/dir
+          -Dsonar.sources=src/dir
+          -Dsonar.verbose=DEBUG
           -Dsonar.scm.provider=git
           -Dsonar.python.version=3.11
           -Dsonar.projectBaseDir=/github/workspace
@@ -255,7 +255,7 @@ jobs:
           echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
           echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
           echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
-          echo "dockerContextPath=${{ inputs.docker-compose-context }}" >> $GITHUB_OUTPUT
+          echo "dockerContextPath=${{ inputs.docker-compose-test-context }}" >> $GITHUB_OUTPUT
           echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
           echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT
           echo "defaultDockerImageBranchTagForVersion=$BRANCH_TAG_FOR_VERSION" >> $GITHUB_OUTPUT
