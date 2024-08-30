@@ -12,7 +12,7 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-      vionix-platform-dind-runner-label:
+      seceng-devsecops-dind-runner-label:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
@@ -423,7 +423,7 @@ jobs:
   yaml:
     name: 🦺 yaml
     needs: [code]
-    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     continue-on-error: true
@@ -482,7 +482,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code]
-    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
     if: ${{ inputs.check-kustomization == 'true' && needs.code.outputs.requiresKustomizeProcessing == 'true' }}
 
     strategy:
@@ -562,7 +562,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code]
-    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
     if: ${{ inputs.check-argocd == 'true' && needs.code.outputs.requiresArgocdProcessing == 'true' }}
 
     strategy:
