@@ -748,7 +748,7 @@ jobs:
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-to=type=registry,mode=max,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.platform=${{ inputs.docker-build-platforms }}
 
-      - name: Push additional tags for this build ${{ inputs.inputs.docker-build-mode }}
+      - name: Push additional tags for this build ${{ inputs.docker-build-mode }}
         # github.ref_type == 'branch' &&
         if: ${{ inputs.docker-build-mode == 'parallel' }}
         run: |
@@ -759,7 +759,7 @@ jobs:
 
       # TODO: since we are using self-hosted, the docker image is saved in the same host
       # https://docs.docker.com/engine/reference/commandline/buildx_bake/
-      - name: Build Docker Image in mode ${{ inputs.inputs.docker-build-mode }}
+      - name: Build Docker Image in mode ${{ inputs.docker-build-mode }}
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ inputs.docker-build-mode != 'parallel' }}
