@@ -115,12 +115,6 @@ on:
 #             }
 #           }
 
-      test-report-sonarqube-host:
-        description: "The Sonarqube host where to push the coverage report tests"
-        type: string
-        required: false
-        default: https://sonarqube.viarise.viasat.io
-
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
@@ -484,45 +478,6 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🛡️ check-code Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-      # If you wish to fail your job when the Quality Gate is red, uncomment the
-      # following lines. This would typically be used to fail a deployment.
-      # We do not recommend to use this in a pull request. Prefer using pull request decoration instead.
-      - uses: viarise/sonarqube-scan-action@v2.0.1
-        if: ${{ inputs.docker-build-sonarqube-project-id != '' && github.ref_type == 'branch' && matrix.checkType == 'Dockerfile' }}
-        # TODO continue on error when evaluating Dockerfiles with Sonarqube
-        continue-on-error: true
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ inputs.test-report-sonarqube-host }}
-        with:
-          # https://community.sonarsource.com/t/sonarqube-scanner-fails-with-not-inside-a-git-worktree-error/26914/3
-          # https://docs.sonarqube.org/latest/analysis/languages/python/#header-3
-          # https://docs.sonarqube.org/latest/branches/overview/
-          # https://docs.sonarsource.com/sonarqube/latest/analyzing-source-code/analysis-parameters/
-          # https://portal.productboard.com/sonarsource/3-sonarqube/c/239-detect-security-misconfigurations-in-dockerfile-files
-          args: |
-            -Dsonar.projectKey=${{ inputs.docker-build-sonarqube-project-id }}
-            -Dsonar.projectName=${{ github.repository }}
-            -Dsonar.sources=${{ inputs.docker-compose-context }}
-            -Dsonar.verbose=true
-            -Dsonar.scm.provider=git
-            -Dsonar.qualitygate.wait=false
-            -Dsonar.failOnErrors=false
-            -Dsonar.lang.patterns.docker=Dockerfile,Dockerfile.*,*.Dockerfile
-
-#         run: |
-#           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-#           echo "## :heavy_check_mark: Dockerfile Benchmark " >> $GITHUB_STEP_SUMMARY
-#           echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          for JSON_LINE in "toJSON(steps.check-dockerfile-benchmark.outputs.violation_report) }}"; do
-#            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-#          done
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
-
 
       - name: Check Readme
         if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Readme' }}
