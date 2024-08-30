@@ -214,17 +214,6 @@ jobs:
     strategy:
       fail-fast: true
 
-    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    outputs:
-      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
-      numberOfCoveredClasses: ${{steps.test-values.outputs.numberOfCoveredClasses}}
-      coverageRate: ${{steps.test-values.outputs.coverageRate}}
-      numberOfTestErrors: ${{steps.test-values.outputs.numberOfTestErrors}}
-      numberOfTestFailures: ${{steps.test-values.outputs.numberOfTestFailures}}
-      numberOfTestsSkipped: ${{steps.test-values.outputs.numberOfTestsSkipped}}
-      numberOfTestsExecuted: ${{steps.test-values.outputs.numberOfTestsExecuted}}
-      testsExecutionTime: ${{steps.test-values.outputs.testsExecutionTime}}
-
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TF_IN_AUTOMATION: true
@@ -289,17 +278,6 @@ jobs:
     environment:
       name: ${{ inputs.terraform-environment-name }}
       url: ${{ inputs.terraform-environment-url }}
-
-    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    outputs:
-      # "set-output" in each of the steps[name].outputs is defined is where these are defined for the job
-      numberOfCoveredClasses: ${{steps.test-values.outputs.numberOfCoveredClasses}}
-      coverageRate: ${{steps.test-values.outputs.coverageRate}}
-      numberOfTestErrors: ${{steps.test-values.outputs.numberOfTestErrors}}
-      numberOfTestFailures: ${{steps.test-values.outputs.numberOfTestFailures}}
-      numberOfTestsSkipped: ${{steps.test-values.outputs.numberOfTestsSkipped}}
-      numberOfTestsExecuted: ${{steps.test-values.outputs.numberOfTestsExecuted}}
-      testsExecutionTime: ${{steps.test-values.outputs.testsExecutionTime}}
 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
