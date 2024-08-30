@@ -171,7 +171,6 @@ jobs:
       gitopsDeployTargetRegion: ${{steps.set_base_values.outputs.gitopsDeployTargetRegion}}
       gitopsDeployTargetType: ${{steps.set_base_values.outputs.gitopsDeployTargetType}}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
-      slackMessageId: ${{steps.slack.outputs.message_id}}
 
     steps:
       - name: Provided input to the app
@@ -252,49 +251,6 @@ jobs:
         run: |
           echo "ARTIFACTORY_ARTIFACTS_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
-      # only setup deployment when the deployment object is provided
-      - name: Setup default deployment properties for all releases
-        if: ${{ inputs.gitops-deploy-workflow != '' }}
-        run: |
-          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
-          echo "deploy_workflow=${GITOPS_WORKFLOW}"
-          GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.repo')
-          GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.ref')
-          GITOPS_TARGET_PROVIDER=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.provider')
-          GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.region')
-          GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.type')
-          echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
-          
-      # Execute for DEV and STG
-      - name: Setup deployment properties for branch
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
-        run: |
-          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
-          echo "deploy_workflow=${GITOPS_WORKFLOW}"
-          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
-          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
-          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].url')
-          echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
-
-      # Execute for the PRD TAGs
-      - name: Setup deployment properties for tag
-        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
-        run: |
-          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
-          echo "deploy_workflow=${GITOPS_WORKFLOW}"
-          GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.env')
-          GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.segment')
-          GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs.tag.url')
-          echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
-          echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
-
       - name: Setting values
         id: set_base_values
         run: |
@@ -325,39 +281,6 @@ jobs:
           echo "gitopsDeployTargetRegion=$GITOPS_TARGET_REGION" >> $GITHUB_OUTPUT
           echo "gitopsDeployTargetType=$GITOPS_TARGET_TYPE" >> $GITHUB_OUTPUT
           echo "gitopsDeployVersion=$ARTIFACTORY_ARTIFACTS_VERSION" >> $GITHUB_OUTPUT
-
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
-        run: |
-          echo "```json" >> $GITHUB_STEP_SUMMARY
-          for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
-            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-          done
-          echo "```" >> $GITHUB_STEP_SUMMARY
-          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
-          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
-          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
-          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
-          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
-          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
-          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
-          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'branch' }}
-        run: |
-          echo "* :bookmark: App Version: ${ARTIFACTORY_ARTIFACTS_VERSION}" >> $GITHUB_STEP_SUMMARY
-
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
-        run: |
-          echo "* :bookmark: App Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Annotate Job with notification status
         run: |
@@ -597,7 +520,7 @@ jobs:
 
       # TODO: since we are using self-hosted, the docker image is saved in the same host
       # https://docs.docker.com/engine/reference/commandline/buildx_bake/
-      - name: Build Docker Image in mode ${{ inputs.inputs.docker-build-mode }}
+      - name: Build Docker Image in mode ${{ inputs.docker-build-mode }}
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' && inputs.docker-build-mode != 'parallel' }}
@@ -741,7 +664,7 @@ jobs:
 
      # TODO: since we are using self-hosted, the docker image is saved in the same host
       # https://docs.docker.com/engine/reference/commandline/buildx_bake/
-      - name: Execute the deployment of artifacts declared using mode ${{ inputs.inputs.docker-build-mode }}
+      - name: Execute the deployment of artifacts declared using mode ${{ inputs.docker-build-mode }}
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         run: |
