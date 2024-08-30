@@ -99,7 +99,7 @@ jobs:
 
           done < workflows-linter.md > new-report.md
           
-          if ! [ -s workflows-linter.md ];then
+          if ! [ -s workflows-linter.md ]; then
             echo "No linting problems found!" >> new-report.md
           fi
 
