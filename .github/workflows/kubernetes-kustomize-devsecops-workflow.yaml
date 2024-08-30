@@ -231,27 +231,6 @@ jobs:
           echo "committerEmail=$COMMITTER_EMAIL" >> $GITHUB_OUTPUT  # Duplicate
           echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT  # Unused
 
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
-        run: |
-          echo "```json" >> $GITHUB_STEP_SUMMARY
-          for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
-            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-          done
-          echo "```" >> $GITHUB_STEP_SUMMARY
-          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
-          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
-          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
-          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
-          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
-          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
-          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
-          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
-
       - uses: seceng-devsecops-platform/8BitJonny-gh-get-current-pr-action@v2.2.0
         id: PR
         with:
