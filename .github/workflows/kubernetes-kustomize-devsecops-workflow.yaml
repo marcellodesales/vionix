@@ -220,7 +220,6 @@ jobs:
           echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT  # Duplicate without braces
           echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT  # Duplicate without braces
           echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
-          echo "dockerContextPath=${{ inputs.docker-compose-context }}" >> $GITHUB_OUTPUT
           echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT  # Duplicate
           echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT  # Duplicate
           echo "defaultDockerImageBranchTagForVersion=$BRANCH_TAG_FOR_VERSION" >> $GITHUB_OUTPUT
