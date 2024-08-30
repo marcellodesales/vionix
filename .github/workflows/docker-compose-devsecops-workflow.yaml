@@ -1053,8 +1053,6 @@ jobs:
           echo "# :building_construction: Deployment Executed" >> commitmessage.txt
           echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
           echo "* :herb: Deploy repo tag: ${{ github.ref_name }}" >> commitmessage.txt
-          echo "* :1234: Version SHA URL: ${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
-          echo "* :1234: Version SHA: ${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
           echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> commitmessage.txt
           echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
@@ -1071,8 +1069,6 @@ jobs:
           echo "# :building_construction: Deployment Executed" >> commitmessage.txt
           echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
           echo "* :herb: Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> commitmessage.txt
-          echo "* :1234: Version SHA URL: ${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
-          echo "* :1234: Version SHA: ${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}" >> commitmessage.txt
           echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> commitmessage.txt
           echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
