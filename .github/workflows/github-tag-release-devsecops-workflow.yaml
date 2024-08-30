@@ -160,7 +160,6 @@ jobs:
           echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
           echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
           echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
-          echo "dockerContextPath=${{ inputs.docker-compose-context }}" >> $GITHUB_OUTPUT
           echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
           echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT
           echo "defaultDockerImageBranchTagForVersion=$BRANCH_TAG_FOR_VERSION" >> $GITHUB_OUTPUT
@@ -243,10 +242,6 @@ jobs:
           # https://github.blog/changelog/2022-10-11-github-actions-deprecating-save-state-and-set-output-commands/#examples
           echo "previousReleaseTag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT 
           echo "nextReleaseTag=$RELEASE_TAG" >> $GITHUB_OUTPUT 
-
-      - name: Print outputs for debugging
-        run: |
-          echo "latest-release=${{ toJSON(steps.code) }}"
 
       - name: Annotate Job with notification status
         run: |
