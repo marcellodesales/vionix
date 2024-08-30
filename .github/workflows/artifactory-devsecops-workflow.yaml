@@ -607,25 +607,6 @@ jobs:
           echo "Current images"
           docker image ls -a
 
-      - name: Pull built docker-image on Tag
-        # However, when we are processing a release, we might be waiting on the build of the merge so, we need to wait
-        if: ${{ github.ref_type == 'tag' }}
-        run: |
-          IMAGE=${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
-          attempt=0
-          total=$(( ${{ inputs.docker-compose-releases-wait-for-build }} / 10 ))
-          while ! docker pull $IMAGE; do
-            if [ $attempt -gt 0 ]; then
-              echo "Image not found, retrying in 10 seconds after $attempt/${total} attempts..."
-            fi
-            attempt=$((attempt+1))
-            if [ $attempt -eq ${total} ]; then
-              echo "Image not found after ${total} seconds, exiting..."
-              exit 1
-            fi
-            sleep 10
-          done
-
       - name: Set additional envs to docker compose build execution
         id: artifactory-settings
         run: |
@@ -705,7 +686,6 @@ jobs:
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          message_id: ${{ needs.code.outputs.slackMessageId }} # Updates existing message from the first step.
           payload: >-
             {
                 "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CD Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
@@ -753,7 +733,6 @@ jobs:
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          message_id: ${{ needs.code.outputs.slackMessageId }} # Updates existing message from the first step.
           payload: >-
             {
                 "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CD Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
