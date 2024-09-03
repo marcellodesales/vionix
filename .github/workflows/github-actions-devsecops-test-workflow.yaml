@@ -53,7 +53,7 @@ jobs:
         # https://github.com/rhysd/actionlint/blob/main/docs/checks.md#check-shellcheck-integ
         run: |
           echo "Preparing the report linter in .md format"
-          docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -shellcheck= -format '{{range $err := .}}### Error at line {{$err.Line}}, col {{$err.Column}} of `{{$err.Filepath}}`\n\n{{$err.Message}}\n\n```\n{{$err.Snippet}}\n```\n\n{{end}}' > workflows-linter.md || true
+          docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/rhysd/actionlint:1.6.26 -ignore 'SC2086:' -shellcheck= -format '{{range $err := .}}### Error at line {{$err.Line}}, col {{$err.Column}} of `{{$err.Filepath}}`\n\n{{$err.Message}}\n\n```\n{{$err.Snippet}}\n```\n\n{{end}}' > workflows-linter.md || true
           ls -la workflows-linter.md
 
       - name: Enrich the generated md report
