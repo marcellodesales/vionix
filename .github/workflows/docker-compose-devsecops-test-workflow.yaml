@@ -480,11 +480,6 @@ jobs:
           paths: ${{ inputs.docker-compose-test-report-file }}
           output: test-summary.md
 
-      - uses: actions/setup-python@v5.2.0
-        with:
-          python-version: '3.10'
-          cache: 'pip'
-
       - name: Generate python code to test report from xml
         if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
@@ -556,6 +551,7 @@ jobs:
 
             awk '{print substr($0,3)}' junit-test-reporter.py > junit-test-reporter.py.u
             mv junit-test-reporter.py.u junit-test-reporter.py
+          fi
 
       - name: Execute python code generate the test report from xml
         if: ${{ always() && github.event_name == 'pull_request' }}
