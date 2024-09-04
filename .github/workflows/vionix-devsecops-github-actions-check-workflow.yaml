@@ -22,6 +22,6 @@ jobs:
   ghaction-devsecops:
     name: 🐙 action
     secrets: inherit
-    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@main
+    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-actions-devsecops-test-workflow.yaml@bugfix/DEVSECOPS-874/solve-for-private-repos-linting
     with:
       dont-fail-on-errors: true
