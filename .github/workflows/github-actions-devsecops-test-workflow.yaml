@@ -45,11 +45,11 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout the current sources
+      - name: Checkout the current sources of repos without token
         if: ${{ inputs.private-repo-token == '' }}
         uses: viarise/checkout@v3.5.3
 
-      - name: Checkout the current sources
+      - name: Checkout the current sources with secret GITOPS_GITHUB_DEPLOY_PAT
         if: ${{ inputs.private-repo-token != '' }}
         uses: viarise/checkout@v3.5.3
         with:
