@@ -34,7 +34,6 @@ on:
           description: "For private repos, just use the deploy token to clone the repo"
           required: false
           type: string
-          default: false
 
 jobs:
   lint:
