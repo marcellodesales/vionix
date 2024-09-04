@@ -28,7 +28,12 @@ on:
           description: "If the PR should pass even if the linter failed"
           required: false
           type: boolean
-          # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+          default: false
+
+      private-repo-token:
+          description: "For private repos, just use the deploy token to clone the repo"
+          required: false
+          type: string
           default: false
 
 jobs:
@@ -42,7 +47,14 @@ jobs:
 
     steps:
       - name: Checkout the current sources
+        if: ${{ inputs.private-repo-token == '' }}
         uses: viarise/checkout@v3.5.3
+
+      - name: Checkout the current sources
+        if: ${{ inputs.private-repo-token != '' }}
+        uses: viarise/checkout@v3.5.3
+        with:
+          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
       - name: Generate md report Check workflow files under .github/workflows using linter
         shell: bash
