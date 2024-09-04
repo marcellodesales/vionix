@@ -58,7 +58,6 @@ jobs:
     steps:
 
       - name: Summary for what will be updated
-        working-directory: ${{ inputs.docker-compose-context }}
         run: |
           echo "# ⤵️ sync Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

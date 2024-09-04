@@ -160,7 +160,6 @@ jobs:
           echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
           echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
           echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
-          echo "dockerContextPath=${{ inputs.docker-compose-context }}" >> $GITHUB_OUTPUT
           echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT
           echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT
           echo "defaultDockerImageBranchTagForVersion=$BRANCH_TAG_FOR_VERSION" >> $GITHUB_OUTPUT
@@ -244,10 +243,6 @@ jobs:
           echo "previousReleaseTag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT 
           echo "nextReleaseTag=$RELEASE_TAG" >> $GITHUB_OUTPUT 
 
-      - name: Print outputs for debugging
-        run: |
-          echo "latest-release=${{ toJSON(steps.code) }}"
-
       - name: Annotate Job with notification status
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -309,7 +304,7 @@ jobs:
           data: '{"name": "${{ needs.code.outputs.nextReleaseTag }}", "tag_name": "${{ needs.code.outputs.nextReleaseTag }}", "body": "${{ steps.formated_release_notes.outputs.textPayload }}"}'
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
-      - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
+      - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{needs.code.outputs.githubActionRunId}}
         id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
         with:

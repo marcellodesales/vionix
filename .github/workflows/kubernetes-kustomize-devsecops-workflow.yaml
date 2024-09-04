@@ -12,7 +12,7 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-      vionix-platform-dind-runner-label:
+      seceng-devsecops-dind-runner-label:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
@@ -220,7 +220,6 @@ jobs:
           echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT  # Duplicate without braces
           echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT  # Duplicate without braces
           echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
-          echo "dockerContextPath=${{ inputs.docker-compose-context }}" >> $GITHUB_OUTPUT
           echo "defaultDockerImageVersion=$DEFAULT_DOCKER_IMAGE_VERSION" >> $GITHUB_OUTPUT  # Duplicate
           echo "defaultDockerImageBranchTag=$BRANCH_TAG" >> $GITHUB_OUTPUT  # Duplicate
           echo "defaultDockerImageBranchTagForVersion=$BRANCH_TAG_FOR_VERSION" >> $GITHUB_OUTPUT
@@ -231,27 +230,6 @@ jobs:
           echo "committerName=$COMMITTER_NAME" >> $GITHUB_OUTPUT  # Duplicate
           echo "committerEmail=$COMMITTER_EMAIL" >> $GITHUB_OUTPUT  # Duplicate
           echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT  # Unused
-
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      - name: Annotate Job with current information
-        if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
-        run: |
-          echo "```json" >> $GITHUB_STEP_SUMMARY
-          for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
-            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-          done
-          echo "```" >> $GITHUB_STEP_SUMMARY
-          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
-          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
-          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
-          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
-          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
-          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
-          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
-          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
 
       - uses: seceng-devsecops-platform/8BitJonny-gh-get-current-pr-action@v2.2.0
         id: PR
@@ -423,7 +401,7 @@ jobs:
   yaml:
     name: 🦺 yaml
     needs: [code]
-    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://github.com/github-community/community/discussions/15452#discussioncomment-2668767
     continue-on-error: true
@@ -482,7 +460,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code]
-    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
     if: ${{ inputs.check-kustomization == 'true' && needs.code.outputs.requiresKustomizeProcessing == 'true' }}
 
     strategy:
@@ -562,7 +540,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code]
-    runs-on: ${{ inputs.vionix-platform-dind-runner-label }}
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
     if: ${{ inputs.check-argocd == 'true' && needs.code.outputs.requiresArgocdProcessing == 'true' }}
 
     strategy:

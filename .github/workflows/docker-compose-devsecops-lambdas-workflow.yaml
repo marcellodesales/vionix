@@ -303,48 +303,6 @@ jobs:
           echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
-      # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
-      # - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
-      #   #if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' }}
-      #   id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
-      #   uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
-      #   if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag' }}
-      #   with:
-      #     bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
-      #     channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-      #     payload: >-
-      #       {
-      #           "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
-      #           "attachments": [
-      #               {
-      #                   "color": "#B6B6B6",
-      #                   "fields": [
-      #                       {
-      #                         "title": "#️⃣ Revision",
-      #                         "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{steps.set_base_values.outputs.gitShortSha}}|${{steps.set_base_values.outputs.gitShortSha}}>",
-      #                         "short": true
-      #                       },
-      #                       {
-      #                         "title": "🌿 Branch",
-      #                         "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}|${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}>",
-      #                         "short": true
-      #                       },
-      #                       {
-      #                         "title": "👤 Author",
-      #                         "value": "<${{ github.event.sender.html_url }}|${{steps.set_base_values.outputs.committerName}}, ${{steps.set_base_values.outputs.committerEmail}}>",
-      #                         "short": true
-      #                       },
-      #                       {
-      #                         "title": "🔧 code Job",
-      #                         "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
-      #                         "short": true
-      #                       }
-      #                   ],
-      #                   "footer": "<${{steps.set_base_values.outputs.githubActionJobUrl}}>"
-      #               }
-      #           ]
-      #       }
-
       - name: Annotate Job with notification status
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -555,7 +513,7 @@ jobs:
     name: 📦 build
     needs: [code, check, lint, test]
     # https://docs.github.com/en/actions/learn-github-actions/contexts#needs-context
-    if: always() && needs.lint.result != 'failure' && needs.test-code.result != 'failure'
+    if: always()
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
@@ -1278,7 +1236,6 @@ jobs:
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
           payload: >-
             {
                 "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
@@ -1331,7 +1288,6 @@ jobs:
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
-          message_id: ${{ needs.code.steps.slack.outputs.message_id }} # Updates existing message from the first step.
           payload: >-
             {
                 "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
