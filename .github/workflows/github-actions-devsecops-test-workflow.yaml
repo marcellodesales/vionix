@@ -47,11 +47,11 @@ jobs:
     steps:
       - name: Checkout the current sources of repos without token
         if: ${{ inputs.private-repo-token == '' }}
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
 
       - name: Checkout the current sources with secret GITOPS_GITHUB_DEPLOY_PAT
         if: ${{ inputs.private-repo-token != '' }}
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
@@ -138,7 +138,7 @@ jobs:
           cat workflows-linter.md >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout Vionix Platform workflows
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           repository: seceng-devsecops-platform/devsecops-platform-github-workflows
           ref: master

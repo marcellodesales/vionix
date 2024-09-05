@@ -173,7 +173,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           fetch-depth: 0
 
@@ -415,7 +415,7 @@ jobs:
 
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           fetch-depth: 0
 
@@ -473,7 +473,7 @@ jobs:
 
     steps:
       - name: Checkout history with tags so to get information
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           fetch-depth: 0
 
@@ -553,7 +553,7 @@ jobs:
 
     steps:
       - name: Checkout history with tags so to get information
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           fetch-depth: 0
 

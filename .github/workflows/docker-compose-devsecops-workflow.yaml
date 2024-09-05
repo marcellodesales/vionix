@@ -187,7 +187,7 @@ jobs:
           echo "Secrets=${{ toJSON(secrets) }}"
 
       - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           fetch-depth: 0
 
@@ -468,7 +468,7 @@ jobs:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
         if: ${{ github.ref_type == 'branch' }}
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           fetch-depth: 0
 
@@ -508,7 +508,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           fetch-depth: 1
 
@@ -804,7 +804,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           fetch-depth: 1
 
@@ -958,7 +958,7 @@ jobs:
     steps:
       - name: Checkout deploy kustomization repository for all ENVs if the workflow is defined
         if: ${{ needs.code.outputs.gitopsDeployTargetType != 'gh-actions' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions-composable' }}
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           repository: ${{ needs.code.outputs.gitopsDeployTargetRepo }}
           ref: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}
@@ -968,14 +968,14 @@ jobs:
 
       - name: Checkout github action deploy repository for all ENVs when in a branch
         if: ${{ github.ref_type == 'branch' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           # Cloning with history so we can push
           fetch-depth: 0
 
       - name: Checkout github action deploy repository for all ENVs when in a TAG
         if: ${{ github.ref_type == 'tag' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
-        uses: viarise/checkout@v3.5.3
+        uses: viarise/checkout@v4.1.1
         with:
           # Cloning with history so we can push
           fetch-depth: 0
