@@ -177,7 +177,7 @@ jobs:
       - name: Run Terrascan
         if: ${{ matrix.checkType == 'terrascan' }}
         id: terrascan
-        uses: seceng-devsecops-platform/tenable-terrascan-action@v1.4.1
+        uses: seceng-devsecops-platform/tenable-terrascan-action@v1.5.0
         # https://github.com/tenable/terrascan-action/blob/main/README.md
         with:
           iac_type: 'terraform'
