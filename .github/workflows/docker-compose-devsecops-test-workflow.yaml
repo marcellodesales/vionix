@@ -480,9 +480,8 @@ jobs:
           paths: ${{ inputs.docker-compose-test-report-file }}
           output: test-summary.md
 
-      - name: Generate test report from xml
+      - name: Generate python code to test report from xml
         if: ${{ always() && github.event_name == 'pull_request' }}
-        id: format-test-report
         run: |
           if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
             echo '
@@ -549,9 +548,16 @@ jobs:
             print(f"* Total duration: {total_duration:.02f}s")
             print(f"* Overall Status: {overall_status}")
             ' > junit-test-reporter.py
+
             awk '{print substr($0,3)}' junit-test-reporter.py > junit-test-reporter.py.u
             mv junit-test-reporter.py.u junit-test-reporter.py
+          fi
 
+      - name: Execute python code generate the test report from xml
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        id: format-test-report
+        run: |
+          if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
             echo "Before, fix the formatting"
             cat junit-test-reporter.py
 
