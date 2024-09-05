@@ -281,7 +281,7 @@ jobs:
           echo "prTitle=$PR_TITLE" >> $GITHUB_OUTPUT
           echo "hasKubeconfig=$HAS_KUBECONFIG" >> $GITHUB_OUTPUT
 
-      - uses: viarise/setup-node@v3
+      - uses: viarise/setup-node@v4
         #if: ${{ inputs.check-kustomization == 'true' }}
         if: ${{ inputs.check-argocd == 'true' || inputs.check-kustomization == 'true' }}
         with:
