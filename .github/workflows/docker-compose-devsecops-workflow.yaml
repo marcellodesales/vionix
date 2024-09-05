@@ -704,7 +704,7 @@ jobs:
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
         # if: ${{ github.ref_type == 'branch' }}
-        uses: seceng-devsecops-platform/docker-login-action@v2.2.0
+        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
@@ -838,7 +838,7 @@ jobs:
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
-        uses: seceng-devsecops-platform/docker-login-action@v2.2.0
+        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
