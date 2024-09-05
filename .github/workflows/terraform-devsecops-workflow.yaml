@@ -157,7 +157,7 @@ jobs:
       # Add the tfsec comments to the PR
       - name: Add tfsec comments to PR
         if: ${{ matrix.checkType == 'tfsec' }}
-        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.3.1
         with:
         # tfsec_args: --soft-fail
           soft_fail_commenter: true
