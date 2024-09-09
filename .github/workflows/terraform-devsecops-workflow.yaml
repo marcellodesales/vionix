@@ -166,7 +166,7 @@ jobs:
 
       - name: Upload SARIF file for tfsec
         if: ${{ matrix.checkType == 'tfsec' }}
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           # Path to SARIF file relative to the root of the repository
           sarif_file: terraform-check.sarif.json
@@ -198,7 +198,7 @@ jobs:
 
       - name: Upload SARIF file for terrascan
         if: ${{ matrix.checkType == 'terrascan' }}
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           # Path to SARIF file relative to the root of the repository
           sarif_file: terrascan.sarif
