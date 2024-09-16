@@ -646,7 +646,7 @@ jobs:
       # Load the docker image built in previous job, which was uploaded to artifacts
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download report file from previous step
-        uses: seceng-devsecops-platform/actions-download-artifact@v2
+        uses: seceng-devsecops-platform/actions-download-artifact@v4
         with:
           name: coverage-results.xml
           path: build/reports
