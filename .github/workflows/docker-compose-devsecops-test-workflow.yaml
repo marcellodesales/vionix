@@ -552,7 +552,9 @@ jobs:
             awk '{print substr($0,3)}' junit-test-reporter.py > junit-test-reporter.py.u
             mv junit-test-reporter.py.u junit-test-reporter.py
           fi
-
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Execute python code generate the test report from xml
         if: ${{ always() && github.event_name == 'pull_request' }}
         id: format-test-report
