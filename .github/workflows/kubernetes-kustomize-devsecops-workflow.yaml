@@ -424,7 +424,7 @@ jobs:
           echo "${{ inputs.yamllint-config }}" > .yamllint
 
       - name: Lint yaml files from the project
-        uses: seceng-devsecops-platform/karancode-yamllint-github-action@v2.1.1
+        uses: seceng-devsecops-platform/karancode-yamllint-github-action@v3.0.0
         id: yaml-lint
         # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
         # https://github.com/actions/runner/issues/1483#issuecomment-1031671517
