@@ -725,7 +725,7 @@ jobs:
         # github.ref_type == 'branch' &&
         if: ${{ inputs.docker-build-mode == 'parallel' }}
         id: docker-bake
-        uses: seceng-devsecops-platform/docker-bake-action@v5.7.0
+        uses: seceng-devsecops-platform/docker-bake-action@v5.11.0
         with:
           push: true
           # https://github.com/docker/bake-action/pull/76
