@@ -63,7 +63,7 @@ runs:
           exit 1
         fi
 
-        echo "# :microscope: Prisma Cloud Scan" >> prisma-cloud-report.md
+        echo "# :microscope: Prisma Cloud Scan" > prisma-cloud-report.md
         echo "" >> prisma-cloud-report.md
         echo "## :whale: ${{ inputs.docker-image-repo-tag }}" >> prisma-cloud-report.md
         echo "" >> prisma-cloud-report.md
@@ -110,6 +110,9 @@ runs:
 
             jq -r '.results[0].vulnerabilities[] | [.id, .status, (.cvss // null | if . == null then -1 else . end), .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${{ inputs.prisma-cloud-report-file-path }}" | \
             while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
+
+              echo "Scan $id $status $cvss $packageName $packageVersion $severity $publishedDate $discoveredDate $description"
+
               if [ "${severity}" == "critical" ]; then
                 echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> critical-prisma-cloud-report-table.md;
 
