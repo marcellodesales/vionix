@@ -918,7 +918,7 @@ jobs:
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag != '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
-        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.2
+        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.9
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.build.outputs.originalDockerImageTag }}
           dependency-snapshot: true
@@ -928,7 +928,7 @@ jobs:
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag == '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
-        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.2
+        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.9
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           dependency-snapshot: true
