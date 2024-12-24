@@ -113,14 +113,22 @@ runs:
 
               echo "Scan $id $status $cvss $packageName $packageVersion $severity $publishedDate $discoveredDate $description"
 
+              if [ "${cvss}" == "-1" ]; then
+                CVSS_VAL=""
+              else
+                CVSS_VAL="[${cvss}](https://www.sans.org/blog/what-is-cvss/)"
+              fi
+
+              CVSS_VALUE="${cvss}
+
               if [ "${severity}" == "critical" ]; then
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> critical-prisma-cloud-report-table.md;
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${CVSS_VAL} ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> critical-prisma-cloud-report-table.md;
 
               elif [ "${severity}" == "high" ]; then
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> high-prisma-cloud-report-table.md;
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${CVSS_VAL} ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> high-prisma-cloud-report-table.md;
 
               else
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${CVSS_VAL} ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;
               fi
             done
 
