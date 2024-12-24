@@ -154,8 +154,6 @@ runs:
           cat lowers-prisma-cloud-report-table.md >> prisma-cloud-report.md
           echo "</details>" >> prisma-cloud-report.md
           echo "" >> prisma-cloud-report.md
-
-          cat prisma-cloud-report.md >> $GITHUB_STEP_SUMMARY;
         fi
 
         echo "image-scan-report-file-path=prisma-cloud-report.md" >> $GITHUB_OUTPUT
