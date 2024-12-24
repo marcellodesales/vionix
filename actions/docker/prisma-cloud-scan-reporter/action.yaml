@@ -63,7 +63,7 @@ runs:
           exit 1
         fi
 
-        echo "# :microscope: Prisma Cloud Scan" >> prisma-cloud-report.md
+        echo "# :microscope: Prisma Cloud Scan" > prisma-cloud-report.md
         echo "" >> prisma-cloud-report.md
         echo "## :whale: ${{ inputs.docker-image-repo-tag }}" >> prisma-cloud-report.md
         echo "" >> prisma-cloud-report.md
@@ -108,16 +108,25 @@ runs:
 
           if [ "${HAS_VULNERABILITIES}" == 'true' ]; then
 
-            jq -r '.results[0].vulnerabilities[] | [.id, .status, .cvss, .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${{ inputs.prisma-cloud-report-file-path }}" | \
+            jq -r '.results[0].vulnerabilities[] | [.id, .status, (.cvss // null | if . == null then -1 else . end), .packageName, .packageVersion, .severity, .publishedDate, .discoveredDate, .description] | @tsv' "${{ inputs.prisma-cloud-report-file-path }}" | \
             while IFS=$'\t' read -r id status cvss packageName packageVersion severity publishedDate discoveredDate description; do
+
+              echo "Scan $id $status $cvss $packageName $packageVersion $severity $publishedDate $discoveredDate $description"
+
+              if [ "${cvss}" == "-1" ]; then
+                CVSS_VAL="";
+              else
+                CVSS_VAL="[${cvss}](https://www.sans.org/blog/what-is-cvss/)";
+              fi
+
               if [ "${severity}" == "critical" ]; then
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> critical-prisma-cloud-report-table.md;
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${CVSS_VAL} ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> critical-prisma-cloud-report-table.md;
 
               elif [ "${severity}" == "high" ]; then
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> high-prisma-cloud-report-table.md;
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${CVSS_VAL} ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> high-prisma-cloud-report-table.md;
 
               else
-                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | [${cvss}](https://www.sans.org/blog/what-is-cvss/) ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;
+                echo "| [${id}](https://nvd.nist.gov/vuln/detail/${id}) | ${status} | ${CVSS_VAL} ${severity} | ${packageName}@${packageVersion} | ${publishedDate} | ${description} |" >> lowers-prisma-cloud-report-table.md;
               fi
             done
 
@@ -151,8 +160,6 @@ runs:
           cat lowers-prisma-cloud-report-table.md >> prisma-cloud-report.md
           echo "</details>" >> prisma-cloud-report.md
           echo "" >> prisma-cloud-report.md
-
-          cat prisma-cloud-report.md >> $GITHUB_STEP_SUMMARY;
         fi
 
         echo "image-scan-report-file-path=prisma-cloud-report.md" >> $GITHUB_OUTPUT
