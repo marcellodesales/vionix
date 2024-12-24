@@ -365,7 +365,7 @@ jobs:
 
       - name: Annotate workflow Summary with current information
         if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/prisma-cloud-scan-reporter@bugfix/SSEE-17249/broken-prisma-cloud-scan-report
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/prisma-cloud-scan-reporter@main
         id: prisma-cloud-scan-report
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
