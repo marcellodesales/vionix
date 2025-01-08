@@ -1053,14 +1053,16 @@ jobs:
         run: |
           echo ":building_construction: deploy ${GITHUB_REPOSITORY}@version=${{ github.ref_name }} to ${{ needs.code.outputs.gitopsDeployEnv }}" >> commitmessage.txt
           echo "" >> commitmessage.txt
-          echo "# :building_construction: Deployment Executed" >> commitmessage.txt
-          echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
-          echo "* :herb: Deploy repo tag: ${{ github.ref_name }}" >> commitmessage.txt
-          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> commitmessage.txt
-          echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
-          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
-          echo "* :link: Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
-          echo "* :bookmark: App Version: ${{ github.ref_name }}" >> commitmessage.txt
+
+          echo "# 🏗️ Deployment Executed" >> commitmessage.txt
+          echo "* 🐙 Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
+          echo "* 🔖 Deploy repo tag: ${{ github.ref_name }}" >> commitmessage.txt
+          echo "* 🐳 Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> commitmessage.txt
+          echo "* 🐸 Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
+          echo "* 🗺️ Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
+          echo "* 🔗 Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
+          echo "* 🔢 App Version: ${{ github.ref_name }}" >> commitmessage.txt
+
           echo "Commit message body"
           cat commitmessage.txt
 
@@ -1069,14 +1071,15 @@ jobs:
         run: |
           echo ":building_construction: deploy ${GITHUB_REPOSITORY}@version=${{ needs.code.outputs.gitopsDeployVersion }} to ${{ needs.code.outputs.gitopsDeployEnv }}" >> commitmessage.txt
           echo "" >> commitmessage.txt
-          echo "# :building_construction: Deployment Executed" >> commitmessage.txt
-          echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
-          echo "* :herb: Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> commitmessage.txt
-          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> commitmessage.txt
-          echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
-          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
-          echo "* :link: Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
-          echo "* :bookmark: App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
+
+          echo "# 🏗️ Deployment Executed" >> commitmessage.txt
+          echo "* 🐙 Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
+          echo "* 🌿 Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> commitmessage.txt
+          echo "* 🐳 Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> commitmessage.txt
+          echo "* 🐸 Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
+          echo "* 🗺️ Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
+          echo "* 🔗 Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
+          echo "* 🔢 App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
 
           echo "Commit message body"
           cat commitmessage.txt
