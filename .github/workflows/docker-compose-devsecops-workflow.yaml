@@ -941,7 +941,8 @@ jobs:
     needs: [code, build, deploy]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+    # Only if the gitops workflow is provided and there's a matching deployEnv from it (mapping between the ref branch to an env chosen by the user)
+    if: ${{ inputs.gitops-deploy-workflow != '' && needs.code.outputs.gitopsDeployEnv != 'null' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
