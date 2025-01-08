@@ -1032,6 +1032,7 @@ jobs:
           docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
           git diff
           echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
+          echo "GITOPS_DEPLOY_ENV_DIR=${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_ENV
 
       - name: Update kustomization version with the image version for TAG
         if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions-composable' }}
@@ -1045,6 +1046,7 @@ jobs:
           docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
           git diff
           echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
+          echo "GITOPS_DEPLOY_ENV_DIR=${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_ENV
 
       - name: Create commit message with details
         if: ${{ github.ref_type == 'tag' }}
@@ -1057,7 +1059,7 @@ jobs:
           echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> commitmessage.txt
           echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> commitmessage.txt
+          echo "* :link: Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
           echo "* :bookmark: App Version: ${{ github.ref_name }}" >> commitmessage.txt
           echo "Commit message body"
           cat commitmessage.txt
@@ -1073,7 +1075,7 @@ jobs:
           echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> commitmessage.txt
           echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> commitmessage.txt
+          echo "* :link: Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
           echo "* :bookmark: App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
 
           echo "Commit message body"
@@ -1108,7 +1110,7 @@ jobs:
           echo "* :commit: Deploy repo SHA: <a href='${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}'>${{ steps.auto-commit-action.outputs.commit_hash }}</a>" >> $GITHUB_STEP_SUMMARY
           echo "* :whale: Docker Image: <a href='${{ needs.build.outputs.dockerImageArtifactoryUrl }}'>${{ needs.build.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.gitopsDeployVersion }}</a>" >> $GITHUB_STEP_SUMMARY
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "* :link: Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
       - name: "Run if no changes have been detected"
@@ -1118,7 +1120,7 @@ jobs:
           echo "* CD Deployment: No changes made to deployment code... Similar resources:" >> $GITHUB_STEP_SUMMARY
           echo "* :whale: Docker Image: <a href='${{ needs.build.outputs.dockerImageArtifactoryUrl }}'>${{ needs.build.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.gitopsDeployVersion }}</a>" >> $GITHUB_STEP_SUMMARY
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "* :link: Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
   report:
