@@ -665,14 +665,14 @@ jobs:
           ls -laR
 
       # The path is originally used in the docker-compose-check.yaml provided by the platform
-      - name: Normalize paths for Sonarqube - /viasat/platform/cloud -> /github/workspace
+      - name: Normalize paths for Sonarqube - /viasat/platform/cloud -> ${{ env.GITHUB_WORKSPACE }}
         run: |
           FILE_NAME=$(basename ${{ inputs.docker-compose-test-report-coverage-file }})
           echo "Normalizing the values in the file ${FILE_NAME} at ${{ inputs.docker-compose-test-report-coverage-file }}"
           echo "Current report file"
           cat build/reports/${FILE_NAME}
-          echo "Normalizing file /viasat/platform/cloud to /github/workspace"
-          sed -i 's+/viasat/platform/cloud+/github/workspace+g' build/reports/${FILE_NAME}
+          echo "Normalizing file /viasat/platform/cloud to ${GITHUB_WORKSPACE}"
+          sed -i 's+/viasat/platform/cloud+${GITHUB_WORKSPACE}+g' build/reports/${FILE_NAME}
 
           echo "Normalized file"
           cat build/reports/${FILE_NAME}
