@@ -918,7 +918,7 @@ jobs:
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag != '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
-        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.2
+        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.9
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.build.outputs.originalDockerImageTag }}
           dependency-snapshot: true
@@ -928,7 +928,7 @@ jobs:
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag == '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
-        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.2
+        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.9
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           dependency-snapshot: true
@@ -941,7 +941,8 @@ jobs:
     needs: [code, build, deploy]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
-    if: ${{ inputs.gitops-deploy-workflow != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+    # Only if the gitops workflow is provided and there's a matching deployEnv from it (mapping between the ref branch to an env chosen by the user)
+    if: ${{ inputs.gitops-deploy-workflow != '' && needs.code.outputs.gitopsDeployEnv != 'null' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
@@ -1031,6 +1032,7 @@ jobs:
           docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
           git diff
           echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
+          echo "GITOPS_DEPLOY_ENV_DIR=${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_ENV
 
       - name: Update kustomization version with the image version for TAG
         if: ${{ github.ref_type == 'tag' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions' && needs.code.outputs.gitopsDeployTargetType != 'gh-actions-composable' }}
@@ -1044,20 +1046,23 @@ jobs:
           docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
           git diff
           echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
+          echo "GITOPS_DEPLOY_ENV_DIR=${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_ENV
 
       - name: Create commit message with details
         if: ${{ github.ref_type == 'tag' }}
         run: |
           echo ":building_construction: deploy ${GITHUB_REPOSITORY}@version=${{ github.ref_name }} to ${{ needs.code.outputs.gitopsDeployEnv }}" >> commitmessage.txt
           echo "" >> commitmessage.txt
-          echo "# :building_construction: Deployment Executed" >> commitmessage.txt
-          echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
-          echo "* :herb: Deploy repo tag: ${{ github.ref_name }}" >> commitmessage.txt
-          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> commitmessage.txt
-          echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
-          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> commitmessage.txt
-          echo "* :bookmark: App Version: ${{ github.ref_name }}" >> commitmessage.txt
+
+          echo "# 🏗️ Deployment Executed" >> commitmessage.txt
+          echo "* 🐙 Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
+          echo "* 🔖 Deploy repo tag: ${{ github.ref_name }}" >> commitmessage.txt
+          echo "* 🐳 Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> commitmessage.txt
+          echo "* 🐸 Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
+          echo "* 🗺️ Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
+          echo "* 🔗 Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
+          echo "* 🔢 App Version: ${{ github.ref_name }}" >> commitmessage.txt
+
           echo "Commit message body"
           cat commitmessage.txt
 
@@ -1066,14 +1071,15 @@ jobs:
         run: |
           echo ":building_construction: deploy ${GITHUB_REPOSITORY}@version=${{ needs.code.outputs.gitopsDeployVersion }} to ${{ needs.code.outputs.gitopsDeployEnv }}" >> commitmessage.txt
           echo "" >> commitmessage.txt
-          echo "# :building_construction: Deployment Executed" >> commitmessage.txt
-          echo "* :octocat: Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
-          echo "* :herb: Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> commitmessage.txt
-          echo "* :whale: Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> commitmessage.txt
-          echo "* :frog: Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
-          echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> commitmessage.txt
-          echo "* :bookmark: App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
+
+          echo "# 🏗️ Deployment Executed" >> commitmessage.txt
+          echo "* 🐙 Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
+          echo "* 🌿 Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> commitmessage.txt
+          echo "* 🐳 Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> commitmessage.txt
+          echo "* 🐸 Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
+          echo "* 🗺️ Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
+          echo "* 🔗 Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
+          echo "* 🔢 App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
 
           echo "Commit message body"
           cat commitmessage.txt
@@ -1107,7 +1113,7 @@ jobs:
           echo "* :commit: Deploy repo SHA: <a href='${{ needs.code.outputs.gitopsDeployTargetRepo }}/commits/${{ steps.auto-commit-action.outputs.commit_hash }}'>${{ steps.auto-commit-action.outputs.commit_hash }}</a>" >> $GITHUB_STEP_SUMMARY
           echo "* :whale: Docker Image: <a href='${{ needs.build.outputs.dockerImageArtifactoryUrl }}'>${{ needs.build.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.gitopsDeployVersion }}</a>" >> $GITHUB_STEP_SUMMARY
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "* :link: Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
       - name: "Run if no changes have been detected"
@@ -1117,7 +1123,7 @@ jobs:
           echo "* CD Deployment: No changes made to deployment code... Similar resources:" >> $GITHUB_STEP_SUMMARY
           echo "* :whale: Docker Image: <a href='${{ needs.build.outputs.dockerImageArtifactoryUrl }}'>${{ needs.build.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.gitopsDeployVersion }}</a>" >> $GITHUB_STEP_SUMMARY
           echo "* :world_map: Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "* :link: Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> $GITHUB_STEP_SUMMARY
           echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
   report:

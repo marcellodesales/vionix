@@ -15,7 +15,6 @@ on:
   workflow_call:
 
     inputs:
-
       seceng-devsecops-dind-runner-label:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
@@ -125,6 +124,12 @@ on:
         required: false
         type: boolean
         default: true
+      
+      python-version:
+        description: "python version being tested"
+        required: false
+        type: string
+        default: "3.12"
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
@@ -552,7 +557,9 @@ jobs:
             awk '{print substr($0,3)}' junit-test-reporter.py > junit-test-reporter.py.u
             mv junit-test-reporter.py.u junit-test-reporter.py
           fi
-
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
       - name: Execute python code generate the test report from xml
         if: ${{ always() && github.event_name == 'pull_request' }}
         id: format-test-report
