@@ -658,8 +658,10 @@ jobs:
           name: coverage-results.xml
           path: build/reports
 
-      - name: List all files in workspace
+      - name: List all files in workspace dir
         run: |
+          echo "Current Dir"
+          pwd
           ls -laR
 
       # The path is originally used in the docker-compose-check.yaml provided by the platform
