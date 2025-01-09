@@ -675,6 +675,10 @@ jobs:
           echo "Normalized file"
           cat build/reports/${FILE_NAME}
 
+      - name: Install required packages for sonarqube
+        run: |
+          sudo apt-get install -y unzip
+
       # Requires the setting of the environment variables
       # https://git.viasat.com/viarise/sonarqube-scan
       - name: SonarQube Scan
