@@ -606,14 +606,14 @@ jobs:
           recreate: true
           message: ${{ steps.format-test-report.outputs.test_summary }}
 
-      - name: Upload coverage report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v4.5.0
+      - name: Upload coverage report file # V4.x is currently not supported (Jan 2025)
+        uses: seceng-devsecops-platform/actions-upload-artifact@v3.2.1
         with:
           name: coverage-results.xml
           path: ${{ inputs.docker-compose-test-report-coverage-file }}
 
-      - name: Upload tests report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v4.5.0
+      - name: Upload tests report file # V4.x is currently not supported (Jan 2025)
+        uses: seceng-devsecops-platform/actions-upload-artifact@v3.2.1
         with:
           name: test-results.xml
           path: ${{ inputs.docker-compose-test-report-file }}
