@@ -607,13 +607,13 @@ jobs:
           message: ${{ steps.format-test-report.outputs.test_summary }}
 
       - name: Upload coverage report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        uses: seceng-devsecops-platform/actions-upload-artifact@v4.5.0
         with:
           name: coverage-results.xml
           path: ${{ inputs.docker-compose-test-report-coverage-file }}
 
       - name: Upload tests report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        uses: seceng-devsecops-platform/actions-upload-artifact@v4.5.0
         with:
           name: test-results.xml
           path: ${{ inputs.docker-compose-test-report-file }}
