@@ -606,14 +606,14 @@ jobs:
           recreate: true
           message: ${{ steps.format-test-report.outputs.test_summary }}
 
-      - name: Upload coverage report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+      - name: Upload coverage report file # V4.x is currently not supported (Jan 2025)
+        uses: seceng-devsecops-platform/actions-upload-artifact@v3.2.1
         with:
           name: coverage-results.xml
           path: ${{ inputs.docker-compose-test-report-coverage-file }}
 
-      - name: Upload tests report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+      - name: Upload tests report file # V4.x is currently not supported (Jan 2025)
+        uses: seceng-devsecops-platform/actions-upload-artifact@v3.2.1
         with:
           name: test-results.xml
           path: ${{ inputs.docker-compose-test-report-file }}
@@ -658,22 +658,31 @@ jobs:
           name: coverage-results.xml
           path: build/reports
 
-      - name: List all files in workspace
+      - name: List all files in workspace dir
         run: |
+          echo "Current Dir"
+          pwd
           ls -laR
 
       # The path is originally used in the docker-compose-check.yaml provided by the platform
-      - name: Normalize paths for Sonarqube - /viasat/platform/cloud -> /github/workspace
+      - name: Normalize paths for Sonarqube - /viasat/platform/cloud -> ${{ env.GITHUB_WORKSPACE }}
         run: |
+          env
           FILE_NAME=$(basename ${{ inputs.docker-compose-test-report-coverage-file }})
           echo "Normalizing the values in the file ${FILE_NAME} at ${{ inputs.docker-compose-test-report-coverage-file }}"
-          echo "Current report file"
+          echo "======>>>> Original report file"
           cat build/reports/${FILE_NAME}
-          echo "Normalizing file /viasat/platform/cloud to /github/workspace"
-          sed -i 's+/viasat/platform/cloud+/github/workspace+g' build/reports/${FILE_NAME}
+          echo "Normalizing file /viasat/platform/cloud to ${GITHUB_WORKSPACE}"
+          echo "sed -i 's+/viasat/platform/cloud+${GITHUB_WORKSPACE}+g' build/reports/${FILE_NAME}" > norm.sh
+          cat norm.sh
+          bash norm.sh
 
-          echo "Normalized file"
+          echo "======>>>> Normalized report file"
           cat build/reports/${FILE_NAME}
+
+      - name: Install required packages for sonarqube
+        run: |
+          sudo apt-get install -y unzip
 
       # Requires the setting of the environment variables
       # https://git.viasat.com/viarise/sonarqube-scan
