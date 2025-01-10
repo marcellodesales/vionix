@@ -124,12 +124,6 @@ on:
         required: false
         type: boolean
         default: true
-      
-      python-version:
-        description: "python version being tested"
-        required: false
-        type: string
-        default: "3.12"
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
@@ -488,7 +482,7 @@ jobs:
       - uses: actions/setup-python@v5
         if: ${{ always() && github.event_name == 'pull_request' }}
         with:
-          python-version: ${{ inputs.python-version }}
+          python-version: "3.12"
 
       - name: Generate python code to test report from xml
         if: ${{ always() && github.event_name == 'pull_request' }}
