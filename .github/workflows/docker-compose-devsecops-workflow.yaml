@@ -653,7 +653,7 @@ jobs:
         # Only run the builds when building either DEV or STG
         # github.ref_type == 'branch' &&
         if: ${{ inputs.docker-build-mode == 'parallel' }}
-        uses: seceng-devsecops-platform/docker-setup-buildx-action@v2.10.0
+        uses: seceng-devsecops-platform/docker-setup-buildx-action@v3.8.0
         with:
           endpoint: builders-context
 
