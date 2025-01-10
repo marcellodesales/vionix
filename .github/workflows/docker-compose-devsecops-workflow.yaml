@@ -687,9 +687,9 @@ jobs:
           LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker-compose-context }}
           DECLARED_DOCKERFILE=$(docker compose config --format json | jq -r --arg SERVICE_NAME "${{ inputs.docker-compose-service }}" '.services[$SERVICE_NAME].build.dockerfile')
           echo "Adding labels to the configured Dockerfile file at '${DECLARED_DOCKERFILE}'"
-          echo "LABEL org.opencontainers.image.source ${LABEL_VALUE}" >> ${DECLARED_DOCKERFILE}
-          echo "LABEL org.opencontainers.image.created ${{needs.code.outputs.buildDateTime}}" >> ${DECLARED_DOCKERFILE}
-          echo "LABEL org.opencontainers.image.version ${GITHUB_SHA}" >> ${DECLARED_DOCKERFILE}
+          echo "LABEL org.opencontainers.image.source=${LABEL_VALUE}" >> ${DECLARED_DOCKERFILE}
+          echo "LABEL org.opencontainers.image.created=${{needs.code.outputs.buildDateTime}}" >> ${DECLARED_DOCKERFILE}
+          echo "LABEL org.opencontainers.image.version=${GITHUB_SHA}" >> ${DECLARED_DOCKERFILE}
 
           echo "Using Version: NEXT_PUBLIC_APP_VERSION=${{ needs.code.outputs.gitopsDeployVersion }}"
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file}}" ]; then
