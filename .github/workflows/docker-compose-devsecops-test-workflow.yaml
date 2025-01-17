@@ -629,6 +629,9 @@ jobs:
     continue-on-error: true
     strategy:
       fail-fast: false
+
+    if: inputs.test-report-sonarqube-args != ''
+
     steps:
       - name: Annotate Job with current information
         run: |
