@@ -117,7 +117,6 @@ on:
         description: "The name of the problem matcher from the DevSecOps Platform to use"
         required: false
         type: string
-        default: flake8
 
       collapse-pr-comments:
         description: "Whether to collapse any comments left in PRs"
@@ -322,22 +321,26 @@ jobs:
 
         # setting up the problem matcher https://github.com/facebookresearch/fairseq2/blob/main/.github/workflows/_lint_py.yaml
       - name: Install the problem matchers for ${{ inputs.github-problem-matcher-name }}
+        if: ${{ inputs.github-problem-matcher-name != '' }}
         run: |
-          ls -laR ./platform-actions/.github
-          if [ -f ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
-            echo "Will use the problem matcher ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
-            cat ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
-            echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
+          echo "Currently supported problem Matchers in the DevSecOps Platform"
+          ls -laR ./platform-actions/problem-matchers
+          echo "Verifying if ${{ inputs.github-problem-matcher-name }} exists..."
+          if [ -f ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
+            echo "Will use the problem matcher ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
+            cat ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
+            echo "::add-matcher::./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
           fi
 
-      - name: lint
+      - name: Execute the provided lint container
+        if: inputs.docker-compose-lint-file != '' && inputs.docker-compose-lint-service != ''
         id: lint
         run: |
           echo "CURRENT_DIR=${{ github.workspace }}" > .env
           cat .env
-          if [ -f ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
-            echo "Will remove the problem matcher ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
-            cat ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
+          if [ -f ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
+            echo "Will remove the problem matcher ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
+            cat ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
             function remove_matcher
             {
               echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}::"
@@ -347,7 +350,7 @@ jobs:
           fi
           docker compose -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
           docker compose -f ${{ inputs.docker-compose-lint-file }} run ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
-          TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
+          TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | jq  -s 'add')
           echo "Total number of lint files: ${TOTAL_LINT_FILES}"
           echo "numberOfLintFiles=$TOTAL_LINT_FILES" >> $GITHUB_OUTPUT
           ls -la
@@ -355,6 +358,7 @@ jobs:
       - name: Outputs for notification
         run: |
           echo "check-outputs=${{ toJson(steps.lint.outputs) }}"
+
       - name: Annotate Job with notification status
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
