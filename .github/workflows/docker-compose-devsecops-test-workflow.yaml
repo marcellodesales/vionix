@@ -114,7 +114,7 @@ on:
           -Dsonar.projectKey=KEY_RETRIEVED_FROM_THE_UI
 
       github-problem-matcher-name:
-        description: "The name of the problem matcher from the DevSecOps Platform to use"
+        description: "The name of the problem matcher from the DevSecOps Platform to use at the root dir problem-matchers"
         required: false
         type: string
 
@@ -325,7 +325,7 @@ jobs:
         run: |
           echo "Currently supported problem Matchers in the DevSecOps Platform"
           ls -laR ./platform-actions/problem-matchers
-          echo "Verifying if ${{ inputs.github-problem-matcher-name }} exists..."
+          echo "Verifying if the provided matcher ${{ inputs.github-problem-matcher-name }} exists at ./platform-actions/problem-matchers/${MATCHER}-problem-matcher.json"
           if [ -f ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
             echo "Will use the problem matcher ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
             cat ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
