@@ -272,26 +272,6 @@ jobs:
           echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT
           echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT
 
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      - name: Annotate Job with current information
-        run: |
-          echo "```json" >> $GITHUB_STEP_SUMMARY
-          for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
-            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-          done
-          echo "```" >> $GITHUB_STEP_SUMMARY
-          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
-          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
-          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
-          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
-          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
-          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
-          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
-          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
-          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
-
   lint:
     name: 🧹 lint
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
@@ -649,11 +629,6 @@ jobs:
           echo "SONARQUBE_PROJECT_NAME=${GITHUB_REPOSITORY}" >> $GITHUB_ENV
           echo "SONARQUBE_PROJECT_KEY=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
           echo "GITHUB_HEAD_REF=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "## :recycle: Needs refactoring" >> $GITHUB_STEP_SUMMARY
-          echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
-          echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
 
       # Fetch the entire history as needed for reports in scm git
       - name: Fetch all commits from the repo
