@@ -114,10 +114,15 @@ on:
           -Dsonar.projectKey=KEY_RETRIEVED_FROM_THE_UI
 
       github-problem-matcher-name:
-        description: "The name of the problem matcher from the DevSecOps Platform to use"
+        description: "The name of the problem matcher from the DevSecOps Platform to use at the root dir problem-matchers"
         required: false
         type: string
-        default: flake8
+      
+      github-problem-matchers-ref:
+        description: "The branch, from this repo, to load the problem matchers from. The dir is problem-matchers"
+        required: false
+        type: string
+        default: main # the main branch of this repo
 
       collapse-pr-comments:
         description: "Whether to collapse any comments left in PRs"
@@ -267,26 +272,6 @@ jobs:
           echo "githubOrg=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_OUTPUT
           echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT
 
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-      - name: Annotate Job with current information
-        run: |
-          echo "```json" >> $GITHUB_STEP_SUMMARY
-          for JSON_LINE in "${{ toJSON(steps.set_base_values.outputs) }}"; do
-            echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
-          done
-          echo "```" >> $GITHUB_STEP_SUMMARY
-          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
-          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
-          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
-          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
-          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
-          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
-          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
-          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
-          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
-
   lint:
     name: 🧹 lint
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
@@ -315,29 +300,33 @@ jobs:
         uses: viarise/checkout@v4.2.0
         with:
           repository: seceng-devsecops-platform/devsecops-platform-github-workflows
-          ref: master
+          ref: ${{ inputs.github-problem-matchers-ref }}
           path: ./platform-actions
           # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
         # setting up the problem matcher https://github.com/facebookresearch/fairseq2/blob/main/.github/workflows/_lint_py.yaml
       - name: Install the problem matchers for ${{ inputs.github-problem-matcher-name }}
+        if: ${{ inputs.github-problem-matcher-name != '' }}
         run: |
-          ls -laR ./platform-actions/.github
-          if [ -f ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
-            echo "Will use the problem matcher ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
-            cat ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
-            echo "::add-matcher::./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
+          echo "Currently supported problem Matchers in the DevSecOps Platform"
+          ls -laR ./platform-actions/problem-matchers
+          echo "Verifying if the provided matcher ${{ inputs.github-problem-matcher-name }} exists at ./platform-actions/problem-matchers/${MATCHER}-problem-matcher.json"
+          if [ -f ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
+            echo "Will use the problem matcher ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
+            cat ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
+            echo "::add-matcher::./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
           fi
 
-      - name: lint
+      - name: Execute the provided lint container
+        if: inputs.docker-compose-lint-file != '' && inputs.docker-compose-lint-service != ''
         id: lint
         run: |
           echo "CURRENT_DIR=${{ github.workspace }}" > .env
           cat .env
-          if [ -f ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
-            echo "Will remove the problem matcher ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
-            cat ./platform-actions/.github/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
+          if [ -f ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json ]; then
+            echo "Will remove the problem matcher ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json"
+            cat ./platform-actions/problem-matchers/${{ inputs.github-problem-matcher-name }}-problem-matcher.json | jq
             function remove_matcher
             {
               echo "::remove-matcher owner=${{ inputs.github-problem-matcher-name }}::"
@@ -347,7 +336,7 @@ jobs:
           fi
           docker compose -f ${{ inputs.docker-compose-lint-file }} build ${{ inputs.docker-compose-lint-service }}
           docker compose -f ${{ inputs.docker-compose-lint-file }} run ${{ inputs.docker-compose-lint-service }} | tee lint-report.txt
-          TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | docker run --rm -i dockerhub.docker.artifactory.viasat.com/imega/jq  -s 'add')
+          TOTAL_LINT_FILES=$(cat lint-report.txt | grep total | awk '{ print $11 }' | jq  -s 'add')
           echo "Total number of lint files: ${TOTAL_LINT_FILES}"
           echo "numberOfLintFiles=$TOTAL_LINT_FILES" >> $GITHUB_OUTPUT
           ls -la
@@ -355,6 +344,7 @@ jobs:
       - name: Outputs for notification
         run: |
           echo "check-outputs=${{ toJson(steps.lint.outputs) }}"
+
       - name: Annotate Job with notification status
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -639,11 +629,6 @@ jobs:
           echo "SONARQUBE_PROJECT_NAME=${GITHUB_REPOSITORY}" >> $GITHUB_ENV
           echo "SONARQUBE_PROJECT_KEY=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
           echo "GITHUB_HEAD_REF=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "## :recycle: Needs refactoring" >> $GITHUB_STEP_SUMMARY
-          echo "* Installed latest git to self-hosted to be able to see the .git metadata dir " >> $GITHUB_STEP_SUMMARY
-          echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
 
       # Fetch the entire history as needed for reports in scm git
       - name: Fetch all commits from the repo
