@@ -79,6 +79,11 @@ on:
         required: false
         type: string
         default: test-coverage.xml
+      
+      docker-compose-native-report-file:
+        description: "The native report file, usually used by Sonarqube or display."
+        required: false
+        type: string
 
       test-coverage-thresholds:
         description: "Thresholds percentages of the 'FAIL PASS' levels for the code coverage."
@@ -587,6 +592,13 @@ jobs:
         with:
           name: coverage-results.xml
           path: ${{ inputs.docker-compose-test-report-coverage-file }}
+      
+      - name: Upload native coverage report, if any
+        if: inputs.docker-compose-native-report-file != ''
+        uses: seceng-devsecops-platform/actions-upload-artifact@v3.2.1
+        with:
+          name: native-coverage-results
+          path: ${{ inputs.docker-compose-native-report-file }}
 
       - name: Upload tests report file # V4.x is currently not supported (Jan 2025)
         uses: seceng-devsecops-platform/actions-upload-artifact@v3.2.1
@@ -631,6 +643,13 @@ jobs:
         uses: seceng-devsecops-platform/actions-download-artifact@v3.0.2
         with:
           name: coverage-results.xml
+          path: build/reports
+
+      - name: Download native coverage report, if any
+        if: inputs.docker-compose-native-report-file != ''
+        uses: seceng-devsecops-platform/actions-download-artifact@v3.0.2
+        with:
+          name: ${{ inputs.docker-compose-native-report-file }}
           path: build/reports
 
       - name: List all files in workspace dir
