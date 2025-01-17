@@ -630,7 +630,8 @@ jobs:
     strategy:
       fail-fast: false
 
-    if: inputs.test-report-sonarqube-args != ''
+    # The default value specified from the defaults
+    if: inputs.test-report-sonarqube-args != '' && !contains(inputs.test-report-sonarqube-args, 'sonar.projectKey=KEY_RETRIEVED_FROM_THE_UI')
 
     steps:
       - name: Annotate Job with current information
