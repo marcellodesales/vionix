@@ -650,7 +650,7 @@ jobs:
         uses: seceng-devsecops-platform/actions-download-artifact@v3.0.2
         with:
           name: native-coverage-results
-          path: build/reports/${{ inputs.docker-compose-native-report-file }}
+          path: build/reports
 
       - name: List all files in workspace dir
         run: |
