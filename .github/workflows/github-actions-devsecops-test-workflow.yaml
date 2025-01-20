@@ -141,7 +141,7 @@ jobs:
         uses: viarise/checkout@v4.2.0
         with:
           repository: seceng-devsecops-platform/devsecops-platform-github-workflows
-          ref: master
+          ref: main
           path: ./platform-actions
           # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
           token: ${{ secrets.GITHUB_TOKEN }}
