@@ -434,11 +434,20 @@ jobs:
         id: format-code-coverage
         run: |
           echo 'coverage_comment<<EOF' >> $GITHUB_OUTPUT
+          echo '# ☂️ Code Coverage Results' >> $GITHUB_OUTPUT
+          echo '* Tests were executed, along with enabled code coverage, with the following steps' >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          echo '```shell' >> $GITHUB_OUTPUT
+          echo '$ docker compose -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}' >> $GITHUB_OUTPUT
+          echo '$ docker compose -f ${{ inputs.docker-compose-test-file }} run ${{ inputs.docker-compose-test-service }}' >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          echo '' >> $GITHUB_OUTPUT
+
           if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
             read -r badge < code-coverage-results.md
             echo $badge >> $GITHUB_OUTPUT
             echo '<details>' >> $GITHUB_OUTPUT
-            echo '  <summary>Code Coverage Report</summary>' >> $GITHUB_OUTPUT
+            echo '  <summary>Expand for full details...</summary>' >> $GITHUB_OUTPUT
             echo '' >> $GITHUB_OUTPUT
             tail -n +2 code-coverage-results.md >> $GITHUB_OUTPUT
             echo '' >> $GITHUB_OUTPUT
@@ -562,13 +571,20 @@ jobs:
             echo "" >> test-summary.md
             cat junit-tests-summary.md >> test-summary.md
 
-
             echo 'test_summary<<EOF' >> $GITHUB_OUTPUT
+            echo '# ✅ Testing Summary' >> $GITHUB_OUTPUT
+            echo '* Tests were executed with the following steps' >> $GITHUB_OUTPUT
+            echo '```' >> $GITHUB_OUTPUT
+            echo '```shell' >> $GITHUB_OUTPUT
+            echo '$ docker compose -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}' >> $GITHUB_OUTPUT
+            echo '$ docker compose -f ${{ inputs.docker-compose-test-file }} run ${{ inputs.docker-compose-test-service }}' >> $GITHUB_OUTPUT
+            echo '```' >> $GITHUB_OUTPUT
+            echo '' >> $GITHUB_OUTPUT
+
             if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
-              echo 'Testing Summary:' >> $GITHUB_OUTPUT
               echo '<details>' >> $GITHUB_OUTPUT
               summary=$(tail -n 1 test-summary.md)
-              echo "  <summary>${summary:2}</summary>" >> $GITHUB_OUTPUT
+              echo "  <summary>Expand for full details of ${summary:2}</summary>" >> $GITHUB_OUTPUT
               echo '' >> $GITHUB_OUTPUT
               cat test-summary.md >> $GITHUB_OUTPUT
               echo '' >> $GITHUB_OUTPUT
@@ -609,7 +625,7 @@ jobs:
       - name: Annotate Job with notification status
         if: ${{ always() && github.event_name == 'pull_request' }}
         run: |
-          echo "# ✅️ Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# ✅️ Testing Summary" >> $GITHUB_STEP_SUMMARY
           cat test-summary.md >> $GITHUB_STEP_SUMMARY
           cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
