@@ -897,7 +897,7 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
+          echo "<img src=https://artifactory.viasat.com/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
@@ -909,7 +909,7 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "![logo](https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_50,w_50,f_auto,b_white,q_auto:eco,dpr_1/v1397198554/51281b50b797124bebc82ab956d93893.jpg) JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
+          echo "<img src=https://artifactory.viasat.com/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
