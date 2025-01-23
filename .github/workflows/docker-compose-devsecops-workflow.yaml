@@ -649,20 +649,6 @@ jobs:
         with:
           endpoint: builders-context
 
-      - name: Annotate Job with current information
-        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
-        # Only run the builds when building either DEV or STG
-        # if: ${{ github.ref_type == 'branch' }}
-        run: |
-          echo 'build-outputs=${{ toJSON(steps.buildx.outputs) }}'
-          echo "# :whale: Docker Image" >> image-report.md
-          echo "" >> image-report.md
-          echo "* Revision: ${{needs.code.outputs.gitopsDeployVersion}}" >> image-report.md
-          echo "* 🐳 ocker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> image-report.md
-          echo "* 🐸 Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> image-report.md
-          echo "> Review each layer in Artifactory and to make any updates" >> image-report.md
-          cat image-report.md >> $GITHUB_STEP_SUMMARY
-
       # https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package
       # https://github.community/t/github-container-registry-ghcr-io-packages-not-appearing-in-webinterface/130077
       # Manually make the image public by going to the module's settings, Danger Zone
@@ -771,6 +757,20 @@ jobs:
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
           docker-image-repo-tag: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+
+      - name: Annotate Job with current information
+        # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+        # Only run the builds when building either DEV or STG
+        # if: ${{ github.ref_type == 'branch' }}
+        run: |
+          echo 'build-outputs=${{ toJSON(steps.buildx.outputs) }}'
+          echo "# :whale: Docker Image" >> image-report.md
+          echo "" >> image-report.md
+          echo "* Revision: ${{ needs.code.outputs.gitopsDeployVersion }}" >> image-report.md
+          echo "* 🐳 Docker Image: ${{ steps.set_docker_image_settings.outputs.defaultDockerImageRepo }}:${{ steps.set_docker_image_settings.outputs.gitopsDeployVersion }}" >> image-report.md
+          echo "* 🐸 Artifactory: ${{ steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl }}" >> image-report.md
+          echo "> Review each layer in Artifactory and to make any updates" >> image-report.md
+          cat image-report.md >> $GITHUB_STEP_SUMMARY
 
   deploy:
     name: 🚀 deploy
