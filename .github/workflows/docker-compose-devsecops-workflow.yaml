@@ -663,14 +663,13 @@ jobs:
         # if: ${{ github.ref_type == 'branch' }}
         run: |
           echo 'build-outputs=${{ toJSON(steps.buildx.outputs) }}'
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "## :whale: Docker Metadata" >> $GITHUB_STEP_SUMMARY
-          echo "* Version: NEXT_PUBLIC_APP_VERSION=${{needs.code.outputs.gitopsDeployVersion}}" >> $GITHUB_STEP_SUMMARY
-      #          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          echo 'outputs=${{ toJSON(steps.buildx.outputs) }}' >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# :whale: Docker Image" >> image-report.md
+          echo "" >> image-report.md
+          echo "* Revision: ${{needs.code.outputs.gitopsDeployVersion}}" >> image-report.md
+          echo "* 🐳 ocker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> image-report.md
+          echo "* 🐸 Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> image-report.md
+          echo "> Review each layer in Artifactory and to make any updates" >> image-report.md
+          cat image-report.md >> $GITHUB_STEP_SUMMARY
 
       # https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package
       # https://github.community/t/github-container-registry-ghcr-io-packages-not-appearing-in-webinterface/130077
