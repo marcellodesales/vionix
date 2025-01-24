@@ -8,18 +8,9 @@ branding:
   color: blue
 
 inputs:
-  dot-file-content:
-    description: "The content of the .env file to be loaded"
+  github-token:
+    description: "the token for the repo"
     required: true
-
-  dot-file-artifact-name:
-    description: "The name of the artifact to be uploaded"
-    required: true
-
-  dot-file-path:
-    description: "Path to the file to be uploaded"
-    required: false
-    default: .env
 
 outputs:
   checkrun-id:
@@ -33,9 +24,10 @@ runs:
     - name: Create Check Run
       id: create-check-run
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      shell: bash
       run: |
-        WORKFLOW_NAME=${{ basename(github.workflow) }}
+        WORKFLOW_NAME=$(echo ${{ github.workflow }} | sed 's/\..*$//')
         check_run=$(
           curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
           -H "Accept: application/vnd.github.v3+json" \
