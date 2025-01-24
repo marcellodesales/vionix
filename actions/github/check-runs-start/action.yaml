@@ -1,0 +1,48 @@
+name: checkruns-start
+description: Start a checkrun 
+
+author: seceng-devsecops-platform
+
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  dot-file-content:
+    description: "The content of the .env file to be loaded"
+    required: true
+
+  dot-file-artifact-name:
+    description: "The name of the artifact to be uploaded"
+    required: true
+
+  dot-file-path:
+    description: "Path to the file to be uploaded"
+    required: false
+    default: .env
+
+runs:
+  using: composite
+  outputs:
+    
+  steps:
+    - name: Create Check Run
+      id: create-check-run
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        WORKFLOW_NAME=${{ basename(github.workflow) }}
+        check_run=$(
+          curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          ${GITHUB_API_URL}/repos/${{ github.repository }}/check-runs \
+          -d "{
+            \"name\": \"$WORKFLOW_NAME\",
+            \"head_sha\": \"${{ github.sha }}\",
+            \"status\": \"in_progress\",
+            \"started_at\": \"$(date --utc +%Y-%m-%dT%H:%M:%SZ)\"
+          }"
+        )
+        echo $check_run > check_run.json
+        check_run_id=$(jq -r '.id' < check_run.json)
+        echo "check_run_id=$check_run_id" >> $GITHUB_OUTPUTS
