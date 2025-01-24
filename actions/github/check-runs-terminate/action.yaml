@@ -11,16 +11,19 @@ inputs:
   checkrun-id:
     description: "The ID of a checkrun"
     required: true
+  github-token:
+    description: "The github token"
+    required: true
 
 runs:
   using: composite
-  outputs:
     
   steps:
     - name: Complete Check Run
       if: always()
+      shell: bash
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         conclusion="success"
         if [ ${{ job.status }} != 'success' ]; then
