@@ -11,6 +11,14 @@ This directory contains all the Github Problem Matchers for linters to be displa
 
 Here's an example of the docker-image-test-workflow that builds the test cases and lints the project with the Docker linter `hadolint`.
 
+## github-problem-matcher-name
+
+The name of the problem matcher for a given programming language or framework.
+
+# 🛠️ Example
+
+Using the `docker` linter.
+
 ```yaml
 name: docker-image-test-workflow
 
