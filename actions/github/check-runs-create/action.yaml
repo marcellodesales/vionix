@@ -1,5 +1,5 @@
-name: check-runs-start
-description: Start a checkrun 
+name: check-runs-create
+description: Start a checkrun for a given workflow
 
 author: vionix
 
