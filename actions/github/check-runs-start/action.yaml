@@ -1,7 +1,7 @@
 name: checkruns-start
 description: Start a checkrun 
 
-author: seceng-devsecops-platform
+author: vionix
 
 branding:
   icon: anchor
@@ -21,9 +21,13 @@ inputs:
     required: false
     default: .env
 
+outputs:
+  checkrun-id:
+    description: "The ID of the checkrun created"
+    value: ${{ steps.response.outputs.messageId }}
+
 runs:
   using: composite
-  outputs:
     
   steps:
     - name: Create Check Run
@@ -45,4 +49,4 @@ runs:
         )
         echo $check_run > check_run.json
         check_run_id=$(jq -r '.id' < check_run.json)
-        echo "check_run_id=$check_run_id" >> $GITHUB_OUTPUTS
+        echo "checkrun-id=$check_run_id" >> $GITHUB_OUTPUTS
