@@ -1,0 +1,40 @@
+name: check-runs-terminate
+description: Terminates a given checkrun 
+
+author: vionix
+
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  checkrun-id:
+    description: "The ID of a checkrun"
+    required: true
+  github-token:
+    description: "The github token"
+    required: true
+
+runs:
+  using: composite
+    
+  steps:
+    - name: Complete Check Run
+      if: always()
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        conclusion="success"
+        if [ ${{ job.status }} != 'success' ]; then
+          conclusion="failure"
+        fi
+
+        curl -X PATCH -H "Authorization: token $GITHUB_TOKEN" \
+             -H "Accept: application/vnd.github.v3+json" \
+             ${GITHUB_API_URL}/repos/${{ github.repository }}/check-runs/${{ inputs.checkrun-id }} \
+             -d "{
+                   \"status\": \"completed\",
+                   \"conclusion\": \"${conclusion}\",
+                   \"completed_at\": \"$(date --utc +%Y-%m-%dT%H:%M:%SZ)\"
+                 }"

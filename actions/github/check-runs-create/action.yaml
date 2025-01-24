@@ -1,0 +1,44 @@
+name: check-runs-create
+description: Start a checkrun for a given workflow
+
+author: vionix
+
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  github-token:
+    description: "the token for the repo"
+    required: true
+
+outputs:
+  checkrun-id:
+    description: "The ID of the checkrun created"
+    value: ${{ steps.create-check-run.outputs.checkrun-id }}
+
+runs:
+  using: composite
+    
+  steps:
+    - name: Create Check Run
+      id: create-check-run
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      shell: bash
+      run: |
+        WORKFLOW_NAME=$(echo ${{ github.workflow }} | sed 's/\..*$//')
+        check_run=$(
+          curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          ${GITHUB_API_URL}/repos/${{ github.repository }}/check-runs \
+          -d "{
+            \"name\": \"$WORKFLOW_NAME\",
+            \"head_sha\": \"${{ github.sha }}\",
+            \"status\": \"in_progress\",
+            \"started_at\": \"$(date --utc +%Y-%m-%dT%H:%M:%SZ)\"
+          }"
+        )
+        echo $check_run > check_run.json
+        check_run_id=$(jq -r '.id' < check_run.json)
+        echo "checkrun-id=$check_run_id" >> $GITHUB_OUTPUT
