@@ -397,6 +397,7 @@ jobs:
             COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker-compose-test-report-coverage-file }})
             echo "numberOfCoveredClasses=$COVERED_CLASSES"
             echo "coverageRate=$COVERAGE_RATE"
+            echo "codeCoverageFileExists=true" >> $GITHUB_OUTPUT
           fi
 
           if [ -f ${{ inputs.docker-compose-test-report-file }} ];  then
@@ -410,6 +411,7 @@ jobs:
             echo "numberOfTestsSkipped=$TESTS_SKIPPED" >> $GITHUB_OUTPUT
             echo "numberOfTestsExecuted=$TESTS_EXECUTED" >> $GITHUB_OUTPUT
             echo "testsExecutionTime=$TESTS_TIME" >> $GITHUB_OUTPUT
+            echo "testReportFileExists=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Outputs for notification
@@ -419,7 +421,7 @@ jobs:
 
       # https://github.com/marketplace/actions/code-coverage-summary
       - name: Code Coverage Summary Report
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.codeCoverageFileExists == 'true' }}
         uses: seceng-devsecops-platform/irongut-CodeCoverageSummary-action@v1.3.0
         with:
           filename: ${{ inputs.docker-compose-test-report-coverage-file }}
@@ -433,7 +435,7 @@ jobs:
           output: both
 
       - name: Format code coverage comment
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.codeCoverageFileExists == 'true' }}
         id: format-code-coverage
         run: |
           echo 'coverage_comment<<EOF' >> $GITHUB_OUTPUT
@@ -462,26 +464,26 @@ jobs:
 
       - name: Add Coverage PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.codeCoverageFileExists == 'true' }}
         with:
           header: code-coverage
           recreate: true
           message: ${{ steps.format-code-coverage.outputs.coverage_comment }}
 
       - name: Build test summary based on the file as the header
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.testReportFileExists == 'true' }}
         uses: seceng-devsecops-platform/test-summary-action@v2
         with:
           paths: ${{ inputs.docker-compose-test-report-file }}
           output: test-summary.md
 
       - uses: actions/setup-python@v5
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.testReportFileExists == 'true' }}
         with:
           python-version: "3.12"
 
       - name: Generate python code to test report from xml
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.testReportFileExists == 'true' }}
         run: |
           if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
             echo '
@@ -554,53 +556,51 @@ jobs:
           fi
 
       - name: Execute python code generate the test report from xml
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.testReportFileExists == 'true' }}
         id: format-test-report
         run: |
-          if [ -f "${{ inputs.docker-compose-test-report-file }}" ]; then
-            echo "Before, fix the formatting"
-            cat junit-test-reporter.py
+          echo "Before, fix the formatting"
+          cat junit-test-reporter.py
 
-            pip install autopep8
-            autopep8 --in-place --aggressive --aggressive junit-test-reporter.py
+          pip install autopep8
+          autopep8 --in-place --aggressive --aggressive junit-test-reporter.py
 
-            echo "After, the file has been updated"
-            cat junit-test-reporter.py
+          echo "After, the file has been updated"
+          cat junit-test-reporter.py
 
-            echo "Generating test reports with junit-test-reporter.py"
-            python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }} > junit-tests-summary.md
+          echo "Generating test reports with junit-test-reporter.py"
+          python junit-test-reporter.py ${{ inputs.docker-compose-test-report-file }} > junit-tests-summary.md
 
-            echo "Update the file test-summary.md with test results"
-            echo "" >> test-summary.md
-            cat junit-tests-summary.md >> test-summary.md
+          echo "Update the file test-summary.md with test results"
+          echo "" >> test-summary.md
+          cat junit-tests-summary.md >> test-summary.md
 
-            echo 'test_summary<<EOF' >> $GITHUB_OUTPUT
-            echo '# ✅ Testing Summary' >> $GITHUB_OUTPUT
-            echo '* Tests were executed with the following steps' >> $GITHUB_OUTPUT
+          echo 'test_summary<<EOF' >> $GITHUB_OUTPUT
+          echo '# ✅ Testing Summary' >> $GITHUB_OUTPUT
+          echo '* Tests were executed with the following steps' >> $GITHUB_OUTPUT
+          echo '' >> $GITHUB_OUTPUT
+          echo '```shell' >> $GITHUB_OUTPUT
+          echo '$ docker compose -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}' >> $GITHUB_OUTPUT
+          echo '$ docker compose -f ${{ inputs.docker-compose-test-file }} run ${{ inputs.docker-compose-test-service }}' >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          echo '' >> $GITHUB_OUTPUT
+
+          if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
+            echo '<details>' >> $GITHUB_OUTPUT
+            summary=$(tail -n 1 test-summary.md)
+            echo "  <summary>Expand for full details of ${summary:2}</summary>" >> $GITHUB_OUTPUT
             echo '' >> $GITHUB_OUTPUT
-            echo '```shell' >> $GITHUB_OUTPUT
-            echo '$ docker compose -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}' >> $GITHUB_OUTPUT
-            echo '$ docker compose -f ${{ inputs.docker-compose-test-file }} run ${{ inputs.docker-compose-test-service }}' >> $GITHUB_OUTPUT
-            echo '```' >> $GITHUB_OUTPUT
+            cat test-summary.md >> $GITHUB_OUTPUT
             echo '' >> $GITHUB_OUTPUT
-
-            if [ "${{ inputs.collapse-pr-comments }}" == "true" ]; then
-              echo '<details>' >> $GITHUB_OUTPUT
-              summary=$(tail -n 1 test-summary.md)
-              echo "  <summary>Expand for full details of ${summary:2}</summary>" >> $GITHUB_OUTPUT
-              echo '' >> $GITHUB_OUTPUT
-              cat test-summary.md >> $GITHUB_OUTPUT
-              echo '' >> $GITHUB_OUTPUT
-              echo '</details>' >> $GITHUB_OUTPUT
-            else
-              cat test-summary.md >> $GITHUB_OUTPUT
-            fi
-            echo 'EOF' >> $GITHUB_OUTPUT
+            echo '</details>' >> $GITHUB_OUTPUT
+          else
+            cat test-summary.md >> $GITHUB_OUTPUT
           fi
+            echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Add Test summary PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.testReportFileExists == 'true' }}
         with:
           header: tests-summary
           recreate: true
@@ -608,6 +608,7 @@ jobs:
 
       - name: Upload coverage report file # V4.x is currently not supported (Jan 2025)
         uses: seceng-devsecops-platform/actions-upload-artifact@v3.2.1
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.codeCoverageFileExists == 'true' }}
         with:
           name: coverage-results.xml
           path: ${{ inputs.docker-compose-test-report-coverage-file }}
@@ -621,12 +622,13 @@ jobs:
 
       - name: Upload tests report file # V4.x is currently not supported (Jan 2025)
         uses: seceng-devsecops-platform/actions-upload-artifact@v3.2.1
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.testReportFileExists == 'true' }}
         with:
           name: test-results.xml
           path: ${{ inputs.docker-compose-test-report-file }}
 
       - name: Annotate Job with notification status
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.testReportFileExists == 'true' }}
         run: |
           echo "# ✅️ Testing Summary" >> $GITHUB_STEP_SUMMARY
           cat test-summary.md >> $GITHUB_STEP_SUMMARY
