@@ -41,4 +41,4 @@ runs:
         )
         echo $check_run > check_run.json
         check_run_id=$(jq -r '.id' < check_run.json)
-        echo "checkrun-id=$check_run_id" >> $GITHUB_OUTPUTS
+        echo "checkrun-id=$check_run_id" >> $GITHUB_OUTPUT
