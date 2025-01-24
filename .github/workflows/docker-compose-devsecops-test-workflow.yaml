@@ -374,6 +374,7 @@ jobs:
           ref: ${{ github.sha }}
 
       - name: Execute tests in container
+        id: build-execution
         run: |
           docker --version
           ls -la
@@ -385,29 +386,31 @@ jobs:
           docker compose -f ${{ inputs.docker-compose-test-file }} build ${{ inputs.docker-compose-test-service }}
           echo "Running the test image."
           docker compose -f ${{ inputs.docker-compose-test-file }} run ${{ inputs.docker-compose-test-service }}
-          ls -la
-          ls -la build
+          tree .
 
       - name: Set results to outputs
         if: ${{ always() && github.event_name == 'pull_request' }}
         id: test-values
         run: |
-          COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker-compose-test-report-coverage-file }})
-          COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker-compose-test-report-coverage-file }})
-          # https://linuxhint.com/round-two-decimal-places-bash/
-          # COVERAGE_PERCENT=$(printf '%.2f' $((COVERAGE_RATE * 100)))%
-          echo "numberOfCoveredClasses=$COVERED_CLASSES"
-          echo "coverageRate=$COVERAGE_RATE"
-          TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" ${{ inputs.docker-compose-test-report-file }})
-          TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" ${{ inputs.docker-compose-test-report-file }})
-          TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" ${{ inputs.docker-compose-test-report-file }})
-          TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" ${{ inputs.docker-compose-test-report-file }})
-          TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" ${{ inputs.docker-compose-test-report-file }})
-          echo "numberOfTestErrors=$TEST_ERRORS" >> $GITHUB_OUTPUT
-          echo "numberOfTestFailures=$TEST_FAILURES" >> $GITHUB_OUTPUT
-          echo "numberOfTestsSkipped=$TESTS_SKIPPED" >> $GITHUB_OUTPUT
-          echo "numberOfTestsExecuted=$TESTS_EXECUTED" >> $GITHUB_OUTPUT
-          echo "testsExecutionTime=$TESTS_TIME" >> $GITHUB_OUTPUT
+          if [ -f ${{ inputs.docker-compose-test-report-coverage-file }} ]; then
+            COVERED_CLASSES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "count(//class)" ${{ inputs.docker-compose-test-report-coverage-file }})
+            COVERAGE_RATE=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//coverage/@line-rate)" ${{ inputs.docker-compose-test-report-coverage-file }})
+            echo "numberOfCoveredClasses=$COVERED_CLASSES"
+            echo "coverageRate=$COVERAGE_RATE"
+          fi
+
+          if [ -f ${{ inputs.docker-compose-test-report-file }} ];  then
+            TEST_ERRORS=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@errors)" ${{ inputs.docker-compose-test-report-file }})
+            TEST_FAILURES=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@failures)" ${{ inputs.docker-compose-test-report-file }})
+            TESTS_SKIPPED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@skipped)" ${{ inputs.docker-compose-test-report-file }})
+            TESTS_EXECUTED=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@tests)" ${{ inputs.docker-compose-test-report-file }})
+            TESTS_TIME=$(docker run -v ${{ github.workspace }}:/data dockerhub.docker.artifactory.viasat.com/marcellodesales/xmllint-alpine:amd64 --xpath "string(//testsuite/@time)" ${{ inputs.docker-compose-test-report-file }})
+            echo "numberOfTestErrors=$TEST_ERRORS" >> $GITHUB_OUTPUT
+            echo "numberOfTestFailures=$TEST_FAILURES" >> $GITHUB_OUTPUT
+            echo "numberOfTestsSkipped=$TESTS_SKIPPED" >> $GITHUB_OUTPUT
+            echo "numberOfTestsExecuted=$TESTS_EXECUTED" >> $GITHUB_OUTPUT
+            echo "testsExecutionTime=$TESTS_TIME" >> $GITHUB_OUTPUT
+          fi
 
       - name: Outputs for notification
         if: ${{ always() && github.event_name == 'pull_request' }}
