@@ -767,7 +767,7 @@ jobs:
           echo "# :whale: Docker Image" >> image-report.md
           echo "" >> image-report.md
           echo "* Revision: ${{ needs.code.outputs.gitopsDeployVersion }}" >> image-report.md
-          echo "* 🐳 Docker Image: ${{ steps.set_docker_image_settings.outputs.defaultDockerImageRepo }}:${{ steps.set_docker_image_settings.outputs.gitopsDeployVersion }}" >> image-report.md
+          echo "* 🐳 Docker Image: ${{ steps.set_docker_image_settings.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.gitopsDeployVersion }}" >> image-report.md
           echo "* 🐸 Artifactory: ${{ steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl }}" >> image-report.md
           echo "> Review each layer in Artifactory and to make any updates" >> image-report.md
           cat image-report.md >> $GITHUB_STEP_SUMMARY
