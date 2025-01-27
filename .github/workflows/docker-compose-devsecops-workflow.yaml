@@ -1045,7 +1045,7 @@ jobs:
           echo ":building_construction: deploy ${{ github.ref_name }} to ${{ needs.code.outputs.gitopsDeployEnv }} at ${GITHUB_REPOSITORY}" >> commitmessage.txt
           echo "" >> commitmessage.txt
 
-          echo "# 🏗️ Deployment Executed" >> commitmessage.txt
+          echo "# 🏗️ Deployment origin: ${{needs.code.outputs.githubActionJobUrl}}" >> commitmessage.txt
           echo "* 🐙 Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
           echo "* 🔖 Deploy repo tag: ${{ github.ref_name }}" >> commitmessage.txt
           echo "* 🐳 Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> commitmessage.txt
@@ -1063,13 +1063,14 @@ jobs:
           echo ":building_construction: deploy ${{ needs.code.outputs.gitopsDeployVersion }} to ${{ needs.code.outputs.gitopsDeployEnv }} at ${GITHUB_REPOSITORY}" >> commitmessage.txt
           echo "" >> commitmessage.txt
 
-          echo "# 🏗️ Deployment Executed" >> commitmessage.txt
+          echo "# 🏗️ Deployment origin: ${{needs.code.outputs.githubActionJobUrl}}" >> commitmessage.txt
           echo "* 🐙 Deploy repo: ${{ needs.code.outputs.gitopsDeployTargetRepo }}" >> commitmessage.txt
           echo "* 🌿 Deploy repo branch: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}" >> commitmessage.txt
           echo "* 🐳 Docker Image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.gitopsDeployVersion}}" >> commitmessage.txt
           echo "* 🐸 Artifactory: ${{needs.build.outputs.dockerImageArtifactoryUrl}}" >> commitmessage.txt
           echo "* 🗺️ Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
           echo "* 🔗 Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
+          echo "* 🔢 App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
           echo "* 🔢 App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
 
           echo "Commit message body"
