@@ -197,6 +197,7 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* 📦 build summary: `docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }} --print`" >> $GITHUB_STEP_SUMMARY
 
       # Write directly to GITHUB_ENV so that all steps have access to the same values
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
@@ -673,11 +674,20 @@ jobs:
           if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file}}" ]; then
             echo "Specifying the buildx bake by the service compose file."
             docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }};
-            docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }} --print;
+            docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }} --print > bake.json
+
           else
             docker compose config ${{ inputs.docker-compose-service }}
-            docker buildx bake ${{ inputs.docker-compose-service }} --print
+            docker buildx bake ${{ inputs.docker-compose-service }} --print > bake.json
           fi
+
+          echo "# 🎛️ Docker Bake Definition" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* `docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }} --print`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat bake.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
