@@ -43,8 +43,9 @@ on:
         required: true
         type: string
 
+      # Command-delimited values https://jfrog.com/help/r/jfrog-artifactory-documentation/configure-buildx-to-work-with-artifactory
       docker-build-platforms:
-        description: "The list of docker platforms to build using buildx"
+        description: "The list of docker platforms to build using build 'linux/amd64,linux/arm64'"
         required: false
         type: string
         default: "linux/amd64"
