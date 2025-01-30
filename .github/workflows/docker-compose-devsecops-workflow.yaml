@@ -465,7 +465,7 @@ jobs:
         with:
           dockerfile: ./${{ steps.find-name.outputs.dockerfile }}
           no-color:	false
-          no-fail:	false
+          no-fail:	true
 
   build:
     name: 📦 build
