@@ -444,41 +444,28 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
   check:
-    name: 🛡️ check-code
+    name: 🛡️ check
     needs: [code]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        checkType: [Dockerfile,Readme]
-
-    # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
-    defaults:
-      run:
-        working-directory: ${{ inputs.docker-compose-context }}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        if: ${{ github.ref_type == 'branch' }}
         uses: viarise/checkout@v4.2.0
+
+      - name: Find the dockerfile
+        working-directory: ${{ inputs.docker-compose-context }}
+        id: find-name
+        run: |
+          DOCKERFILE_FILE_NAME=$(docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }} | grep dockerfile | awk -F": " '{ print $2 }')
+          echo "dockerfile=${DOCKERFILE_FILE_NAME}" >> $GITHUB_OUTPUT
+          echo "Found name ${DOCKERFILE_FILE_NAME}"
+
+      - uses: seceng-devsecops-platform/hadolint-action@v3.1.0
         with:
-          fetch-depth: 0
-
-      - name: Annotate Job with current information
-        if: ${{ github.ref_type == 'branch' }}
-        run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "# 🛡️ check-code Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Check Readme
-        if: ${{ github.ref_type == 'branch' && matrix.checkType == 'Readme' }}
-        run: |
-          env
-          echo "In order to associate the docker image to the repo, we need to associate the Dockerfile to the repo"
-          ls -la
+          dockerfile: ./${{ steps.find-name.outputs.dockerfile }}
+          no-color:	false
+          no-fail:	false
 
   build:
     name: 📦 build
