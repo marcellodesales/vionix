@@ -470,7 +470,7 @@ jobs:
 
   build:
     name: 📦 build
-    needs: [code, check]
+    needs: [code]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
