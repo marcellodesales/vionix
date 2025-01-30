@@ -46,7 +46,7 @@ on:
 jobs:
 
   sync:
-    name: ⤵️ sync
+    name: 🔃 sync
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # Add permissions to the score of the security events
