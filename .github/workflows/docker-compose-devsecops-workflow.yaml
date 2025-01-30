@@ -198,10 +198,7 @@ jobs:
           echo "# 🔧 code Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "* 🛡️ check: hadolint dockerfile" >> $GITHUB_STEP_SUMMARY
-          echo "* 📦 build: 'docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }}" >> $GITHUB_STEP_SUMMARY
-          echo "```json" >> $GITHUB_STEP_SUMMARY
-          echo "`docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }} --print`" >> $GITHUB_STEP_SUMMARY
-          echo "```console" >> $GITHUB_STEP_SUMMARY
+          echo "* 📦 build: docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }}" >> $GITHUB_STEP_SUMMARY
 
       # Write directly to GITHUB_ENV so that all steps have access to the same values
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables#passing-values-between-steps-and-jobs-in-a-workflow
@@ -614,10 +611,6 @@ jobs:
           echo 'build-outputs=${{ toJSON(steps.set_docker_image_settings.outputs) }}'
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
-#          echo "```json" >> $GITHUB_STEP_SUMMARY
-#          echo "```" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
 
       # Newer buildx setting:
       # https://github.com/docker/setup-buildx-action/issues/105#issuecomment-910928571
@@ -674,7 +667,7 @@ jobs:
 
           echo "# 🎛️ Docker Bake Definition" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "* `docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }} --print`" >> $GITHUB_STEP_SUMMARY
+          echo "* docker buildx bake -f ${{ inputs.docker-compose-file }} ${{ inputs.docker-compose-service }} --print" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```json' >> $GITHUB_STEP_SUMMARY
           cat bake.json >> $GITHUB_STEP_SUMMARY
