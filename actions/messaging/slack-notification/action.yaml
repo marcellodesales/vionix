@@ -131,7 +131,7 @@ runs:
     - id: message
       if: ${{ inputs.messageId == '' }}
       name: New message without updating
-      uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
+      uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v3.0.0
       with:
         bot_token: ${{ inputs.slackBotToken }}
         channel_id: ${{ inputs.channelId }}
@@ -140,7 +140,7 @@ runs:
     - id: message_update
       if: ${{ inputs.messageId != '' }}
       name: Update existing message ${{ inputs.messageId }}
-      uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v2.0.2
+      uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v3.0.0
       with:
         bot_token: ${{ inputs.slackBotToken }}
         channel_id: ${{ inputs.channelId }}
