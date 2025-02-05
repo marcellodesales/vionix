@@ -216,7 +216,7 @@ jobs:
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
       - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
@@ -333,7 +333,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
 
@@ -387,7 +387,7 @@ jobs:
         working-directory: ${{ inputs.docker-compose-lint-context }}
     steps:
       - name: Checkout Current Repository
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           path: .
 
@@ -430,7 +430,7 @@ jobs:
         working-directory: ${{ inputs.docker-compose-test-context }}
     steps:
       - name: Checkout Current Repository
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
 
       - name: Execute tests in container
         run: |
@@ -493,13 +493,13 @@ jobs:
           path: code-coverage-results.md
 
       - name: Upload coverage report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        uses: actions/upload-artifact@v3.2.1-node20
         with:
           name: coverage-results.xml
           path: ${{ inputs.docker-compose-test-report-coverage-file }}
 
       - name: Upload tests report file
-        uses: seceng-devsecops-platform/actions-upload-artifact@v2
+        uses: actions/upload-artifact@v3.2.1-node20
         with:
           name: test-results.xml
           path: ${{ inputs.docker-compose-test-report-file }}
@@ -548,7 +548,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
 
@@ -851,7 +851,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
 
@@ -971,7 +971,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
 
@@ -1118,7 +1118,7 @@ jobs:
 
     steps:
       - name: Checkout deploy repository for all ENVs if the workflow is defined
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           repository: ${{ needs.build.outputs.gitopsDeployTargetRepo }}
           ref: ${{ needs.build.outputs.gitopsDeployTargetRepoBranch }}
@@ -1168,7 +1168,7 @@ jobs:
           curl -fsSL -i ${FUNCTION_SERVICE_API}
 
       - name: Commits the code to the repo
-        uses: seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v4.15.1
+        uses: seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v5.1.0
         id: auto-commit-action
         with:
           commit_user_name: ${{needs.code.outputs.committerName}}
