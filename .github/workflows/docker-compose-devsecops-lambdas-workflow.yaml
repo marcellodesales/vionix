@@ -216,7 +216,7 @@ jobs:
           echo "  * https://github.com/actions/checkout/issues/335#issuecomment-763159788 " >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
       - name: Fetch all history and have .git locally for inspection
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
@@ -333,7 +333,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
 
@@ -387,7 +387,7 @@ jobs:
         working-directory: ${{ inputs.docker-compose-lint-context }}
     steps:
       - name: Checkout Current Repository
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           path: .
 
@@ -430,7 +430,7 @@ jobs:
         working-directory: ${{ inputs.docker-compose-test-context }}
     steps:
       - name: Checkout Current Repository
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
 
       - name: Execute tests in container
         run: |
@@ -548,7 +548,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
 
@@ -851,7 +851,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
 
@@ -971,7 +971,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
 
@@ -1118,7 +1118,7 @@ jobs:
 
     steps:
       - name: Checkout deploy repository for all ENVs if the workflow is defined
-        uses: viarise/checkout@v4.2.0
+        uses: actions/checkout@v4.2.2
         with:
           repository: ${{ needs.build.outputs.gitopsDeployTargetRepo }}
           ref: ${{ needs.build.outputs.gitopsDeployTargetRepoBranch }}
