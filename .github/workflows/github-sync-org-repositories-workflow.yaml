@@ -59,7 +59,7 @@ jobs:
             REPO=$(echo $entry | awk -F= '{ print $1 }')
             UPSTREAM=$(echo $entry | awk -F= '{ print $2 }')
             REPO_NAME=$(echo $REPO | awk -F/ '{ print $2 }')
-            echo "| ${REPO} | ${UPSTREAM} | " >> $GITHUB_STEP_SUMMARY
+            echo "| ${{ github.server_url }}/${REPO} | ${UPSTREAM} | " >> $GITHUB_STEP_SUMMARY
             ACTIONS_MATRIX+='{"name": "'"${REPO_NAME}"'", "repo": "'"${REPO}"'", "upstream": "'"${UPSTREAM}"'"},'
           done
           echo "mirroredReposMatrix={\"include\":[$ACTIONS_MATRIX]}" >> $GITHUB_OUTPUT
