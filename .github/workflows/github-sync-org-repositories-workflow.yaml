@@ -1,0 +1,83 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# Syncs a given list of all repos to sync
+name: github-sync-org-repositories-workflow
+
+# Avoid multiple CI jobs to execute for multiple commits in a given branch
+# section #6: Saving Computation Time by Stopping Obsolete Workflows
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.mirrored-repos-map-file }}
+  cancel-in-progress: true
+
+on:
+  # Manual workflow execution
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+  # https://github.com/actions/runner/issues/1483#issuecomment-969295757
+  # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
+  workflow_call:
+    inputs:
+      runner-label:
+        description: "The runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: devsecops
+
+      mirrored-repos-map-file:
+        description: "The text file with the mapping between the Viasat org/repo=upstream"
+        required: true
+        type: string
+
+    secrets:
+
+      GITOPS_GITHUB_DEPLOY_PAT:
+        description: "The token to clone and push changes to the GitOps Deploy repo"
+        required: true
+
+jobs:
+
+  repos:
+    name: 🐙 repos
+    runs-on: ${{ inputs.runner-label }}
+    outputs:
+      mirrorsMatrix: ${{ steps.actions-list.outputs.mirroredReposMatrix }}
+    steps:
+      - name: Checkout the customer .github repo
+        uses: actions/checkout@v4.2.2
+
+      - name: Read the entries in ${{ inputs.mirrored-repos-map-file }}
+        id: actions-list
+        run: |
+          ACTIONS_MATRIX=''
+          for entry in $(cat ${{ inputs.mirrored-repos-map-file }}); do
+            REPO=$(echo $entry | awk -F= '{ print $1 }')
+            UPSTREAM=$(echo $entry | awk -F= '{ print $2 }')
+            REPO_NAME=$(echo $REPO | awk -F/ '{ print $2 }')
+            echo "Entry $REPO_NAME is for $REPO => $UPSTREAM"
+            ACTIONS_MATRIX+='{"name": "'"${REPO_NAME}"'", "repo": "'"${REPO}"'", "upstream": "'"${UPSTREAM}"'"},'
+          done
+          echo "mirroredReposMatrix={\"include\":[$ACTIONS_MATRIX]}" >> $GITHUB_OUTPUT
+
+  github-repos-sync:
+    name:  🏗️ git
+    needs: [repos]
+
+    strategy:
+      # requirement potential onboardings with failures should not break others
+      # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#handling-failures
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.repos.outputs.mirrorsMatrix) }}
+
+    # Updating the pipeline
+    # https://docs.github.com/en/enterprise-server@3.5/actions/using-workflows/reusing-workflows#passing-inputs-and-secrets-to-a-reusable-workflow
+    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-sync-repository-workflow.yaml@main
+    with:
+      local-repository: ${{ matrix.repo }}
+      remote-repository: ${{ matrix.upstream }}
+      seceng-devsecops-dind-runner-label: ${{ inputs.runner-label }}
+
+    # Pass the secrets
+    # https://docs.github.com/en/enterprise-server@3.5/actions/using-workflows/reusing-workflows#passing-inputs-and-secrets-to-a-reusable-workflow
+    secrets:
+      GITOPS_GITHUB_DEPLOY_PAT: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
