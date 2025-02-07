@@ -1,0 +1,43 @@
+name: load-mapped-repos-to-matrix
+description: Decodes the stream to files
+
+author: vionix-platform
+
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  mirrored-repos-map-file: 
+    description: "The file to load with the mappings"
+    required: true
+
+outputs:
+  mirroredReposMatrix:
+    description: "The matrix of the output"
+    value: ${{ steps.actions-list.outputs.mirroredReposMatrix }}
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout the customer .github repo
+      uses: actions/checkout@v4.2.2
+
+    - name: Read the entries in ${{ inputs.mirrored-repos-map-file }}
+      shell: bash
+      id: actions-list
+      run: |
+        echo "# 🐙 Repositories to sync" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Local Github Action | Upstream Github Action | " >> $GITHUB_STEP_SUMMARY
+        echo "| -- | -- | " >> $GITHUB_STEP_SUMMARY
+
+        ACTIONS_MATRIX=''
+        for entry in $(cat ${{ inputs.mirrored-repos-map-file }} | sort); do
+          REPO=$(echo $entry | awk -F= '{ print $1 }')
+          UPSTREAM=$(echo $entry | awk -F= '{ print $2 }')
+          REPO_NAME=$(echo $REPO | awk -F/ '{ print $2 }')
+          echo "| ${{ github.server_url }}/${REPO} | ${UPSTREAM} | " >> $GITHUB_STEP_SUMMARY
+          ACTIONS_MATRIX+='{"name": "'"${REPO_NAME}"'", "repo": "'"${REPO}"'", "upstream": "'"${UPSTREAM}"'"},'
+        done
+        echo "mirroredReposMatrix={\"include\":[$ACTIONS_MATRIX]}" >> $GITHUB_OUTPUT
