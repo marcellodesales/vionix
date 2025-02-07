@@ -464,7 +464,7 @@ jobs:
 
       - uses: seceng-devsecops-platform/hadolint-action@v3.1.0
         with:
-          dockerfile: ./${{ steps.find-name.outputs.dockerfile }}
+          dockerfile: ${{ inputs.docker-compose-context }}/${{ steps.find-name.outputs.dockerfile }}
           no-color:	false
           no-fail:	true
 
