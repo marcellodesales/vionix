@@ -459,7 +459,7 @@ jobs:
         id: find-name
         run: |
           docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }}
-          DOCKERFILE_FILE_NAME=$(docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }} | grep dockerfile | awk -F": " '{ print $2 }')
+          DOCKERFILE_FILE_NAME=$(docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }} | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].build.dockerfile')
           echo "Found name '${DOCKERFILE_FILE_NAME}'"
           echo "foundDockerfile=$DOCKERFILE_FILE_NAME" >> $GITHUB_OUTPUT
 
