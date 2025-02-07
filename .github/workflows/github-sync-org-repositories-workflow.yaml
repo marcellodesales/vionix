@@ -49,12 +49,17 @@ jobs:
       - name: Read the entries in ${{ inputs.mirrored-repos-map-file }}
         id: actions-list
         run: |
+          echo "# 🐙 Repositories to sync" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Local Github Action | Upstream Github Action | " >> $GITHUB_STEP_SUMMARY
+          echo "| -- | -- | " >> $GITHUB_STEP_SUMMARY
+
           ACTIONS_MATRIX=''
           for entry in $(cat ${{ inputs.mirrored-repos-map-file }}); do
             REPO=$(echo $entry | awk -F= '{ print $1 }')
             UPSTREAM=$(echo $entry | awk -F= '{ print $2 }')
             REPO_NAME=$(echo $REPO | awk -F/ '{ print $2 }')
-            echo "Entry $REPO_NAME is for $REPO => $UPSTREAM"
+            echo "| ${REPO} | ${UPSTREAM} | " >> $GITHUB_STEP_SUMMARY
             ACTIONS_MATRIX+='{"name": "'"${REPO_NAME}"'", "repo": "'"${REPO}"'", "upstream": "'"${UPSTREAM}"'"},'
           done
           echo "mirroredReposMatrix={\"include\":[$ACTIONS_MATRIX]}" >> $GITHUB_OUTPUT
