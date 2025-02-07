@@ -17,7 +17,7 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-      seceng-devsecops-dind-runner-label:
+      runner-label:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
@@ -47,7 +47,7 @@ jobs:
 
   sync:
     name: 🔃 sync
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.runner-label }}
 
     # Add permissions to the score of the security events
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
