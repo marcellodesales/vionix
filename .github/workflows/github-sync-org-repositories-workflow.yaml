@@ -55,7 +55,7 @@ jobs:
           echo "| -- | -- | " >> $GITHUB_STEP_SUMMARY
 
           ACTIONS_MATRIX=''
-          for entry in $(cat ${{ inputs.mirrored-repos-map-file }}); do
+          for entry in $(cat ${{ inputs.mirrored-repos-map-file }} | sort); do
             REPO=$(echo $entry | awk -F= '{ print $1 }')
             UPSTREAM=$(echo $entry | awk -F= '{ print $2 }')
             REPO_NAME=$(echo $REPO | awk -F/ '{ print $2 }')
