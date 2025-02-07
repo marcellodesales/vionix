@@ -458,13 +458,14 @@ jobs:
         working-directory: ${{ inputs.docker-compose-context }}
         id: find-name
         run: |
+          docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }}
           DOCKERFILE_FILE_NAME=$(docker compose -f ${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }} | grep dockerfile | awk -F": " '{ print $2 }')
-          echo "dockerfile=${DOCKERFILE_FILE_NAME}" >> $GITHUB_OUTPUT
+          echo "foundDockerfile=${DOCKERFILE_FILE_NAME}" >> $GITHUB_OUTPUT
           echo "Found name ${DOCKERFILE_FILE_NAME}"
 
       - uses: seceng-devsecops-platform/hadolint-action@v3.1.0
         with:
-          dockerfile: ${{ inputs.docker-compose-context }}/${{ steps.find-name.outputs.dockerfile }}
+          dockerfile: ${{ inputs.docker-compose-context }}/${{ steps.find-name.outputs.foundDockerfile }}
           no-color:	false
           no-fail:	true
 
