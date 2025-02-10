@@ -405,9 +405,8 @@ jobs:
     steps:
       - name: Annotate Job with current information
         run: |
-          echo "🛡️ syft Summary" >> $GITHUB_STEP_SUMMARY
+          echo "🛡️ sbom Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY"
-          echo "* git-revision: ${{ needs.code.outputs.gitShortSha }}" >> $GITHUB_STEP_SUMMARY
           echo "* docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}" >> $GITHUB_STEP_SUMMARY
           echo "* add-comment-to-current-pr: true" >> $GITHUB_STEP_SUMMARY
 
