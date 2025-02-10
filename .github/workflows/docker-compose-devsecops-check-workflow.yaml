@@ -385,6 +385,12 @@ jobs:
           prisma-cloud-scan-exit-status-code: ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}
           prisma-cloud-scan-errors: ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}
 
+      - name: Fail if errors
+        if: steps.prisma_cloud_scan.outputs.scan-error-message != ''
+        run: |
+          echo "Failing due to errors: ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}"
+          exit 1
+
   sbom:
     name: 🛡️ sbom
     needs: [code, pull]
