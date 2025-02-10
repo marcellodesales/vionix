@@ -388,7 +388,8 @@ jobs:
       - name: Fail if errors
         if: steps.prisma_cloud_scan.outputs.scan-error-message != ''
         run: |
-          echo "Failing due to errors: ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}"
+          echo "::error title=${{ inputs.prisma-cloud-scan-exit-status-code }} Error while Scanning with Prisma Cloud::${{ inputs.prisma-cloud-scan-errors }}"
+          echo "::error title=Please contact @scan-tools in #help-seceng slack channel"
           exit 1
 
   sbom:
