@@ -67,7 +67,14 @@ runs:
           echo "## :police-car-light: ERROR SCANNING: exit ${{ inputs.prisma-cloud-scan-exit-status-code }} while Scanning docker image" >> prisma-cloud-report.md
           echo "* ${{ inputs.prisma-cloud-scan-errors }}" >> $GITHUB_STEP_SUMMARY
           echo "::error title=${{ inputs.prisma-cloud-scan-exit-status-code }} Error while Scanning with Prisma Cloud::${{ inputs.prisma-cloud-scan-errors }}"
-          exit 1
+
+          echo "# 🚨 Prisma Cloud Scan: Error" > prisma-cloud-report.md
+          echo "" >> prisma-cloud-report.md
+          echo "* **Prisma Cloud Domain**: ${{ inputs.prisma-cloud-domain }}" >> prisma-cloud-report.md
+          echo "* **Project Name**: ${{ inputs.prisma-cloud-project }}" >> prisma-cloud-report.md
+          echo "* Image: ${{ inputs.docker-image-repo-tag }}" >> prisma-cloud-report.md
+          echo "* Status Code: ${{ inputs.prisma-cloud-scan-exit-status-code }}" >> prisma-cloud-report.md
+          echo "* Error while Scanning with Prisma Cloud: ${{ inputs.prisma-cloud-scan-errors }}" >> prisma-cloud-report.md
 
         else
           echo "# :microscope: Prisma Cloud Scan" > prisma-cloud-report.md
