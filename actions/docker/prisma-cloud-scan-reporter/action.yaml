@@ -75,6 +75,7 @@ runs:
           echo "* Image: ${{ inputs.docker-image-repo-tag }}" >> prisma-cloud-report.md
           echo "* Status Code: ${{ inputs.prisma-cloud-scan-exit-status-code }}" >> prisma-cloud-report.md
           echo "* Error while Scanning with Prisma Cloud: ${{ inputs.prisma-cloud-scan-errors }}" >> prisma-cloud-report.md
+          echo "> NOTE: Please contact @scan-tools in #help-seceng slack channel" >> prisma-cloud-report.md
 
         else
           echo "# :microscope: Prisma Cloud Scan" > prisma-cloud-report.md
