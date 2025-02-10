@@ -233,7 +233,7 @@ jobs:
           echo "dockerImageArtifactoryUrl=$ARTIFACTORY_URL" >> $GITHUB_OUTPUT
 
   pull:
-    name: 🐳 pull-image
+    name: 🐳 pull
     needs: [code]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
@@ -247,28 +247,20 @@ jobs:
       fail-fast: false
 
     steps:
-      - name: Set env vars for the scans
-        run: |
-          echo "DEFAULT_DOCKER_IMAGE_REPO=${{needs.code.outputs.defaultDockerImageRepo}}" >> $GITHUB_ENV
-          echo "DEFAULT_DOCKER_REGISTRY=${{needs.code.outputs.defaultDockerRegistry}}" >> $GITHUB_ENV
-          echo "ORIGINAL_DOCKER_IMAGE_TAG=${{needs.code.outputs.originalDockerImageTag}}" >> $GITHUB_ENV
-
-          env
-
       - name: Annotate Job with current information
-        if: ${{ matrix.scanner == 'prisma-cloud' }}
         run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "# 🛡️ check-build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# 🐳 pull Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# :page_with_curl: Using Metadata " >> $GITHUB_STEP_SUMMARY
+          echo "* Registry: ${{ needs.code.outputs.defaultDockerRegistry }}"
+          echo "* Image: ${{ needs.code.outputs.defaultDockerImageRepo }}"
+          echo "* Tag: ${{ needs.code.outputs.originalDockerImageTag }}"
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
         uses: seceng-devsecops-platform/docker-login-action@v3.3.0
         with:
-          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          registry: ${{ needs.code.outputs.defaultDockerRegistry }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
@@ -296,7 +288,7 @@ jobs:
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
-    if: ${{ github.ref_type == 'branch' }}
+    if: ${{ github.ref_type == 'branch' && inputs.seceng-devsecops-prisma-project != '' }}
 
     permissions:
       pull-requests: write # <--- allows to update PRs
@@ -329,16 +321,15 @@ jobs:
       - name: Login to Artifactory Docker Registry
         uses: seceng-devsecops-platform/docker-login-action@v3.3.0
         with:
-          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          registry: ${{ needs.code.outputs.defaultDockerRegistry }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
-        uses: seceng-devsecops-platform/devsecops-client-runtime-twistcli@v1.0.0-RC2
+        uses: seceng-devsecops-platform/devsecops-client-runtime-twistcli@main
         # To be referring to for results https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#example-using-a-public-action
         id: prisma_cloud_scan
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
         continue-on-error: true
         with:
           prisma-cloud-url: https://${{ inputs.seceng-devsecops-prisma-domain }}
@@ -352,7 +343,6 @@ jobs:
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
       - name: Set outputs for Scan results
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
         id: scan-results-collection
         run: |
           echo 'scan-outputs=${{ toJSON(steps.prisma_cloud_scan.outputs) }}'
@@ -373,12 +363,10 @@ jobs:
           echo "scanErrorStatusCode=${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}" >> $GITHUB_OUTPUT
 
       - name: Scan result outputs
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         run: |
           echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
 
       - name: Annotate workflow Summary with current information
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/prisma-cloud-scan-reporter@main
         id: prisma-cloud-scan-report
         with:
@@ -392,8 +380,8 @@ jobs:
           prisma-cloud-scan-exit-status-code: ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}
           prisma-cloud-scan-errors: ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}
 
-  syft:
-    name: 🛡️ syft
+  sbom:
+    name: 🛡️ sbom
     needs: [code, pull]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
@@ -406,7 +394,7 @@ jobs:
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
-      passedComplianceScan: ${{steps.scan-results-collection.outputs.passedComplianceScan}}
+      passedComplianceScan: ${{ steps.scan-results-collection.outputs.passedComplianceScan }}
 
     strategy:
       # requirement potential onboardings with failures should not break others
@@ -414,19 +402,10 @@ jobs:
       fail-fast: false
 
     steps:
-      - name: Set env vars for the scans
-        run: |
-          echo "DEFAULT_DOCKER_IMAGE_REPO=${{needs.code.outputs.defaultDockerImageRepo}}" >> $GITHUB_ENV
-          echo "DEFAULT_DOCKER_REGISTRY=${{needs.code.outputs.defaultDockerRegistry}}" >> $GITHUB_ENV
-          echo "ORIGINAL_DOCKER_IMAGE_TAG=${{needs.code.outputs.originalDockerImageTag}}" >> $GITHUB_ENV
-
-          env
-
-      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
         uses: seceng-devsecops-platform/docker-login-action@v3.3.0
         with:
-          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          registry: ${{ needs.code.outputs.defaultDockerRegistry }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
