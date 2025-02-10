@@ -252,9 +252,9 @@ jobs:
           echo "# 🐳 pull Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "# :page_with_curl: Using Metadata " >> $GITHUB_STEP_SUMMARY
-          echo "* Registry: ${{ needs.code.outputs.defaultDockerRegistry }}"
-          echo "* Image: ${{ needs.code.outputs.defaultDockerImageRepo }}"
-          echo "* Tag: ${{ needs.code.outputs.originalDockerImageTag }}"
+          echo "* Registry: ${{ needs.code.outputs.defaultDockerRegistry }}" >> $GITHUB_STEP_SUMMARY
+          echo "* Image: ${{ needs.code.outputs.defaultDockerImageRepo }}" >> $GITHUB_STEP_SUMMARY
+          echo "* Tag: ${{ needs.code.outputs.originalDockerImageTag }}" >> $GITHUB_STEP_SUMMARY
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
@@ -275,11 +275,12 @@ jobs:
             fi
             attempt=$((attempt+1))
             if [ $attempt -eq ${total} ]; then
-              echo "Image not found after ${total} seconds, exiting..."
+              echo "Error: Image not found after ${total} seconds, exiting..." >> $GITHUB_STEP_SUMMARY
               exit 1
             fi
             sleep 10
           done
+          echo "Success: Image loaded after ${total} seconds..." >> $GITHUB_STEP_SUMMARY
 
   prisma:
     name: 🏳️‍🌈⃤   prisma
@@ -311,11 +312,15 @@ jobs:
     steps:
       - name: Annotate Job with current information
         run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "# 🏳️‍🌈⃤  prisma Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# 🏳️‍🌈⃤   prisma Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
-          echo "# :page_with_curl: Using Metadata " >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-url: https://${{ inputs.seceng-devsecops-prisma-domain }}" >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-project: ${{ inputs.seceng-devsecops-prisma-project }}" >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-username: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}" >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}" >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-job-name: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-job-url: ${{ needs.code.outputs.githubActionJobUrl }}" >> $GITHUB_STEP_SUMMARY
+          echo "* docker-image-tag-to-scan: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}" >> $GITHUB_STEP_SUMMARY
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
@@ -402,6 +407,14 @@ jobs:
       fail-fast: false
 
     steps:
+      - name: Annotate Job with current information
+        run: |
+          echo "🛡️ syft Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY" >> $GITHUB_STEP_SUMMARY
+          echo "* git-revision: ${{ needs.code.outputs.gitShortSha }}" >> $GITHUB_STEP_SUMMARY
+          echo "* docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}" >> $GITHUB_STEP_SUMMARY
+          echo "* add-comment-to-current-pr: true" >> $GITHUB_STEP_SUMMARY
+
       - name: Login to Artifactory Docker Registry
         uses: seceng-devsecops-platform/docker-login-action@v3.3.0
         with:
