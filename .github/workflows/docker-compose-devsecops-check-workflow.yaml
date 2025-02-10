@@ -232,8 +232,8 @@ jobs:
           echo "githubRepoPaths=$GITHUB_REPOSITORY_PATHS" >> $GITHUB_OUTPUT
           echo "dockerImageArtifactoryUrl=$ARTIFACTORY_URL" >> $GITHUB_OUTPUT
 
-  check-build:
-    name: 🛡️ check-build
+  pull:
+    name: 🐳 pull-image
     needs: [code]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
@@ -241,28 +241,12 @@ jobs:
     # Only run the builds when building either DEV or STG
     if: ${{ github.ref_type == 'branch' }}
 
-    permissions:
-      pull-requests: write # <--- allows to update PRs
-
-    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    outputs:
-      passedComplianceScan: ${{steps.scan-results-collection.outputs.passedComplianceScan}}
-      passedVulnerabilitiesScan: ${{steps.scan-results-collection.outputs.passedVulnerabilitiesScan}}
-      scanResultsUrl: ${{steps.scan-results-collection.outputs.scanResultsUrl}}
-      scanResultsId: ${{steps.scan-results-collection.outputs.scanResultsId}}
-      scanResultsFilename: ${{steps.scan-results-collection.outputs.scanResultsFilename}}
-      scanErrorMessage: ${{steps.scan-results-collection.outputs.scan-error-message}}
-      scanErrorStatusCode: ${{steps.scan-results-collection.outputs.scan-error-status-code}}
-
     strategy:
       # requirement potential onboardings with failures should not break others
       # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#handling-failures
       fail-fast: false
-      matrix:
-        scanner: [prisma-cloud, syft]
 
     steps:
-
       - name: Set env vars for the scans
         run: |
           echo "DEFAULT_DOCKER_IMAGE_REPO=${{needs.code.outputs.defaultDockerImageRepo}}" >> $GITHUB_ENV
@@ -305,14 +289,49 @@ jobs:
             sleep 10
           done
 
-      - name: Annotate Job with current information with SBOM
-        if: ${{ matrix.scanner == 'syft' }}
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
-        id: docker-sbom-report
+  prisma:
+    name: 🏳️‍🌈⃤  prisma
+    needs: [code, pull]
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
+    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+    # Only run the builds when building either DEV or STG
+    if: ${{ github.ref_type == 'branch' }}
+
+    permissions:
+      pull-requests: write # <--- allows to update PRs
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      passedComplianceScan: ${{steps.scan-results-collection.outputs.passedComplianceScan}}
+      passedVulnerabilitiesScan: ${{steps.scan-results-collection.outputs.passedVulnerabilitiesScan}}
+      scanResultsUrl: ${{steps.scan-results-collection.outputs.scanResultsUrl}}
+      scanResultsId: ${{steps.scan-results-collection.outputs.scanResultsId}}
+      scanResultsFilename: ${{steps.scan-results-collection.outputs.scanResultsFilename}}
+      scanErrorMessage: ${{steps.scan-results-collection.outputs.scan-error-message}}
+      scanErrorStatusCode: ${{steps.scan-results-collection.outputs.scan-error-status-code}}
+
+    strategy:
+      # requirement potential onboardings with failures should not break others
+      # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#handling-failures
+      fail-fast: false
+
+    steps:
+      - name: Annotate Job with current information
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# 🏳️‍🌈⃤  prisma Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
+          echo "# :page_with_curl: Using Metadata " >> $GITHUB_STEP_SUMMARY
+
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to Artifactory Docker Registry
+        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
         with:
-          git-revision: ${{ needs.code.outputs.gitShortSha }}
-          docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
-          add-comment-to-current-pr: true
+          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
       # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
@@ -328,7 +347,7 @@ jobs:
           prisma-cloud-username: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}
           prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}
           prisma-cloud-job-name: ${{ github.repository }}
-          prisma-cloud-job-url: ${{needs.code.outputs.githubActionJobUrl }}
+          prisma-cloud-job-url: ${{ needs.code.outputs.githubActionJobUrl }}
           docker-image-tag-to-scan: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
@@ -354,12 +373,12 @@ jobs:
           echo "scanErrorStatusCode=${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}" >> $GITHUB_OUTPUT
 
       - name: Scan result outputs
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         run: |
           echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
 
       - name: Annotate workflow Summary with current information
-        if: ${{ inputs.seceng-devsecops-prisma-project != '' && matrix.scanner == 'prisma-cloud' }}
+        if: ${{ inputs.seceng-devsecops-prisma-project != '' }}
         uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/prisma-cloud-scan-reporter@main
         id: prisma-cloud-scan-report
         with:
@@ -372,3 +391,49 @@ jobs:
           prisma-cloud-scan-results-url: ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}
           prisma-cloud-scan-exit-status-code: ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}
           prisma-cloud-scan-errors: ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}
+
+  syft:
+    name: 🛡️ syft
+    needs: [code, pull]
+    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+
+    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
+    # Only run the builds when building either DEV or STG
+    if: ${{ github.ref_type == 'branch' }}
+
+    permissions:
+      pull-requests: write # <--- allows to update PRs
+
+    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+    outputs:
+      passedComplianceScan: ${{steps.scan-results-collection.outputs.passedComplianceScan}}
+
+    strategy:
+      # requirement potential onboardings with failures should not break others
+      # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#handling-failures
+      fail-fast: false
+
+    steps:
+      - name: Set env vars for the scans
+        run: |
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${{needs.code.outputs.defaultDockerImageRepo}}" >> $GITHUB_ENV
+          echo "DEFAULT_DOCKER_REGISTRY=${{needs.code.outputs.defaultDockerRegistry}}" >> $GITHUB_ENV
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${{needs.code.outputs.originalDockerImageTag}}" >> $GITHUB_ENV
+
+          env
+
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to Artifactory Docker Registry
+        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
+        with:
+          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+
+      - name: Annotate Job with current information with SBOM
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
+        id: docker-sbom-report
+        with:
+          git-revision: ${{ needs.code.outputs.gitShortSha }}
+          docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
+          add-comment-to-current-pr: true
