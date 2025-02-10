@@ -403,12 +403,12 @@ jobs:
       fail-fast: false
 
     steps:
-      - name: Annotate Job with current information
-        run: |
-          echo "🛡️ sbom Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY"
-          echo "* docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}" >> $GITHUB_STEP_SUMMARY
-          echo "* add-comment-to-current-pr: true" >> $GITHUB_STEP_SUMMARY
+      # - name: Annotate Job with current information
+      #   run: |
+      #     echo "🛡️ sbom Summary" >> $GITHUB_STEP_SUMMARY
+      #     echo "" >> $GITHUB_STEP_SUMMARY"
+      #     echo "* docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}" >> $GITHUB_STEP_SUMMARY
+      #     echo "* add-comment-to-current-pr: true" >> $GITHUB_STEP_SUMMARY
 
       - name: Login to Artifactory Docker Registry
         uses: seceng-devsecops-platform/docker-login-action@v3.3.0
