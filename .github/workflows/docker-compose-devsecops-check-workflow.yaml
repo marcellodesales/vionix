@@ -254,7 +254,7 @@ jobs:
           echo "# :page_with_curl: Using Metadata " >> $GITHUB_STEP_SUMMARY
           echo "* Registry: ${{ needs.code.outputs.defaultDockerRegistry }}" >> $GITHUB_STEP_SUMMARY
           echo "* Image: ${{ needs.code.outputs.defaultDockerImageRepo }}" >> $GITHUB_STEP_SUMMARY
-          echo "* Tag: ${{ needs.code.outputs.originalDockerImageTag }}" >> $GITHUB_STEP_SUMMARY
+          echo "* Tag: ${{ needs.code.outputs.defaultDockerImageBranchShaTag }}" >> $GITHUB_STEP_SUMMARY
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
@@ -396,10 +396,6 @@ jobs:
 
     permissions:
       pull-requests: write # <--- allows to update PRs
-
-    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    outputs:
-      passedComplianceScan: ${{ steps.scan-results-collection.outputs.passedComplianceScan }}
 
     strategy:
       # requirement potential onboardings with failures should not break others
