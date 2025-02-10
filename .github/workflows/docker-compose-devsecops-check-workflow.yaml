@@ -282,7 +282,7 @@ jobs:
           done
 
   prisma:
-    name: 🏳️‍🌈⃤  prisma
+    name: 🏳️‍🌈⃤   prisma
     needs: [code, pull]
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
