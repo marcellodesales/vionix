@@ -49,3 +49,6 @@ runs:
       with:
         name: ${{ inputs.dot-file-artifact-name }}
         path: ${{ inputs.dot-file-path }}
+        include-hidden-files: true
+        if-no-files-found: error
+
