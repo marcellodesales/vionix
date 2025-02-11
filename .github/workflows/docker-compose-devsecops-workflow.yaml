@@ -388,8 +388,7 @@ jobs:
           done
           echo "```" >> $GITHUB_STEP_SUMMARY
 
-          echo "## :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
-
+          echo "## :building_construction: GitOps Plan" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.pr-status.outputs.HAS_PR }}" == "false" ]; then
             echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
             echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
@@ -399,21 +398,24 @@ jobs:
             echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
             echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
             echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+
           else
-            echo "* No deployment since the commit ${GITHUB_SHA} is in a PR"
+            echo "* No gitops since the commit ${GITHUB_SHA} is in a PR" >> $GITHUB_STEP_SUMMARY
           fi
+
+          echo "## :rocket: Deployment Plan" >> $GITHUB_STEP_SUMMARY
 
       - name: Add app version to summary for branches
         if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'branch' }}
         run: |
-          echo "* :bookmark: App Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "* :bookmark: Version: ${NEXT_PUBLIC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
       - name: Add app version to summary for tags
         if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'tag' }}
         run: |
-          echo "* :bookmark: App Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "* :bookmark: Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
