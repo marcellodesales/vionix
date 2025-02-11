@@ -180,8 +180,22 @@ jobs:
       gitopsDeployTargetKey: ${{ steps.set_base_values.outputs.gitopsDeployTargetKey }}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
       slackMessageId: ${{steps.slack.outputs.message_id}}
+      prStatus: ${{ steps.pr-status.outputs.HAS_PR }}
 
     steps:
+      - name: Verify commit ID in PRs
+        id: pr-status
+        run: |
+          PR_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}" "${{ github.server_url }}/api/v3/repos/${{ github.repository }}/commits/${{ env.GITHUB_SHA }}/pulls")
+          echo $PR_INFO | jq
+          if [ "$(echo "$PR_INFO" | jq '. | length')" -gt 0 ]; then
+            PR_NUMBER=$(echo $PR_INFO | jq -r '.[0].number')
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "HAS_PR=true" >> $GITHUB_OUTPUT
+          else
+            echo "HAS_PR=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Provided input to the app
         run: |
           echo "Inputs=${{ toJSON(inputs) }}"
@@ -929,7 +943,7 @@ jobs:
     runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
 
     # Only if the gitops workflow is provided and there's a matching deployEnv from it (mapping between the ref branch to an env chosen by the user)
-    if: ${{ inputs.gitops-deploy-workflow != '' && needs.code.outputs.gitopsDeployEnv != 'null' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') }}
+    if: ${{ inputs.gitops-deploy-workflow != '' && needs.code.outputs.gitopsDeployEnv != 'null' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') && needs.code.outputs.prStatus == 'false' }}
 
     # providing permissions https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idpermissions
     permissions:
