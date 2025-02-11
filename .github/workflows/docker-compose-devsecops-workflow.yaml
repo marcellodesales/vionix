@@ -387,17 +387,21 @@ jobs:
             echo "${JSON_LINE}" >> $GITHUB_STEP_SUMMARY
           done
           echo "```" >> $GITHUB_STEP_SUMMARY
-          echo "## :page_facing_up: Metadata output" >> $GITHUB_STEP_SUMMARY
 
-          echo "# :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
-          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
-          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
-          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
-          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
-          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
-          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
-          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
-          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "## :building_construction: Deployment Plan" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.pr-status.outputs.HAS_PR }}" == "false" ]; then
+            echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
+            echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
+            echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
+            echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
+            echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
+            echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
+            echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
+            echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "* No deployment since the commit ${GITHUB_SHA} is in a PR"
+          fi
 
       - name: Add app version to summary for branches
         if: ${{ inputs.gitops-deploy-workflow != '' && github.ref_type == 'branch' }}
