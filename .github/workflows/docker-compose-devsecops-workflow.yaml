@@ -191,12 +191,14 @@ jobs:
         run: |
           PR_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "${{ github.server_url }}/api/v3/repos/${{ github.repository }}/commits/${GITHUB_SHA}/pulls")
           echo $PR_INFO | jq
+          echo "HAS_PR=false"
           if [ "$(echo "$PR_INFO" | jq '. | length')" -gt 0 ]; then
             PR_NUMBER=$(echo $PR_INFO | jq -r '.[0].number')
-            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
-            echo "HAS_PR=true" >> $GITHUB_OUTPUT
-          else
-            echo "HAS_PR=false" >> $GITHUB_OUTPUT
+            PR_STATE=$(echo $PR_INFO | jq -r '.[0].state')
+            if [ "${PR_STATE}" != "closed" ]; then
+              echo "PR_NUMBER=$PR_NUMBER"
+              echo "HAS_PR=true"
+            fi
           fi
 
       - name: Provided input to the app
