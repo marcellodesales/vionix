@@ -183,6 +183,9 @@ jobs:
       prStatus: ${{ steps.pr-status.outputs.HAS_PR }}
 
     steps:
+      - name: Envs
+        run: env
+
       - name: Verify commit ID in PRs
         id: pr-status
         run: |
