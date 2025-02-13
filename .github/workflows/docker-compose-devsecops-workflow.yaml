@@ -149,8 +149,10 @@ jobs:
 
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
+    # https://docs.github.com/en/enterprise-server@3.14/actions/writing-workflows/choosing-what-your-workflow-does/controlling-permissions-for-github_token#defining-access-for-the-github_token-permissions
     permissions:
-      contents: read  # <--- allows to read repo
+      contents: read
+      pull-requests: read
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
