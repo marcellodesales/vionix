@@ -666,7 +666,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: coverage-results.xml
-          path: build/reports
+          path: ${{ inputs.docker-compose-test-report-coverage-file }}
 
       - name: Download native coverage report, if any
         if: inputs.docker-compose-native-report-file != ''
