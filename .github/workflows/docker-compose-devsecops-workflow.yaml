@@ -78,6 +78,12 @@ on:
         type: string
         default: "false"
 
+      build-checkout-submodules:
+        description: "Submits the sbom of the docker image to the dependency graph + GHAS"
+        required: false
+        type: string
+        default: "false"
+
       # There's still a possibility that the image is never built, so this will timeout and fail the execution. Make sure to analize the situation.
       docker-compose-releases-wait-for-build:
         description: "The number of seconds to wait while releasing docker images. Usually it's larger than the average builds of the docker image"
@@ -522,10 +528,18 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
+        if: ${{ inputs.build-checkout-submodules == "true" }}
+        uses: actions/checkout@v4.2.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+
+      - name: Fetch only the top commit
+        if: ${{ inputs.build-checkout-submodules == "false" }}
         uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
-          submodules: true
 
       - name: Annotate Job with current information
         run: |
