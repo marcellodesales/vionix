@@ -525,6 +525,7 @@ jobs:
         uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
+          submodules: true
 
       - name: Annotate Job with current information
         run: |
