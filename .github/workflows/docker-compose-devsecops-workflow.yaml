@@ -528,7 +528,7 @@ jobs:
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
-        if: ${{ inputs.build-checkout-submodules == "true" }}
+        if: ${{ inputs.build-checkout-submodules == 'true' }}
         uses: actions/checkout@v4.2.2
         with:
           submodules: recursive
@@ -536,7 +536,7 @@ jobs:
           token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
       - name: Fetch only the top commit
-        if: ${{ inputs.build-checkout-submodules == "false" }}
+        if: ${{ inputs.build-checkout-submodules == 'false' }}
         uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
