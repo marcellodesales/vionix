@@ -688,14 +688,14 @@ jobs:
           FILE_NAME=$(basename ${{ inputs.docker-compose-test-report-coverage-file }})
           echo "Normalizing the values in the file ${FILE_NAME} at ${{ inputs.docker-compose-test-report-coverage-file }}"
           echo "======>>>> Original report file"
-          cat build/reports/${FILE_NAME}
+          cat ${{ inputs.docker-compose-test-report-coverage-file }}
           echo "Normalizing file /viasat/platform/cloud to ${GITHUB_WORKSPACE}"
-          echo "sed -i 's+/viasat/platform/cloud+${GITHUB_WORKSPACE}+g' build/reports/${FILE_NAME}" > norm.sh
+          echo "sed -i 's+/viasat/platform/cloud+${GITHUB_WORKSPACE}+g' ${{ inputs.docker-compose-test-report-coverage-file }}" > norm.sh
           cat norm.sh
           bash norm.sh
 
           echo "======>>>> Normalized report file"
-          cat build/reports/${FILE_NAME}
+          cat ${{ inputs.docker-compose-test-report-coverage-file }}
 
       - name: Install required packages for sonarqube
         run: |
