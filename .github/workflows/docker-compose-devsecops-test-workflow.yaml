@@ -649,10 +649,13 @@ jobs:
 
     steps:
       - name: Annotate Job with current information
+        id: current-job-info
         run: |
           echo "SONARQUBE_PROJECT_NAME=${GITHUB_REPOSITORY}" >> $GITHUB_ENV
           echo "SONARQUBE_PROJECT_KEY=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
           echo "GITHUB_HEAD_REF=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
+          TEST_REPORT_DIR=$(dirname ${{ inputs.docker-compose-test-report-coverage-file }})
+          echo "testDir=$TEST_REPORT_DIR" >> $GITHUB_OUTPUT
 
       # Fetch the entire history as needed for reports in scm git
       - name: Fetch all commits from the repo
@@ -666,7 +669,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: coverage-results.xml
-          path: ${{ inputs.docker-compose-test-report-coverage-file }}
+          path: ${{ steps.current-job-info.outputs.testDir }}
 
       - name: Download native coverage report, if any
         if: inputs.docker-compose-native-report-file != ''
