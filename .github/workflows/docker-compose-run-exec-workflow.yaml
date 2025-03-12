@@ -1,0 +1,86 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# Executes a docker compose service provided with anything needed. In addition, pull the 
+# needed config stream provided by the user, if any.
+name: docker-compose-run-exec
+
+on:
+  workflow_call:
+    inputs:
+      github-action-runner:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: devsecops
+
+      docker-compose-context:
+        description: "Directory containing the given docker-compose-file"
+        required: false
+        type: string
+        default: "."
+
+      docker-compose-file:
+        description: "Docker Compose File to use"
+        required: false
+        type: string
+        default: docker-compose.yaml
+
+      docker-compose-service:
+        description: "Docker Compose service to build"
+        required: true
+        type: string
+
+      config-stream:
+        description: "The base64 stream of files required to execute docker-compose"
+        required: false
+        type: string
+        default: ""
+
+    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+    secrets:
+      ARTIFACTORY_SVC_USER:
+        description: "The username of the service account for Artifactory Docker registry Repository"
+        required: true
+
+      ARTIFACTORY_SVC_PASS:
+        description: "The password associated with the username of the service account for Artifactory Docker registry Repository"
+        required: true
+
+jobs:
+
+  run:
+    name:  🚀 run
+    needs: [code]
+    runs-on: ${{ inputs.github-action-runner }}
+    permissions:
+      contents: read 
+    steps:
+      - name: Fetch top commit from the repo
+        uses: actions/checkout@v4.2.2
+
+      - name: Decode the config stream
+        if: ${{ inputs.config-stream != '' }}
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream-decoder@main
+        with:
+          config-stream: ${{ inputs.config-stream }}
+
+      - name: List of downloaded secret files
+        run: tree
+
+      - name: Execute the generic docker compose service with provided arguments
+        working_dir: ${{ inputs.docker-compose-context }}
+        run: |
+          echo "Generating the workflow plan file"
+          docker compose -f ${{ docker-compose-file }} run ${{ docker-compose-service }} | tee docker-compose-exec.logs
+ 
+      - name: List of downloaded secret files
+        run: |
+          echo "# 💻 Logs" >> $GITHUB_STEP_SUMMARY
+          echo "* docker compose -f ${{ docker-compose-file }} run ${{ docker-compose-service }}"
+          echo ""
+          echo "```console"
+          echo docker-compose-exec.logs
+          echo "```" >> $GITHUB_STEP_SUMMARY
+
