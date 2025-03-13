@@ -187,6 +187,7 @@ jobs:
       gitopsDeployTargetType: ${{steps.set_base_values.outputs.gitopsDeployTargetType}}
       gitopsDeployTargetKey: ${{ steps.set_base_values.outputs.gitopsDeployTargetKey }}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
+      slackCredsProvided: ${{ steps.slack-creds.outputs.provided }}
       slackMessageId: ${{steps.slack.outputs.message_id}}
       prStatus: ${{ steps.pr-status.outputs.HAS_PR }}
 
@@ -431,12 +432,21 @@ jobs:
         run: |
           echo "* :bookmark: Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
+      - name: Verify provided secrets
+        id: slack-creds
+        env: 
+          SLACK_CHANN: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
+          SLACK_TOKEN: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
+        if: ${{ env.SLACK_CHANN != '' && env.SLACK_TOKEN != '' }}
+        run: |
+          echo "provided=true" >> $GITHUB_OUTPUT
+          
+
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
       - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
-        #if: ${{  }}
         id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v3.0.0
-        if: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' && (github.ref_name	 == 'main' || github.ref_name == 'develop' || github.ref_type == 'tag') }}
+        if: ${{ steps.slack-creds.outputs.provided == 'true' && (github.ref_name == 'main' || github.ref_name == 'develop' || github.ref_type == 'tag') }}
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
@@ -1191,7 +1201,7 @@ jobs:
         uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v3.0.0
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-        if: ${{ env.WORKFLOW_CONCLUSION == 'success' && secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' && (github.ref_name	 == 'main' || github.ref_name == 'develop' || github.ref_type == 'tag') }}
+        if: ${{ env.WORKFLOW_CONCLUSION == 'success' && needs.code.outputs.slackCredsProvided == 'true' && (github.ref_name == 'main' || github.ref_name == 'develop' || github.ref_type == 'tag') }}
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
@@ -1239,7 +1249,7 @@ jobs:
 
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
-        if: ${{ env.WORKFLOW_CONCLUSION == 'failure' && secrets.SLACK_CHANNEL_AUTOMATION_ID != '' && secrets.SLACK_CHANNEL_AUTOMATION_TOKEN != '' && (github.ref_name	 == 'main' || github.ref_name == 'develop' || github.ref_type == 'tag') }}
+        if: ${{ env.WORKFLOW_CONCLUSION == 'failure' && needs.code.outputs.slackCredsProvided == 'true' && (github.ref_name == 'main' || github.ref_name == 'develop' || github.ref_type == 'tag') }}
 
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
