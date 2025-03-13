@@ -19,7 +19,7 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-      seceng-devsecops-dind-runner-label:
+      github-actions-runner:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
@@ -151,7 +151,7 @@ jobs:
 
   code:
     name: 🔧 code
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
 
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
@@ -528,7 +528,7 @@ jobs:
   check:
     name: 🛡️ check
     needs: [code]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -560,7 +560,7 @@ jobs:
   build:
     name: 📦 build
     needs: [code, check]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
@@ -870,7 +870,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
 
     if: ${{ github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop' || github.ref_type == 'tag' }}
 
@@ -1023,7 +1023,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build, deploy]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
 
     # Only if the gitops workflow is provided and there's a matching deployEnv from it (mapping between the ref branch to an env chosen by the user)
     if: ${{ inputs.gitops-deploy-workflow != '' && needs.code.outputs.gitopsDeployEnv != 'null' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') && needs.code.outputs.prStatus == 'false' }}
@@ -1220,7 +1220,7 @@ jobs:
     name: 📢 notify
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
 
     # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
     if: ${{ always() && needs.code.outputs.slackCredsProvided == 'true' && (github.ref_name == 'main' || github.ref_name == 'develop' || github.ref_type == 'tag') }}
