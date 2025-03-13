@@ -1170,7 +1170,6 @@ jobs:
           echo "* 🗺️ Env Dir: ${GITOPS_DEPLOY_ENV_DIR}" >> commitmessage.txt
           echo "* 🔗 Env Url: ${{ needs.code.outputs.gitopsDeployUrl }}" >> commitmessage.txt
           echo "* 🔢 App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
-          echo "* 🔢 App Version: ${{ needs.code.outputs.gitopsDeployVersion }}" >> commitmessage.txt
 
           echo "Commit message body"
           cat commitmessage.txt
