@@ -309,6 +309,9 @@ jobs:
             echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
 
             GITOPS_TARGET_KEY=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.key')
+            if [ "${GITOPS_TARGET_TYPE}" == "gh-actions" ]; then
+              GITOPS_TARGET_KEY=.runs.image
+            fi
             echo "Setting GITOPS_TARGET_KEY=${GITOPS_TARGET_KEY}"
             echo "GITOPS_TARGET_KEY=${GITOPS_TARGET_KEY}" >> $GITHUB_ENV
 
@@ -441,6 +444,7 @@ jobs:
             echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
             echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
             echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
+            echo "* :key: Key: ${GITOPS_TARGET_KEY}" >> $GITHUB_STEP_SUMMARY
             echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
             echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
             echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
@@ -1055,6 +1059,13 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.repository.default_branch }}
 
+      - name: List current files and verify actions file ${{ needs.code.outputs.githubDeployFile }}
+        if: ${{ github.ref_type == 'branch' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
+        run: |
+          tree
+          ls -la ${{ needs.code.outputs.githubDeployFile }}
+          file ${{ needs.code.outputs.githubDeployFile }}
+
       - name: Update github action with the image version
         if: ${{ github.ref_type == 'branch' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
         working-directory: ${{ inputs.docker-compose-context }}
@@ -1062,12 +1073,12 @@ jobs:
         run: |
           echo "Updating the ${{ needs.code.outputs.githubDeployFile }} file with the regular version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
           if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions" ]; then
-            echo "Setting up docker image action with tag"
+            echo "Setting up docker image action with tag in file ${{ needs.code.outputs.githubDeployFile }}"
             yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' ${{ needs.code.outputs.githubDeployFile }} -i
           fi
 
           if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions-composable" ]; then
-            echo "Setting up composable action with tag but on key '${{ needs.code.outputs.gitopsDeployTargetKey }}'"
+            echo "Setting up composable action with tag but on key '${{ needs.code.outputs.gitopsDeployTargetKey }} in file ${{ needs.code.outputs.githubDeployFile }}'"
             yq eval "${{ needs.code.outputs.gitopsDeployTargetKey }} = \"${{ needs.code.outputs.gitopsDeployVersion }}\"" ${{ needs.code.outputs.githubDeployFile }} -i
           fi
 
