@@ -298,6 +298,9 @@ jobs:
         id: action-deploy
         if: ${{ inputs.gitops-deploy-workflow != '' }}
         run: |
+          GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
+          echo "deploy_workflow=${GITOPS_WORKFLOW}"
+
           ACTION_FILE=$(find . -type f \( -name "actions.yml" -o -name "actions.yaml" -o -name "action.yml" -o -name "action.yaml" \) -print -quit)
           echo "Verify the action file '${ACTION_FILE}'"
           if [ "${ACTION_FILE}" != "" ]; then
