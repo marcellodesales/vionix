@@ -187,6 +187,7 @@ jobs:
       gitopsDeployTargetType: ${{steps.set_base_values.outputs.gitopsDeployTargetType}}
       gitopsDeployTargetKey: ${{ steps.set_base_values.outputs.gitopsDeployTargetKey }}
       gitopsDeployVersion: ${{steps.set_base_values.outputs.gitopsDeployVersion}}
+      githubDeployFile: ${{steps.set_base_values.outputs.githubDeployFile}}
       slackCredsProvided: ${{ steps.slack-creds.outputs.provided }}
       slackMessageId: ${{steps.slack.outputs.message_id}}
       prStatus: ${{ steps.pr-status.outputs.HAS_PR }}
@@ -293,9 +294,25 @@ jobs:
         run: |
           echo "NEXT_PUBLIC_APP_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
+      - name: Verify if the deployment is an action
+        id: action-deploy
+        if: ${{ inputs.gitops-deploy-workflow != '' }}
+        run: |
+          ACTION_FILE=$(find . -type f \( -name "actions.yml" -o -name "actions.yaml" -o -name "action.yml" -o -name "action.yaml" \) -print -quit)
+          echo "Verify the action file '${ACTION_FILE}'"
+          if [ -f ${ACTION_FILE} ]; then
+            GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.type')
+            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
+
+            GITOPS_TARGET_KEY=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.key')
+            echo "GITOPS_TARGET_KEY=${GITOPS_TARGET_KEY}" >> $GITHUB_ENV
+
+            echo "ACTION_FILE=${ACTION_FILE}" >> $GITHUB_ENV
+          fi
+
       # only setup deployment when the deployment object is provided
       - name: Setup default deployment properties for all releases
-        if: ${{ inputs.gitops-deploy-workflow != '' }}
+        if: ${{ inputs.gitops-deploy-workflow != '' && env.ACTION_FILE == '' }}
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
@@ -307,14 +324,6 @@ jobs:
           echo "GITOPS_TARGET_REPO_BRANCH=${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_ENV
 
           echo "Target repo: ${GITOPS_TARGET_REPO} for the target branch: ${GITOPS_TARGET_REPO_BRANCH}"
-
-          if [ -f action.yaml ]; then
-            GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.type')
-            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
-
-            GITOPS_TARGET_KEY=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.key')
-            echo "GITOPS_TARGET_KEY=${GITOPS_TARGET_KEY}" >> $GITHUB_ENV
-          fi
 
           HAS_CLUSTER=$(echo ${GITOPS_WORKFLOW} | jq '. | has("cluster")')
           if [ "${HAS_CLUSTER} " == "true" ]; then
@@ -392,6 +401,7 @@ jobs:
           echo "gitopsDeployTargetType=$GITOPS_TARGET_TYPE" >> $GITHUB_OUTPUT
           echo "gitopsDeployTargetKey=$GITOPS_TARGET_KEY" >> $GITHUB_OUTPUT
           echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT
+          echo "githubDeployFile=$ACTION_FILE" >> $GITHUB_OUTPUT
 
       # https://docs.github.com/en/actions/learn-github-actions/contexts#example-printing-context-information-to-the-log
       # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
@@ -1031,15 +1041,15 @@ jobs:
         working-directory: ${{ inputs.docker-compose-context }}
         # Examples .inputs."shield-cli-image-tag"."default" for keys with dashes
         run: |
-          echo "Updating the action.yaml file with the regular version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
+          echo "Updating the ${{ needs.code.outputs.githubDeployFile }} file with the regular version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
           if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions" ]; then
             echo "Setting up docker image action with tag"
-            yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' action.yaml -i
+            yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"' ${{ needs.code.outputs.githubDeployFile }} -i
           fi
 
           if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions-composable" ]; then
             echo "Setting up composable action with tag but on key '${{ needs.code.outputs.gitopsDeployTargetKey }}'"
-            yq eval "${{ needs.code.outputs.gitopsDeployTargetKey }} = \"${{ needs.code.outputs.gitopsDeployVersion }}\"" action.yaml -i
+            yq eval "${{ needs.code.outputs.gitopsDeployTargetKey }} = \"${{ needs.code.outputs.gitopsDeployVersion }}\"" ${{ needs.code.outputs.githubDeployFile }} -i
           fi
 
           git diff
@@ -1049,16 +1059,16 @@ jobs:
         if: ${{ github.ref_type == 'tag' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
-          echo "Updating the action.yaml file with the version with the tag version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
+          echo "Updating the ${{ needs.code.outputs.githubDeployFile }} file with the version with the tag version ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
 
           if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions" ]; then
             echo "Setting up docker image action with tag"
-            yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"' action.yaml -i
+            yq e '.runs.image="docker://${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"' ${{ needs.code.outputs.githubDeployFile }} -i
           fi
 
           if [ "${{ needs.code.outputs.gitopsDeployTargetType }}" == "gh-actions-composable" ]; then
             echo "Setting up composable action with tag but on key '${{ needs.code.outputs.gitopsDeployTargetKey }}'"
-            yq eval "${{ needs.code.outputs.gitopsDeployTargetKey }} = \"${{ github.ref_name }}\"" action.yaml -i
+            yq eval "${{ needs.code.outputs.gitopsDeployTargetKey }} = \"${{ github.ref_name }}\"" ${{ needs.code.outputs.githubDeployFile }} -i
           fi
 
           git diff
