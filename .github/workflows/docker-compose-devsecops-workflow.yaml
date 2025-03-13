@@ -316,7 +316,7 @@ jobs:
             echo "Setting GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}"
             echo "GITOPS_TARGET_REPO=${GITOPS_TARGET_REPO}" >> $GITHUB_ENV
 
-            echo "GITOPS_TARGET_REPO_BRANCH=${ github.ref_name }}" >> $GITHUB_ENV
+            echo "GITOPS_TARGET_REPO_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_PROVIDER=${{ github.server_url }}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_REGION=current-server" >> $GITHUB_ENV
             echo "GITOPS_TARGET_SEGMENT=current-repo" >> $GITHUB_ENV
