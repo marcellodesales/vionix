@@ -432,7 +432,7 @@ jobs:
         run: |
           echo "* :bookmark: Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: Verify provided secrets
+      - name: Verify whether the client provided the SLACK credentials
         id: slack-creds
         env: 
           SLACK_CHANN: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
