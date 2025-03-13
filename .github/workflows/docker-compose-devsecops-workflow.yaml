@@ -301,7 +301,7 @@ jobs:
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
           echo "deploy_workflow=${GITOPS_WORKFLOW}"
 
-          ACTION_FILE=$(find . -type f \( -name "actions.yml" -o -name "actions.yaml" -o -name "action.yml" -o -name "action.yaml" \) -print -quit)
+          ACTION_FILE=$(find . -type f \( -name "actions.yml" -o -name "actions.yaml" -o -name "action.yml" -o -name "action.yaml" \) -print -quit | sed 's|^\./||')
           echo "Verify the action file '${ACTION_FILE}'"
           if [ "${ACTION_FILE}" != "" ]; then
             GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.type')
