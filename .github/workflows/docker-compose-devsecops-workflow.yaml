@@ -550,6 +550,13 @@ jobs:
           no-color:	false
           no-fail:	true
 
+      - name: json-yaml-validate
+        id: json-yaml-validate
+        uses: seceng-devsecops-platform/GrantBirki-json-yaml-validate-action@v3.2.1 # replace with the latest version
+        with:
+          comment: "true" # enable comment mode
+          mode: "fail"
+
   build:
     name: 📦 build
     needs: [code]
