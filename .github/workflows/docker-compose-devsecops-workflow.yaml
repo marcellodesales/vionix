@@ -299,7 +299,7 @@ jobs:
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           GITOPS_WORKFLOW='${{ inputs.gitops-deploy-workflow }}'
-          echo "deploy_workflow='${GITOPS_WORKFLOW}'"
+          echo "deploy_workflow=${GITOPS_WORKFLOW}"
 
           GITOPS_TARGET_REPO=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.repo')
           GITOPS_TARGET_REPO_BRANCH=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.ref')
@@ -308,9 +308,18 @@ jobs:
 
           echo "Target repo: ${GITOPS_TARGET_REPO} for the target branch: ${GITOPS_TARGET_REPO_BRANCH}"
 
-          if echo ${GITOPS_WORKFLOW} | jq '. | has("cluster")' > /dev/null; then
-            echo "The workflow is for kubernetes deployments with a k8s cluster defined"
-            echo ${GITOPS_WORKFLOW} | jq '.cluster'
+          if [ -f action.yaml ]; then
+            GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.type')
+            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
+
+            GITOPS_TARGET_KEY=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.key')
+            echo "GITOPS_TARGET_KEY=${GITOPS_TARGET_KEY}" >> $GITHUB_ENV
+          fi
+
+          HAS_CLUSTER=$(echo ${GITOPS_WORKFLOW} | jq '. | has("cluster")')
+          if [ "${HAS_CLUSTER} " == "true" ]; then
+            CLUSTER=$(echo ${GITOPS_WORKFLOW} | jq '.cluster')
+            echo "The workflow is for kubernetes deployments with a k8s cluster '${CLUSTER}'"
 
             GITOPS_TARGET_REGION=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.region')
             GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.cluster.type')
@@ -319,14 +328,6 @@ jobs:
             echo "GITOPS_TARGET_PROVIDER=${GITOPS_TARGET_PROVIDER}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
-          fi
-
-          if [ -f action.yaml ]; then
-            GITOPS_TARGET_TYPE=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.type')
-            echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
-
-            GITOPS_TARGET_KEY=$(echo ${GITOPS_WORKFLOW} | jq -r '.target.key')
-            echo "GITOPS_TARGET_KEY=${GITOPS_TARGET_KEY}" >> $GITHUB_ENV
           fi
 
       # Execute for DEV and STG
