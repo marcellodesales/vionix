@@ -319,9 +319,13 @@ jobs:
             echo "GITOPS_TARGET_REPO_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_PROVIDER=${{ github.server_url }}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_REGION=current-server" >> $GITHUB_ENV
-            echo "GITOPS_TARGET_SEGMENT=current-repo" >> $GITHUB_ENV
+
+            GITOPS_TARGET_SEGMENT=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].segment')
+            echo "GITOPS_TARGET_SEGMENT=${GITOPS_TARGET_SEGMENT}" >> $GITHUB_ENV
+
             GITOPS_TARGET_ENV=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].env')
-            GITOPS_TARGET_URL=$(echo ${GITOPS_WORKFLOW} | jq -r --arg branch ${GITHUB_REF_NAME} '.envs[$branch].url')
+            GITOPS_TARGET_URL="${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/${ACTION_FILE}"
+
             echo "GITOPS_TARGET_ENV=${GITOPS_TARGET_ENV}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_URL=${GITOPS_TARGET_URL}" >> $GITHUB_ENV
 
