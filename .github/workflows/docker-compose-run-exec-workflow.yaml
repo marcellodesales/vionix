@@ -72,12 +72,12 @@ jobs:
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           echo "Generating the workflow plan file"
-          docker compose -f ${{ docker-compose-file }} run ${{ docker-compose-service }} | tee docker-compose-exec.logs
+          docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }} | tee docker-compose-exec.logs
  
       - name: List of downloaded secret files
         run: |
           echo "# 💻 Logs" >> $GITHUB_STEP_SUMMARY
-          echo "* docker compose -f ${{ docker-compose-file }} run ${{ docker-compose-service }}"
+          echo "* docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }}"
           echo ""
           echo "```console"
           echo docker-compose-exec.logs
