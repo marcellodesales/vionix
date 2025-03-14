@@ -52,7 +52,6 @@ jobs:
 
   run:
     name:  🚀 run
-    needs: [code]
     runs-on: ${{ inputs.github-action-runner }}
     permissions:
       contents: read 
@@ -70,7 +69,7 @@ jobs:
         run: tree
 
       - name: Execute the generic docker compose service with provided arguments
-        working_dir: ${{ inputs.docker-compose-context }}
+        working-directory: ${{ inputs.docker-compose-context }}
         run: |
           echo "Generating the workflow plan file"
           docker compose -f ${{ docker-compose-file }} run ${{ docker-compose-service }} | tee docker-compose-exec.logs
