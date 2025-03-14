@@ -59,7 +59,7 @@ jobs:
     name: 🔧 code
     runs-on: ${{ inputs.github-action-runner }}
     permissions:
-      read
+      contents: read
 
     outputs:
       defaultDockerRegistry: ${{ steps.set_docker_image_settings.outputs.defaultDockerRegistry }}
