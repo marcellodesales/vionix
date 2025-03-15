@@ -76,7 +76,7 @@ runs:
         DOCKER_DEFAULT_PLATFORM: ${{ inputs.runner-platform }}
       run: |
         echo "Convert the file to base64 stream config-stream.tar.gz to config-stream.base64"
-        docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/schmitzi/openssl-alpine-j11:1.2.0 openssl base64 -e -A -in config-stream.tar.gz -out config-stream.base64
+        docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/schmitzi/openssl-alpine-j11:1.1.0 openssl base64 -e -A -in config-stream.tar.gz -out config-stream.base64
         ls -la config-stream.base64
 
         BASE64_STREAM=$(cat config-stream.base64)
