@@ -183,7 +183,7 @@ jobs:
         # if: ${{ github.ref_type == 'branch' }}
         uses: seceng-devsecops-platform/docker-login-action@v3.3.0
         with:
-          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          registry: ${{ needs.code.outputs.defaultDockerRegistry }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
           password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
 
