@@ -68,6 +68,7 @@ jobs:
       originalDockerImageTag: ${{ steps.set_docker_image_settings.outputs.originalDockerImageTag }}
       githubRepoPaths: ${{ steps.set_docker_image_settings.outputs.githubRepoPaths }}
       dockerImageArtifactoryUrl: ${{ steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl }}
+      artifactoryCredsProvided: ${{ steps.artifactory-creds.outputs.provided }}
 
     steps:
       - name: Fetch only the top commit
@@ -123,6 +124,40 @@ jobs:
         if: ${{ env.USER != '' && env.PASS != '' }}
         run: |
           echo "provided=true" >> $GITHUB_OUTPUT
+
+      # Load the docker image built in previous job, which was uploaded to artifacts
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download extra build envs for the execution
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.docker-compose-build-envs }}
+          path: ${{ inputs.docker-compose-context }}
+
+      - name: Decode extra build env variables for the build from ${{ inputs.docker-compose-context }}
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        working-directory: ${{ inputs.docker-compose-context }}
+        run: |
+          ls -la
+          echo "Encoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+
+          echo "Decoding extra build envs..."
+          cat ${{ inputs.docker-compose-build-envs }} | base64 -d > tmp.env
+          mv tmp.env ${{ inputs.docker-compose-build-envs }}
+
+          echo "Decoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+
+          if [ -f .env ]; then
+            echo "Consolidating extrac build env vars with existing .env"
+            cat .env
+          fi
+
+          cat ${{ inputs.docker-compose-build-envs }} >> .env
+          echo "Final build env vars"
+          ls -la
+          cat .env
 
       - name: Report on the command to be executed
         run: |
@@ -193,7 +228,7 @@ jobs:
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
-        # if: ${{ github.ref_type == 'branch' }}
+        if: ${{ needs.code.outputs.artifactoryCredsProvided == 'true' }}
         uses: seceng-devsecops-platform/docker-login-action@v3.3.0
         with:
           registry: ${{ needs.code.outputs.defaultDockerRegistry }}
