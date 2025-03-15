@@ -43,6 +43,12 @@ on:
         type: string
         default: ""
 
+      log-lines-to-summary:
+        description: "The number of last log lines to add to summary"
+        required: false
+        type: string
+        default: "30"
+
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
       ARTIFACTORY_SVC_USER:
@@ -239,14 +245,18 @@ jobs:
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
           echo "Generating the workflow plan file"
-          docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }} | tee docker-compose-exec.logs
+          docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }}  2>&1 | tee docker-compose-exec.logs
  
-      - name: List of downloaded secret files
+      - name: Report on the output logs of the compose file
         run: |
           echo "# 💻 Logs" >> $GITHUB_STEP_SUMMARY
           echo "* docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "```console" >> $GITHUB_STEP_SUMMARY
-          cat docker-compose-exec.logs >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo '```console' >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.log-lines-to-summary }}" == "" ]; then
+            cat docker-compose-exec.logs >> $GITHUB_STEP_SUMMARY
+          else
+            tail -n ${{ inputs.log-lines-to-summary }} docker-compose-exec.logs  >> $GITHUB_STEP_SUMMARY
+          fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
