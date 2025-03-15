@@ -16,6 +16,11 @@ inputs:
     description: "The content of the .env file to be loaded"
     required: true
 
+  runner-platform:
+    description: "The platform of the config stream converter linux/amd64, linux/arm64 for the specific runner platform"
+    required: false
+    default: linux/amd64
+
 outputs:
   base64-stream:
     description: "The stream value to be used for configuration"
@@ -53,30 +58,33 @@ runs:
           echo "Zipping the provided dir paths: ${DIR_PATHS}"
         fi
 
-        if [ -f terraform-config.tar.gz ]; then
-          echo "Deleting existing file ${terraform-config.tar.gz}"
-          rm -f terraform-config.tar.gz
+        if [ -f config-stream.tar.gz ]; then
+          echo "Deleting existing file ${config-stream.tar.gz}"
+          rm -f config-stream.tar.gz
         fi
 
-        echo "Creating config stream with tar -czvf terraform-config.tar.gz ${FILE_PATHS} ${DIR_PATHS}"
-        tar -czvf terraform-config.tar.gz ${FILE_PATHS} ${DIR_PATHS}
+        echo "Creating config stream with tar -czvf config-stream.tar.gz ${FILE_PATHS} ${DIR_PATHS}"
+        tar -czvf config-stream.tar.gz ${FILE_PATHS} ${DIR_PATHS}
 
         echo "Making sure they are in place"
-        tar -tvf terraform-config.tar.gz
+        tar -tvf config-stream.tar.gz
 
-    - id: response
-      name: Set up for streaming
+    - name: Set up for streaming file for the output
+      id: response
       shell: bash
+      env:
+        DOCKER_DEFAULT_PLATFORM: ${{ inputs.runner-platform }}
       run: |
-        docker run -v $(pwd):$(pwd) -w $(pwd) schmitzi/openssl-alpine-j11:1.2.0 openssl base64 -e -A -in terraform-config.tar.gz -out terraform-config-stream.base64
-        ls -la terraform-config-stream.base64
+        echo "Convert the file to base64 stream config-stream.tar.gz to config-stream.base64"
+        docker run -v $(pwd):$(pwd) -w $(pwd) dockerhub.docker.artifactory.viasat.com/schmitzi/openssl-alpine-j11:1.2.0 openssl base64 -e -A -in config-stream.tar.gz -out config-stream.base64
+        ls -la config-stream.base64
 
-        BASE64_STREAM=$(cat terraform-config-stream.base64)
-        echo "Result of terraform config for base64 stream: ${BASE64_STREAM}"
+        BASE64_STREAM=$(cat config-stream.base64)
+        echo "Result of the config for base64 stream: ${BASE64_STREAM}"
 
-        echo "Verifying"
-        base64 -d terraform-config-stream.base64 > terraform-config.tar.gz.original
-        ls -la terraform-config.tar.gz.original
-        ls -la terraform-config.tar.gz
+        echo "Verifying the config stream"
+        base64 -d config-stream.base64 > config-stream.tar.gz.original
+        ls -la config-stream.tar.gz.original
+        ls -la config-stream.tar.gz
 
         echo "base64Stream=${BASE64_STREAM}" >> $GITHUB_OUTPUT
