@@ -21,6 +21,11 @@ inputs:
     required: false
     default: .env
 
+outputs:
+  dot-file-content:
+    description: "The provided dot file content"
+    value: ${{ inputs.dot-file-content }}
+
 runs:
   using: composite
   steps:
