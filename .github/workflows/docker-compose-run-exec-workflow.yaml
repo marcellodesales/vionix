@@ -47,7 +47,7 @@ on:
         description: "The number of last log lines to add to summary"
         required: false
         type: string
-        default: "30"
+        default: "10"
 
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
