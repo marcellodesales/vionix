@@ -124,6 +124,19 @@ jobs:
         run: |
           echo "provided=true" >> $GITHUB_OUTPUT
 
+      - name: Report on the command to be executed
+        run: |
+          echo "# 🔧 Docker Config" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* docker compose -f ${{ inputs.docker-compose-context }}/${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }}" >> $GITHUB_STEP_SUMMARY
+
+          docker compose -f ${{ inputs.docker-compose-context }}/${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }} > compose.config
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```yaml' >> $GITHUB_STEP_SUMMARY
+          cat compose.config >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
   run:
     name:  🚀 run
     needs: [code]
@@ -199,6 +212,6 @@ jobs:
           echo "* docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "```console" >> $GITHUB_STEP_SUMMARY
-          echo docker-compose-exec.logs >> $GITHUB_STEP_SUMMARY
+          cat docker-compose-exec.logs >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
 
