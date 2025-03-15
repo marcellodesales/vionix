@@ -24,7 +24,7 @@ inputs:
 outputs:
   dot-file-content:
     description: "The provided dot file content"
-    value: ${{ inputs.dot-file-content }}
+    value: ${{ steps.file-content.outputs.input-dot-file-content }}
 
 runs:
   using: composite
@@ -35,6 +35,7 @@ runs:
       run: env
 
     - name: Setup additional credentials based on the given .env file
+      id: file-content
       shell: bash
       env:
         DOCKER_EXTRA_BUILD_ENVS: '${{ inputs.dot-file-content }}'
@@ -48,6 +49,9 @@ runs:
 
         echo "Testing encoded..."
         cat ${{ inputs.dot-file-path }} | base64 -d
+        echo 'input-dot-file-content<<EOF' >> $GITHUB_OUTPUT
+        echo "${DOCKER_EXTRA_BUILD_ENVS}" >> $GITHUB_OUTPUT
+        echo 'EOF' >> $GITHUB_OUTPUT
 
     - name: Upload extra envs for the build
       uses: actions/upload-artifact@v3.2.1-node20
