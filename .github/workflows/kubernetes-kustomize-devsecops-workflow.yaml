@@ -241,18 +241,30 @@ jobs:
           # Only return if PR is still open. (By default it returns PRs in any state.)
           filterOutClosed: true
 
+      - name: Hide kubeconfig info during runtime
+        run: |
+          echo "::add-mask::${{ secrets.KUBERNETES_KUBECONFIG }}"
+
+          # Create a random kubeconfig file in a random path
+          DECODED_K8SCONFIG=$(mktemp)
+          echo "::add-mask::$DECODED_K8SCONFIG"
+
+          #mkdir ${HOME}/.kube
+          echo "KUBECONFIG=$DECODED_K8SCONFIG" >> $GITHUB_ENV
+
       # Runs a single command using the runners shell
       - name: Setup kubernetes credentials
         id: kconfig-connection
         run: |
           echo "Access Kubernetes cluster's kubeconfig file" >> $GITHUB_STEP_SUMMARY
-          mkdir ${HOME}/.kube
-          echo ${{ secrets.KUBERNETES_KUBECONFIG }} | base64 -d > ${HOME}/.kube/config
+
+          # Decode directly to a file without showing the content with bash here-string (<<< doesn't get logged)
+          base64 -d <<< "${{ secrets.KUBERNETES_KUBECONFIG }}" > ${KUBECONFIG}
 
           echo "## :closed_lock_with_key: Kubernetes credentials" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ -f "${HOME}/.kube/config" ] && [ -s "${HOME}/.kube/config" ]; then
+          if [ -f ${KUBECONFIG} ] && [ -s ${KUBECONFIG} ]; then
               echo "HAS_KUBECONFIG=true" >> $GITHUB_ENV
           else
               echo "HAS_KUBECONFIG=false" >> $GITHUB_ENV
