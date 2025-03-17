@@ -185,6 +185,12 @@ jobs:
     permissions:
       contents: read 
     steps:
+      # Files created by the encoder doesn't expose, but the decoder input is on the clear
+      # with the base64 value. At this point we can just mask it to avoid any exposure
+      - name: Add config stream mask for possible secrets exposure
+        if: ${{ inputs.config-stream != '' }}
+        run: echo "::add-mask::${{ inputs.config-stream }}"
+    
       - name: Fetch top commit from the repo
         uses: actions/checkout@v4.2.2
 
