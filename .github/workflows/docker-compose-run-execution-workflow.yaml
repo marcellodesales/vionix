@@ -3,7 +3,7 @@
 ####
 # Executes a docker compose service provided with anything needed. In addition, pull the 
 # needed config stream provided by the user, if any.
-name: docker-compose-run-exec
+name: docker-compose-run-execution
 
 on:
   workflow_call:
