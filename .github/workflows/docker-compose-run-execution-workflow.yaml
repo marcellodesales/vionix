@@ -1,0 +1,268 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# Executes a docker compose service provided with anything needed. In addition, pull the 
+# needed config stream provided by the user, if any.
+name: docker-compose-run-execution
+
+on:
+  workflow_call:
+    inputs:
+      github-action-runner:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: devsecops
+
+      docker-compose-context:
+        description: "Directory containing the given docker-compose-file"
+        required: false
+        type: string
+        default: "."
+
+      docker-compose-file:
+        description: "Docker Compose File to use"
+        required: false
+        type: string
+        default: docker-compose.yaml
+
+      docker-compose-service:
+        description: "Docker Compose service to build"
+        required: true
+        type: string
+
+      docker-compose-build-envs:
+        description: "If there's extra build envs placed to the file specified by this value"
+        required: false
+        type: string
+
+      config-stream:
+        description: "The base64 stream of files required to execute docker-compose"
+        required: false
+        type: string
+        default: ""
+
+      log-lines-to-summary:
+        description: "The number of last log lines to add to summary"
+        required: false
+        type: string
+        default: "10"
+
+    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+    secrets:
+      ARTIFACTORY_SVC_USER:
+        description: "The username of the service account for Artifactory Docker registry Repository"
+        required: true
+
+      ARTIFACTORY_SVC_PASS:
+        description: "The password associated with the username of the service account for Artifactory Docker registry Repository"
+        required: true
+
+jobs:
+
+  code:
+    name: 🔧 code
+    runs-on: ${{ inputs.github-action-runner }}
+    permissions:
+      contents: read
+
+    outputs:
+      defaultDockerRegistry: ${{ steps.set_docker_image_settings.outputs.defaultDockerRegistry }}
+      defaultDockerImageRepo: ${{ steps.set_docker_image_settings.outputs.defaultDockerImageRepo }}
+      defaultDockerService: ${{ steps.set_docker_image_settings.outputs.defaultDockerService }}
+      originalDockerImageTag: ${{ steps.set_docker_image_settings.outputs.originalDockerImageTag }}
+      githubRepoPaths: ${{ steps.set_docker_image_settings.outputs.githubRepoPaths }}
+      dockerImageArtifactoryUrl: ${{ steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl }}
+      artifactoryCredsProvided: ${{ steps.artifactory-creds.outputs.provided }}
+
+    steps:
+      - name: Fetch only the top commit
+        # Generalize all checkouts with an action that knows how to handle submodules
+        #if: ${{ inputs.build-checkout-submodules == 'false' }}
+        uses: actions/checkout@v4.2.2
+
+      - name: Find out the image repo name and version
+        working-directory: ${{ inputs.docker-compose-context }}
+        run: |
+          env
+          DEFAULT_DOCKER_IMAGE_REPO=$(docker compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
+          ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
+          DEFAULT_DOCKER_IMAGE_REPO=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $1 }')
+
+          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
+          echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
+
+          # The registry is the first part of the registry/repo/folder
+          DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
+          echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
+          # Just break down the paths for links in artifactory
+          REGISTRY="${DEFAULT_DOCKER_REGISTRY}/"
+          GITHUB_REPOSITORY_PATHS=${DEFAULT_DOCKER_IMAGE_REPO/$REGISTRY/}
+          GITHUB_REPOSITORY_PATHS=$(echo ${GITHUB_REPOSITORY_PATHS} | sed -e "s/-/\//g")
+          GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG}
+          echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
+
+          # Extract the first token, repository path, and image tag from the image string
+          ARTIFACTORY_REPO_TOKEN="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | cut -d '.' -f1)"
+          ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
+
+          # Construct the new artifactory URL
+          ARTIFACTORY_URL="https://artifactory.viasat.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
+          echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
+
+      - name: Verify if the docker-compose file and service exists
+        id: set_docker_image_settings
+        run: |
+          env
+          echo "defaultDockerImageRepo=$DEFAULT_DOCKER_IMAGE_REPO" >> $GITHUB_OUTPUT
+          echo "defaultDockerService=${{ inputs.docker-compose-service }}" >> $GITHUB_OUTPUT
+          echo "defaultDockerRegistry=$DEFAULT_DOCKER_REGISTRY" >> $GITHUB_OUTPUT
+          echo "originalDockerImageTag=$ORIGINAL_DOCKER_IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "githubRepoPaths=$GITHUB_REPOSITORY_PATHS" >> $GITHUB_OUTPUT
+          echo "dockerImageArtifactoryUrl=$ARTIFACTORY_URL" >> $GITHUB_OUTPUT
+
+      - name: Verify whether the client provided the Artifactory credentials
+        id: artifactory-creds
+        env: 
+          USER: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          PASS: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+        if: ${{ env.USER != '' && env.PASS != '' }}
+        run: |
+          echo "provided=true" >> $GITHUB_OUTPUT
+
+      # Load the docker image built in previous job, which was uploaded to artifacts
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download extra build envs for the execution
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.docker-compose-build-envs }}
+          path: ${{ inputs.docker-compose-context }}
+
+      - name: Decode extra build env variables for the build from ${{ inputs.docker-compose-context }}
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        working-directory: ${{ inputs.docker-compose-context }}
+        run: |
+          ls -la
+          echo "Encoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+
+          echo "Decoding extra build envs..."
+          cat ${{ inputs.docker-compose-build-envs }} | base64 -d > tmp.env
+          mv tmp.env ${{ inputs.docker-compose-build-envs }}
+
+          echo "Decoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+
+          if [ -f .env ]; then
+            echo "Consolidating extrac build env vars with existing .env"
+            cat .env
+          fi
+
+          cat ${{ inputs.docker-compose-build-envs }} >> .env
+          echo "Final build env vars"
+          ls -la
+          cat .env
+
+      - name: Report on the command to be executed
+        run: |
+          echo "# 🔧 Docker Config" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* docker compose -f ${{ inputs.docker-compose-context }}/${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }}" >> $GITHUB_STEP_SUMMARY
+
+          docker compose -f ${{ inputs.docker-compose-context }}/${{ inputs.docker-compose-file }} config ${{ inputs.docker-compose-service }} > compose.config
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```yaml' >> $GITHUB_STEP_SUMMARY
+          cat compose.config >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  run:
+    name:  🚀 run
+    needs: [code]
+    runs-on: ${{ inputs.github-action-runner }}
+    permissions:
+      contents: read 
+    steps:
+      # Files created by the encoder doesn't expose, but the decoder input is on the clear
+      # with the base64 value. At this point we can just mask it to avoid any exposure
+      - name: Add config stream mask for possible secrets exposure
+        if: ${{ inputs.config-stream != '' }}
+        run: echo "::add-mask::${{ inputs.config-stream }}"
+    
+      - name: Fetch top commit from the repo
+        uses: actions/checkout@v4.2.2
+
+      # Load the docker image built in previous job, which was uploaded to artifacts
+      # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Download extra build envs for the execution
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.docker-compose-build-envs }}
+          path: ${{ inputs.docker-compose-context }}
+
+      - name: Decode extra build env variables for the build from ${{ inputs.docker-compose-context }}
+        if: ${{ inputs.docker-compose-build-envs != '' }}
+        working-directory: ${{ inputs.docker-compose-context }}
+        run: |
+          ls -la
+          echo "Encoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+
+          echo "Decoding extra build envs..."
+          cat ${{ inputs.docker-compose-build-envs }} | base64 -d > tmp.env
+          mv tmp.env ${{ inputs.docker-compose-build-envs }}
+
+          echo "Decoded extra build envs"
+          cat ${{ inputs.docker-compose-build-envs }}
+
+          if [ -f .env ]; then
+            echo "Consolidating extrac build env vars with existing .env"
+            cat .env
+          fi
+
+          cat ${{ inputs.docker-compose-build-envs }} >> .env
+          echo "Final build env vars"
+          ls -la
+          cat .env
+
+       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
+      - name: Decode the config stream
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/build/config-stream-decoder@main
+        if: ${{ inputs.config-stream != '' }}
+        with:
+          config-stream: ${{ inputs.config-stream }}
+
+      - name: List of downloaded config stream
+        run: tree
+
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to Artifactory Docker Registry
+        if: ${{ needs.code.outputs.artifactoryCredsProvided == 'true' }}
+        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
+        with:
+          registry: ${{ needs.code.outputs.defaultDockerRegistry }}
+          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
+          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+
+      - name: Execute the generic docker compose service with provided arguments
+        working-directory: ${{ inputs.docker-compose-context }}
+        run: |
+          echo "Generating the workflow plan file"
+          docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }}  2>&1 | tee docker-compose-exec.logs
+ 
+      - name: Report on the output logs of the compose file
+        run: |
+          echo "# 💻 Logs" >> $GITHUB_STEP_SUMMARY
+          echo "* docker compose -f ${{ inputs.docker-compose-file }} run ${{ inputs.docker-compose-service }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```console' >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.log-lines-to-summary }}" == "" ]; then
+            cat docker-compose-exec.logs >> $GITHUB_STEP_SUMMARY
+          else
+            tail -n ${{ inputs.log-lines-to-summary }} docker-compose-exec.logs  >> $GITHUB_STEP_SUMMARY
+          fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
