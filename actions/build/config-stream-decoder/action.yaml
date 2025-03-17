@@ -32,7 +32,7 @@ runs:
         echo ${{ inputs.config-stream }} > config-stream.base64
         ls -la config-stream.base64
 
-        echo "Parsing terraform-config.tar.gz"
+        echo "Parsing config-stream.tar.gz"
         base64 -d config-stream.base64 > config-stream.tar.gz
 
         echo "Checking config integrity"
@@ -47,3 +47,5 @@ runs:
         echo 'EOF' >> $GITHUB_OUTPUT
 
         rm -f stream-out.txt
+        rm -f config-stream.tar.gz
+

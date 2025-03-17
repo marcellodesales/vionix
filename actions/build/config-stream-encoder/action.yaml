@@ -80,7 +80,6 @@ runs:
         ls -la config-stream.base64
 
         BASE64_STREAM=$(cat config-stream.base64)
-        echo "Result of the config for base64 stream: ${BASE64_STREAM}"
 
         echo "Verifying the config stream"
         base64 -d config-stream.base64 > config-stream.tar.gz.original
