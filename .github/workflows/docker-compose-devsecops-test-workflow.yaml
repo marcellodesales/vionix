@@ -601,6 +601,7 @@ jobs:
       - name: Add Test summary PR Comment
         uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: ${{ always() && github.event_name == 'pull_request' && steps.test-values.outputs.testReportFileExists == 'true' }}
+        continue-on-error: true
         with:
           header: tests-summary
           recreate: true
