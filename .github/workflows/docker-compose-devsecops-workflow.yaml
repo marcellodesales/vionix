@@ -229,12 +229,6 @@ jobs:
           else
             echo "HAS_PR=false" >> $GITHUB_OUTPUT
           fi
-          
-
-      - name: Provided input to the app
-        run: |
-          echo "Inputs=${{ toJSON(inputs) }}"
-          echo "Secrets=${{ toJSON(secrets) }}"
 
       - name: Fetch all history and have .git locally for inspection
         uses: actions/checkout@v4.2.2
