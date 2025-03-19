@@ -565,6 +565,11 @@ jobs:
             echo "configLintMode=warn" >> $GITHUB_OUTPUT
           fi
 
+      - name: Provide Json information
+        if: ${{ inputs.check-fail-on-yaml-json-lint-error == 'false' }}
+        run: |
+          echo "::notice title=Json Yaml Validation Error::If this is a false positive, set check-yaml-exclude-regex or check-json-exclude-regex to exclude files. E.G. '.*\.schema\.yaml$' to exclude schema files. Set check-fail-on-yaml-json-lint-error=false to desable failures"
+
       - name: Lint the provided Dockerfile
         uses: seceng-devsecops-platform/hadolint-action@v3.1.0
         with:
@@ -584,8 +589,7 @@ jobs:
       - name: Provide json-yaml lint details on error
         if: ${{ failure() && steps.json-yaml-validation.outputs.success == 'false' }}
         run: |
-          echo "::info title=Json Yaml Validation Error::If this is a false positive, set check-yaml-exclude-regex or check-json-exclude-regex to exclude files. E.G. '.*\.schema\.yaml$' to exclude schema files. Set check-fail-on-yaml-json-lint-error=false to desable failures"
-          exit 1
+          echo "::notice title=Json Yaml Validation Error::If this is a false positive, set check-yaml-exclude-regex or check-json-exclude-regex to exclude files. E.G. '.*\.schema\.yaml$' to exclude schema files. Set check-fail-on-yaml-json-lint-error=false to desable failures"
 
   build:
     name: 📦 build
