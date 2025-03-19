@@ -107,6 +107,12 @@ on:
         required: false
         type: string
 
+      check-allow-multiple-yaml-documents:
+        description: "Whether to allow or not multiple yaml documents"
+        required: false
+        type: string
+        default: "false"
+
       gitops-deploy-workflow:
         description: "Cloud provider workflow deploy the repo using k8s"
         required: false
@@ -584,6 +590,7 @@ jobs:
           mode: ${{ steps.lint-mode.outputs.configLintMode }}
           yaml_exclude_regex: ${{ inputs.check-yaml-exclude-regex }}
           json_exclude_regex: ${{ inputs.check-json-exclude-regex }}
+          allow_multiple_documents: ${{ inputs.check-allow-multiple-yaml-documents }}
 
       - name: Provide json-yaml lint details on error
         if: ${{ failure() && steps.json-yaml-validation.outputs.success == 'false' }}
