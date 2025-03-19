@@ -559,7 +559,7 @@ jobs:
       - name: Set on lint failure
         id: lint-mode
         run: |
-          if [ "${{ inputs.check-fail-on-yaml-json-lint-error == 'true' }}" == "true" ]; then
+          if [ "${{ inputs.check-fail-on-yaml-json-lint-error }}" == "true" ]; then
             echo "configLintMode=fail" >> $GITHUB_OUTPUT
           else
             echo "configLintMode=warn" >> $GITHUB_OUTPUT
