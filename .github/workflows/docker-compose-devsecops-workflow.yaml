@@ -557,7 +557,7 @@ jobs:
           echo "foundDockerfile=$DOCKERFILE_FILE_NAME" >> $GITHUB_OUTPUT
 
       - name: Check on lint failure
-        id: ${{ inputs.check-fail-on-yaml-json-lint-error == 'true' }}
+        if: ${{ inputs.check-fail-on-yaml-json-lint-error == 'true' }}
         run: |
           echo "DOCKERFILE_FAIL_ON_LINT_ERROR=true" >> $GITHUB_ENV
           echo "JSON_YAML_FAIL_ON_LINT_ERROR=fail" >> $GITHUB_ENV
