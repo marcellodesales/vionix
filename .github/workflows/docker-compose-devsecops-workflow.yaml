@@ -560,19 +560,9 @@ jobs:
       - name: Validate JSON-YAML in the repo
         id: json-yaml-validate
         uses: seceng-devsecops-platform/GrantBirki-json-yaml-validate-action@v3.2.1
-        continue-on-error: true
         with:
           comment: "true"
-          mode: "fail"
-          yaml_exclude_regex: ${{ inputs.check-yaml-exclude-regex }}
-          json_exclude_regex: ${{ inputs.check-json-exclude-regex }}
-
-      - name: Validate JSON-YAML in the repo
-        id: json-yaml-validation
-        uses: seceng-devsecops-platform/GrantBirki-json-yaml-validate-action@v3.2.1
-        with:
-          comment: "true"
-          mode: "fail"
+          mode: "warn"
           yaml_exclude_regex: ${{ inputs.check-yaml-exclude-regex }}
           json_exclude_regex: ${{ inputs.check-json-exclude-regex }}
 
@@ -580,6 +570,7 @@ jobs:
         if: ${{ steps.json-yaml-validation.outputs.success == 'false' }}
         run: |
           echo "::error title=Json Yaml Validation Error::If this is a false positive, set check-yaml-exclude-regex or check-json-exclude-regex to exclude files. E.G. '.*\.schema\.yaml$' to exclude schema files"
+          exit 1
 
   build:
     name: 📦 build
