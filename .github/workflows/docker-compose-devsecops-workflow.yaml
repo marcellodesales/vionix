@@ -91,6 +91,16 @@ on:
         type: number
         default: 400
 
+      check-yaml-exclude-regex:
+        description: "The regex to exclude yaml files... For instance, .*\\.schema\\.yaml$"
+        required: false
+        type: string
+
+      check-json-exclude-regex:
+        description: "The regex to exclude json files... For instance, .*\\.schema\\.json$"
+        required: false
+        type: string
+
       gitops-deploy-workflow:
         description: "Cloud provider workflow deploy the repo using k8s"
         required: false
@@ -397,10 +407,6 @@ jobs:
       - name: Setting values
         id: set_base_values
         run: |
-          # The below outputs a JSON array of check tasks for each subproject
-          #  and uses GitHub Actions magic (::set-output) to set an output
-          #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
-          # https://github.community/t/sharing-a-variable-between-jobs/16967/14
           echo "githubActionJobName=$BUILD_JOB_NAME" >> $GITHUB_OUTPUT
           echo "githubActionJobUrl=$BUILD_JOB_URL" >> $GITHUB_OUTPUT
           echo "githubActionRunId=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
@@ -544,18 +550,36 @@ jobs:
           echo "Found name '${DOCKERFILE_FILE_NAME}'"
           echo "foundDockerfile=$DOCKERFILE_FILE_NAME" >> $GITHUB_OUTPUT
 
-      - uses: seceng-devsecops-platform/hadolint-action@v3.1.0
+      - name: Lint the provided Dockerfile
+        uses: seceng-devsecops-platform/hadolint-action@v3.1.0
         with:
           dockerfile: ${{ inputs.docker-compose-context }}/${{ steps.find-name.outputs.foundDockerfile }}
           no-color:	false
           no-fail:	true
 
-      - name: json-yaml-validate
+      - name: Validate JSON-YAML in the repo
         id: json-yaml-validate
-        uses: seceng-devsecops-platform/GrantBirki-json-yaml-validate-action@v3.2.1 # replace with the latest version
+        uses: seceng-devsecops-platform/GrantBirki-json-yaml-validate-action@v3.2.1
+        continue-on-error: true
         with:
-          comment: "true" # enable comment mode
+          comment: "true"
           mode: "fail"
+          yaml_exclude_regex: ${{ inputs.check-yaml-exclude-regex }}
+          json_exclude_regex: ${{ inputs.check-json-exclude-regex }}
+
+      - name: Validate JSON-YAML in the repo
+        id: json-yaml-validation
+        uses: seceng-devsecops-platform/GrantBirki-json-yaml-validate-action@v3.2.1
+        with:
+          comment: "true"
+          mode: "fail"
+          yaml_exclude_regex: ${{ inputs.check-yaml-exclude-regex }}
+          json_exclude_regex: ${{ inputs.check-json-exclude-regex }}
+
+      - name: Provide json-yaml lint details on error
+        if: ${{ steps.json-yaml-validation.outputs.success == 'false' }}
+        run: |
+          echo "::error title=Json Yaml Validation Error::If this is a false positive, set check-yaml-exclude-regex or check-json-exclude-regex to exclude files. E.G. '.*\.schema\.yaml$' to exclude schema files"
 
   build:
     name: 📦 build
