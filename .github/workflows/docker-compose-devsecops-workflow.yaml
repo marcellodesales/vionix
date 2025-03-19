@@ -568,12 +568,12 @@ jobs:
       - name: Provide Json information
         if: ${{ inputs.check-fail-on-yaml-json-lint-error == 'false' }}
         run: |
-          echo "::warn title=Json Yaml Validation::Check input 'check-fail-on-yaml-json-lint-error=false' might show JSON/YAML errors... Either set it to true to fail builds or Exclude files with 'check-json-exclude-regex=.*\.test\.json$' or 'check-json-exclude-regex=.*\.test\.yaml$' to exclude test files, for instance."
+          echo "::warning title=Json Yaml Validation::Check input 'check-fail-on-yaml-json-lint-error=false' might show JSON/YAML errors... Either set it to true to fail builds or Exclude files with 'check-json-exclude-regex=.*\.test\.json$' or 'check-json-exclude-regex=.*\.test\.yaml$' to exclude test files, for instance."
 
       - name: Provide Json information
         if: ${{ inputs.check-fail-on-yaml-json-lint-error == 'true' }}
         run: |
-          echo "::warn title=Json Yaml Validation::Check input 'check-fail-on-yaml-json-lint-error=true'... In case of failures: Either fix the lint errors or set the value to false. Otherwise, exclude files. Example: 'check-json-exclude-regex=.*\.test\.json$' or 'check-json-exclude-regex=.*\.test\.yaml$'."
+          echo "::warning title=Json Yaml Validation::Check input 'check-fail-on-yaml-json-lint-error=true'... In case of failures: Either fix the lint errors or set the value to false. Otherwise, exclude files. Example: 'check-json-exclude-regex=.*\.test\.json$' or 'check-json-exclude-regex=.*\.test\.yaml$'."
 
       - name: Lint the provided Dockerfile
         uses: seceng-devsecops-platform/hadolint-action@v3.1.0
