@@ -32,7 +32,7 @@ on:
         required: true
         type: string
 
-      seceng-devsecops-dind-runner-label:
+      github-action-runner:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
