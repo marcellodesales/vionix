@@ -561,8 +561,10 @@ jobs:
         run: |
           if [ "${{ inputs.check-fail-on-yaml-json-lint-error }}" == "true" ]; then
             echo "configLintMode=fail" >> $GITHUB_OUTPUT
+            echo "dockerLintNoFail=false" >> $GITHUB_OUTPUT
           else
             echo "configLintMode=warn" >> $GITHUB_OUTPUT
+            echo "dockerLintNoFail=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Provide Json information
@@ -580,7 +582,7 @@ jobs:
         with:
           dockerfile: ${{ inputs.docker-compose-context }}/${{ steps.find-name.outputs.foundDockerfile }}
           no-color: false
-          no-fail: ${{ inputs.check-fail-on-yaml-json-lint-error }}
+          no-fail: ${{ steps.lint-mode.outputs.dockerLintNoFail }}
 
       - name: Validate JSON-YAML in the repo
         id: json-yaml-validate
