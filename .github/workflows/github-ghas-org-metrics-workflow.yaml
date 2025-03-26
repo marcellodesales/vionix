@@ -109,7 +109,7 @@ jobs:
           #repositories: ${{ github.event.repository.name }}
 
       - name: Generate GHAS Metrics Report
-        uses: seceng-devsecops-platform/theztefan-ghas-metrics-report@v1.2.3
+        uses: seceng-devsecops-platform/theztefan-ghas-metrics-report@viasat/main
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
