@@ -80,7 +80,7 @@ on:
 jobs:
   code:
     name: 🔧 code
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-action-runner }}
 
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
@@ -235,7 +235,7 @@ jobs:
   pull:
     name: 🐳 pull
     needs: [code]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-action-runner }}
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
@@ -285,7 +285,7 @@ jobs:
   prisma:
     name: 🏳️‍🌈⃤   prisma
     needs: [code, pull]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-action-runner }}
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
@@ -398,7 +398,7 @@ jobs:
   sbom:
     name: 🛡️ sbom
     needs: [code, pull]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-action-runner }}
 
     # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
     # Only run the builds when building either DEV or STG
