@@ -1,0 +1,128 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# Create a workflow that shows metrics and specific info about the org repos onboarded to GHAS.
+# It will use the Onboarded GHAS app for the execution for customers
+name: github-ghas-org-metrics-workflow.yaml
+
+# Avoid multiple CI jobs to execute for multiple commits in a given branch
+# section #6: Saving Computation Time by Stopping Obsolete Workflows
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.local-repository }}
+  cancel-in-progress: true
+
+on:
+  # Manual workflow execution
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+  # https://github.com/actions/runner/issues/1483#issuecomment-969295757
+  # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
+  workflow_call:
+    inputs:
+      github-actions-runner:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: vionix
+
+      ghas-app-env:
+        description: "The local repository from git.viasat.com"
+        required: false
+        type: string
+        default: dev
+
+      ghas-report-features:
+        description: "The feature to report on"
+        required: false
+        type: string
+        default: "dependabot, code-scanning, secret-scanning"
+
+      ghas-report-output-format:
+        description: "The output format of the workflow"
+        required: false
+        type: string
+        default: "json, pdf, issues, github-output"
+
+    # We need to declare the intent of secrets. The pipelines reusing this must declare them!
+    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+    secrets:
+
+      GITOPS_GITHUB_DEPLOY_PAT:
+        description: "The token to clone and push changes to the GitOps Deploy repo"
+        required: false
+
+      VAULT_CA_CERT:
+        description: "The Vault CA CERT to use to load the App secrets"
+        required: false
+
+# https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
+jobs:
+
+  ghas-metrics-report:
+    name: 📈ghas-org-metrics-report
+    runs-on: ${{ inputs.github-actions-runner }}
+
+    permissions:
+      contents: read
+      # <--- allows to read/write of jwt/OIDC token for Vault
+      id-token: write
+      security-events: read
+
+    steps:
+      # Work to consolidate secrets to vault tracked at https://jira.viasat.com/browse/DEVSECOPS-163
+      - name: Pulling secrets from vault
+        uses: hashicorp/vault-action@v3.3.0
+        with:
+            method: jwt
+            path: git-jwt
+            url: https://vault.security.viasat.io:8200
+            caCertificate: ${{ secrets.VAULT_CA_CERT }}
+            role: vionix-devesecops_org
+            secrets: |
+              viasat/data/vionix/platform/shield/services/git.viasat.com/svc-vionix-devsecops token | GITHUB_TOKEN_AUTH ;
+              viasat/data/vionix/platform/shield/services/git.viasat.com/vionix-ghas-manager-${{ inputs.ghas-app-env }} key | GITHUB_APP_KEY ;
+              viasat/data/vionix/platform/shield/services/git.viasat.com/vionix-ghas-manager-${{ inputs.ghas-app-env }} id | GITHUB_APP_ID ;
+
+      - name: Write the instructions table
+        run: |
+          echo "# 📈 Metrics Description Table" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric                        | Description                                                                              | Example                                                                                                 | " >> $GITHUB_STEP_SUMMARY
+          echo "|-------------------------------|------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------| " >> $GITHUB_STEP_SUMMARY
+          echo "| Open Alerts                   | Number of unresolved alerts requiring attention.                                          | The team currently has 7 open alerts that need to be addressed promptly for system stability.          | " >> $GITHUB_STEP_SUMMARY
+          echo "| Fixed in the past X days       | Number of alerts that were resolved within a specific timeframe.                           | Over the past 7 days, 3 alerts were fixed within 2 hours after being reported.                         | " >> $GITHUB_STEP_SUMMARY
+          echo "| Opened in the past X days      | Number of new alerts that have been reported within a defined period.                      | Within the last 14 days, 10 new alerts were opened, indicating potential issues requiring action.     | " >> $GITHUB_STEP_SUMMARY
+          echo "| Frequency                     | How often metrics or alerts are monitored or reported.                                    | Monitoring for these metrics occurs daily to ensure timely response to any arising issues.           | " >> $GITHUB_STEP_SUMMARY
+          echo "| MTTR (Mean Time to Resolve)    | Average duration taken to address and resolve alerts.                                      | The mean time to resolve alerts within the system is 2 days, 4 hours, and 30 minutes on average.       | " >> $GITHUB_STEP_SUMMARY
+          echo "| MTTD (Mean Time to Detect)     | Average time taken to detect and acknowledge alerts or issues.                             | On average, it takes the team 6 hours to detect and acknowledge new alerts from the time of occurrence.| " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "* Example: Within the provided dataset, there are 7 open alerts that need immediate attention, with a mean time to resolve (MTTR) of approximately 226 days, 10 hours, 20 minutes, and 2 seconds. The mean time to detect (MTTD) is not specified. By monitoring these metrics daily and tracking improvements such as reducing the number of open alerts and enhancing the time to resolve them, teams can enhance their system reliability and operational efficiency." >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ env.GITHUB_APP_ID }}
+          private-key: ${{ env.GITHUB_APP_KEY }}
+          owner: seceng-devsecops-platform
+          # or remove this line to generate toke to all repos in org
+          #repositories: ${{ github.event.repository.name }}
+
+      - name: Generate GHAS Metrics Report
+        uses: seceng-devsecops-platform/theztefan-ghas-metrics-report@viasat/main
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GITHUB_API_URL: ${{ github.server_url }}/api/v3
+        with:
+          org: ${{ github.repository_owner }}
+          #repo: ${{ github.event.repository.name }}
+          features: ${{ inputs.ghas-report-features }}
+          frequency: "daily"
+          output-format: ${{ inputs.ghas-report-output-format }}
+
+      - name: Upload GHAS metrics report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghas-metrics-report
+          path: ${{ github.workspace }}/ghas-report.*
