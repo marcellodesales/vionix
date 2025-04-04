@@ -15,7 +15,7 @@ on:
   workflow_call:
 
     inputs:
-      seceng-devsecops-dind-runner-label:
+      github-actions-runner:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
@@ -170,7 +170,7 @@ on:
 jobs:
   code:
     name: 🔧 code
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
 
     # Maybe to get twistlock action to run we need permission to read
     # https://github.com/actions/checkout/issues/254#issuecomment-1166945991
@@ -268,7 +268,7 @@ jobs:
 
   lint:
     name: 🧹 lint
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
 
     needs: [code]
 
@@ -350,7 +350,7 @@ jobs:
   test:
     name: ✅️ test-code
     needs: [lint]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
 
     if: inputs.docker-compose-test != '' && github.ref_type == 'branch'
 
@@ -640,7 +640,7 @@ jobs:
   report:
     name:  📊️ report
     needs: [test]
-    runs-on: ${{ inputs.seceng-devsecops-dind-runner-label }}
+    runs-on: ${{ inputs.github-actions-runner }}
     continue-on-error: true
     strategy:
       fail-fast: false
