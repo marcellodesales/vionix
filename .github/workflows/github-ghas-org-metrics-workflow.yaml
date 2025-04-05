@@ -43,6 +43,12 @@ on:
         type: string
         default: "json, pdf, issues, github-output"
 
+      ghas-report-metrics-frequency:
+        description: "The metrics frequency for the report"
+        required: false
+        type: string
+        default: daily
+
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
@@ -104,7 +110,7 @@ jobs:
         with:
           app-id: ${{ env.GITHUB_APP_ID }}
           private-key: ${{ env.GITHUB_APP_KEY }}
-          owner: seceng-devsecops-platform
+          owner: ${{ github.repository_owner }}	
           # or remove this line to generate toke to all repos in org
           #repositories: ${{ github.event.repository.name }}
 
@@ -113,12 +119,12 @@ jobs:
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-          GITHUB_API_URL: ${{ github.server_url }}/api/v3
+          GITHUB_API_URL: ${{ github.api_url }}
         with:
           org: ${{ github.repository_owner }}
           #repo: ${{ github.event.repository.name }}
           features: ${{ inputs.ghas-report-features }}
-          frequency: "daily"
+          frequency: ${{ inputs.ghas-report-metrics-frequency }}
           output-format: ${{ inputs.ghas-report-output-format }}
 
       - name: Upload GHAS metrics report as artifact
