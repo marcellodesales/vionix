@@ -72,6 +72,8 @@ jobs:
       # <--- allows to read/write of jwt/OIDC token for Vault
       id-token: write
       security-events: read
+      # Write dependenxies info to Prs
+      pull-requests: write
 
     steps:
       # Check connectivity with https://github.com/actions/dependency-review-action/issues/736
