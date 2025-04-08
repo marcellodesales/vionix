@@ -2,7 +2,7 @@
 #### Author: Marcello DeSales (@mdesales)
 ####
 # Create a workflow that shows GHAS dependanbot dependencies reviews from OSS
-name: github-ghas-org-metrics-workflow.yaml
+name: github-ghas-dependabot-reviews
 
 on:
   # Manual workflow execution
