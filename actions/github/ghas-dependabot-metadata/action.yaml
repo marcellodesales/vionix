@@ -19,7 +19,7 @@ inputs:
 outputs:
   dependabotMetadata:
     description: "The ID of the checkrun created"
-    value: ${{ steps.metadata.outputs.dependabotMetadata }}
+    value: ${{ steps.pr-metadata.outputs.dependabotMetadata }}
     
 runs:
   using: composite
@@ -34,6 +34,7 @@ runs:
         github-token: "${{ inputs.github-token }}"
     
     - name: Display Dependabot metadata as job summary
+      shell: bash
       run: |
         echo "# Dependabot Update Summary 📦" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -71,7 +72,7 @@ runs:
         echo "- **Release Notes:** ${{ steps.metadata.outputs.release-notes }}" >> $GITHUB_STEP_SUMMARY
     
     - name: Add PR comment with metadata
-      id: metadata
+      id: pr-metadata
       uses: actions/github-script@v7
       with:
         github-token: ${{ inputs.github-token }}
