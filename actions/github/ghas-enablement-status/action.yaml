@@ -48,8 +48,8 @@ runs:
             core.warning(message);
           }
 
-          # Adds an output called result, but that doesn't add good context
-          #return securityEnabled;
+          // Adds an output called result, but that doesn't add good context
+          // return securityEnabled;
 
     - name: Print all the results from the check
       shell: bash
