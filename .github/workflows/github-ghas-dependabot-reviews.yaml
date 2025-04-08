@@ -89,6 +89,9 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
       - uses: seceng-devsecops-platform/marocchino-validate-dependabot@v3
         id: validate
         with:
