@@ -93,8 +93,8 @@ jobs:
         id: validate
         with:
           path: ${{ inputs.ghas-dependabot-config-path }}
-          success_message: "✅ GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' looks good 👍".
-          failure_message: "🚫 GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' is not valid! Please check it".
+          success_message: "✅ GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' looks good 👍"
+          failure_message: "🚫 GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' is not valid! Please check it"
 
       - uses: marocchino/sticky-pull-request-comment@v2
         if: always()
