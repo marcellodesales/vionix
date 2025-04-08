@@ -11,6 +11,10 @@ inputs:
   github-token:
     description: "the token for the repo"
     required: true
+  github-enterprise:
+    description: 'Whether or not this is running in github enterprise'
+    required: false
+    default: "true"
 
 outputs:
   checkrun-id:
@@ -30,17 +34,17 @@ runs:
             owner: '${{ github.repository_owner }}',
             repo: '${{ github.event.repository.name }}'
           });
-          console.log(`Response data from rest repos get ${JSON.stringify(response.data)}`)
+          console.log(`Response data from rest repos get ${JSON.stringify(response.data.security_and_analysis)}`)
+
           const securityEnabled = response.data.security_and_analysis?.advanced_security?.status === 'enabled';
           core.setOutput('enabled', securityEnabled);
           
-          if (!securityEnabled) {
-            const message = 'GitHub Advanced Security is NOT enabled.';
-            core.warning(message);
-
-          } else {
+          if (securityEnabled) {
             const message = 'GitHub Advanced Security is enabled!';
             core.notice(message);
+          } else {
+            const message = 'GitHub Advanced Security is NOT enabled.';
+            core.warning(message);
           }
           return securityEnabled;
 
