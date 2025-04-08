@@ -45,9 +45,8 @@ on:
       ghas-dependabot-config-path:
         description: "The location where dependabot.yaml is located"
         required: false
-        default: string
+        type: string
         default: .github/dependabot.yml
-        
 
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
