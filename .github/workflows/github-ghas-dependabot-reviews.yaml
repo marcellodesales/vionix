@@ -59,7 +59,7 @@ jobs:
 
   ghas-status:
     name: 🔍 ghas-status
-    runs-on: vionix
+    runs-on: ${{ inputs.github-actions-runner }}
     outputs:
       isGhasEnabled: ${{ steps.ghas-enablement-status.outputs.enabled }}
     steps:
@@ -72,6 +72,19 @@ jobs:
       - name: Check GHAS status before running metrics
         run: |
           echo "${{ toJSON(steps.ghas-enablement-status.outputs) }}"
+
+  # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
+  ghas-dependabot:
+    name: 📄 ghas-dependabot
+    needs: [ ghas-status ]
+    if: ${{ needs.ghas-status.outputs.isGhasEnabled == 'true' }}
+    runs-on: ${{ inputs.github-actions-runner }}
+    steps:
+      - name: Fetch GHAS dependabot metadata
+        id: ghas-enablement-status
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/github/ghas-dependabot-metadata@main
+        with:
+          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
 
   ghas-dependencies-review:
     name: 📦 ghas-dependencies-review
