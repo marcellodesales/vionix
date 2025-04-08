@@ -74,11 +74,14 @@ jobs:
           echo "${{ toJSON(steps.ghas-enablement-status.outputs) }}"
 
   # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
-  ghas-dependabot:
-    name: 📄 ghas-dependabot
+  ghas-dependabot-reviews:
+    name: 📄 ghas-dependabot-reviews
     needs: [ ghas-status ]
-    if: ${{ needs.ghas-status.outputs.isGhasEnabled == 'true' }}
+    if: ${{ needs.ghas-status.outputs.isGhasEnabled == 'true' && github.event.pull_request.user.login == 'dependabot[bot]' }}
     runs-on: ${{ inputs.github-actions-runner }}
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Fetch GHAS dependabot metadata
         id: ghas-enablement-status
