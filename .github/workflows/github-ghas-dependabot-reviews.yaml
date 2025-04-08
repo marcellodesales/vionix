@@ -57,10 +57,27 @@ on:
 # https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
 
+  ghas-status:
+    name: 🔍 ghas-status
+    runs-on: vionix
+    outputs:
+      isGhasEnabled: ${{ steps.ghas-enablement-status.outputs.enabled }}
+    steps:
+      - name: Verify GHAS enablement status
+        id: ghas-enablement-status
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/github/ghas-enablement-status@main
+        with:
+          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+
+      - name: Check GHAS status before running metrics
+        run: |
+          echo "${{ toJSON(steps.ghas-enablement-status.outputs) }}"
+
   ghas-dependencies-review:
     name: 📦 ghas-dependencies-review
+    needs: [ ghas-status ]
+    if: ${{ needs.ghas-status.outputs.isGhasEnabled == 'true' }}
     runs-on: ${{ inputs.github-actions-runner }}
-
     permissions:
       contents: read
       # <--- allows to read/write of jwt/OIDC token for Vault
@@ -70,6 +87,7 @@ jobs:
       pull-requests: write
 
     steps:
+    
       # Check connectivity with https://github.com/actions/dependency-review-action/issues/736
       - name: Check connectivity with https://api.deps.dev, where OSS dependencies are checked
         run: curl -ik https://api.deps.dev
