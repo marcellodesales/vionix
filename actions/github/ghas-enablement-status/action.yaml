@@ -22,7 +22,7 @@ runs:
   steps:
     - name: Check if GHAS is enabled
       uses: actions/github-script@v7
-      id: ghas-status
+      id: status
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       with:
@@ -48,4 +48,4 @@ runs:
 
     - name: Print all the results from the check
       run: |
-        echo ${{ toJSON(steps.ghas-status.outputs }}
+        echo ${{ toJSON(steps.status.outputs) }}
