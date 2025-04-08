@@ -1,0 +1,152 @@
+name: ghas-dependabot-metadata
+description: Shows all the GHAS dependabot metadata
+
+author: vionix
+
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  github-token:
+    description: "the token for the repo"
+    required: true
+  github-enterprise:
+    description: 'Whether or not this is running in github enterprise'
+    required: false
+    default: "true"
+
+outputs:
+  dependabotMetadata:
+    description: "The ID of the checkrun created"
+    value: ${{ steps.metadata.outputs.dependabotMetadata }}
+    
+runs:
+  using: composite
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Dependabot metadata
+      id: metadata
+      uses: dependabot/fetch-metadata@v2.3.0
+      with:
+        github-token: "${{ inputs.github-token }}"
+    
+    - name: Display Dependabot metadata as job summary
+      run: |
+        echo "# Dependabot Update Summary 📦" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Basic Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Dependency Names:** ${{ steps.metadata.outputs.dependency-names }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Dependency Type:** ${{ steps.metadata.outputs.dependency-type }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Update Type:** ${{ steps.metadata.outputs.update-type }}" >> $GITHUB_STEP_SUMMARY
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Additional Details" >> $GITHUB_STEP_SUMMARY
+        echo "- **Target Branch:** ${{ steps.metadata.outputs.target-branch }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Previous Version:** ${{ steps.metadata.outputs.previous-version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **New Version:** ${{ steps.metadata.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Package Ecosystem:** ${{ steps.metadata.outputs.package-ecosystem }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Updated Dependencies:** ${{ steps.metadata.outputs.updated-dependencies-json }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Directory:** ${{ steps.metadata.outputs.directory }}" >> $GITHUB_STEP_SUMMARY
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Compatibility Score" >> $GITHUB_STEP_SUMMARY
+        echo "- **Compatibility Score:** ${{ steps.metadata.outputs.compatibility-score }}" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ -n "${{ steps.metadata.outputs.compatibility-score }}" ]]; then
+          SCORE=${{ steps.metadata.outputs.compatibility-score }}
+          if (( $(echo "$SCORE >= 80" | bc -l) )); then
+            echo "- **Compatibility Rating:** ✅ High" >> $GITHUB_STEP_SUMMARY
+          elif (( $(echo "$SCORE >= 60" | bc -l) )); then
+            echo "- **Compatibility Rating:** ⚠️ Medium" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Compatibility Rating:** ❌ Low" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Release Notes" >> $GITHUB_STEP_SUMMARY
+        echo "- **Release Notes:** ${{ steps.metadata.outputs.release-notes }}" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Add PR comment with metadata
+      id: metadata
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const metadata = {
+            dependencyNames: '${{ steps.metadata.outputs.dependency-names }}',
+            dependencyType: '${{ steps.metadata.outputs.dependency-type }}',
+            updateType: '${{ steps.metadata.outputs.update-type }}',
+            targetBranch: '${{ steps.metadata.outputs.target-branch }}',
+            previousVersion: '${{ steps.metadata.outputs.previous-version }}',
+            newVersion: '${{ steps.metadata.outputs.new-version }}',
+            packageEcosystem: '${{ steps.metadata.outputs.package-ecosystem }}',
+            directory: '${{ steps.metadata.outputs.directory }}',
+            compatibilityScore: '${{ steps.metadata.outputs.compatibility-score }}',
+            releaseNotes: '${{ steps.metadata.outputs.release-notes }}'
+          };
+          
+          // Format compatibility score with emoji
+          let compatibilityRating = '';
+          if (metadata.compatibilityScore) {
+            const score = parseFloat(metadata.compatibilityScore);
+            if (score >= 80) {
+              compatibilityRating = '✅ High';
+            } else if (score >= 60) {
+              compatibilityRating = '⚠️ Medium';
+            } else {
+              compatibilityRating = '❌ Low';
+            }
+          }
+          
+          // Clean empty values and format output
+          Object.keys(metadata).forEach(key => {
+            if (!metadata[key]) {
+              metadata[key] = '_Not available_';
+            }
+          });
+          
+          // Create markdown comment
+          const body = `
+          # Dependabot Update Summary 📦
+          
+          ## Basic Information
+          - **Dependency Names:** ${metadata.dependencyNames}
+          - **Dependency Type:** ${metadata.dependencyType}
+          - **Update Type:** ${metadata.updateType}
+          
+          ## Additional Details
+          - **Target Branch:** ${metadata.targetBranch}
+          - **Previous Version:** ${metadata.previousVersion}
+          - **New Version:** ${metadata.newVersion}
+          - **Package Ecosystem:** ${metadata.packageEcosystem}
+          - **Directory:** ${metadata.directory}
+          
+          ## Compatibility
+          - **Compatibility Score:** ${metadata.compatibilityScore}
+          ${compatibilityRating ? `- **Compatibility Rating:** ${compatibilityRating}` : ''}
+          
+          ## Release Notes
+          - **Release Notes:** ${metadata.releaseNotes}
+          
+          ---
+          
+          <details>
+          <summary>More Information</summary>
+          <p>This PR was created by Dependabot to keep your dependencies up to date. For more details about Dependabot, see <a href="https://docs.github.com/en/code-security/dependabot/dependabot-version-updates">GitHub's documentation</a>.</p>
+          <p>Review this update carefully, especially if it's a major version update that might contain breaking changes.</p>
+          </details>
+          `;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body.trim()
+          });
+
+          core.setOutput('dependabotMetadata', metadata)
+
