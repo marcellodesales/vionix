@@ -1,0 +1,93 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+# Create a workflow that shows GHAS dependanbot dependencies reviews from OSS
+name: github-ghas-org-metrics-workflow.yaml
+
+# Avoid multiple CI jobs to execute for multiple commits in a given branch
+# section #6: Saving Computation Time by Stopping Obsolete Workflows
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.local-repository }}
+  cancel-in-progress: true
+
+on:
+  # Manual workflow execution
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch
+  # https://github.com/actions/runner/issues/1483#issuecomment-969295757
+  # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
+  workflow_call:
+    inputs:
+      github-actions-runner:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
+        default: vionix
+
+      ghas-dependabot-deny-licenses:
+        description: "The List of licenses to deny"
+        required: false
+        type: string
+        default: "LGPL-2.0, BSD-2-Clause"
+
+      ghas-dependabot-check-licenses:
+        description: "Whether or not to check licenses"
+        required: false
+        type: string
+        default: "true"
+
+      ghas-dependabot-pr-warn-only:
+        description: "If the PR should be only warned instead of failure"
+        required: false
+        type: string
+        default: true
+
+      ghas-dependabot-pr-fail-on-severity:
+        description: "Which severity PRs should fail in"
+        required: false
+        type: string
+        default: critical
+
+    # We need to declare the intent of secrets. The pipelines reusing this must declare them!
+    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
+    secrets:
+
+      GITOPS_GITHUB_DEPLOY_PAT:
+        description: "The token to clone and push changes to the GitOps Deploy repo"
+        required: false
+
+      VAULT_CA_CERT:
+        description: "The Vault CA CERT to use to load the App secrets"
+        required: false
+
+# https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
+jobs:
+
+  ghas-dependencies-review:
+    name: 📦 ghas-dependencies-review
+    runs-on: ${{ inputs.github-actions-runner }}
+
+    permissions:
+      contents: read
+      # <--- allows to read/write of jwt/OIDC token for Vault
+      id-token: write
+      security-events: read
+
+    steps:
+      # Check connectivity with https://github.com/actions/dependency-review-action/issues/736
+      - name: Check connectivity with https://api.deps.dev, where OSS dependencies are checked
+        run: curl -ik https://api.deps.dev
+
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: ${{ inputs.ghas-dependabot-pr-fail-on-severity }}
+          deny-licenses: ${{ inputs.ghas-dependabot-deny-licenses }}
+          license-check: ${{ inputs.ghas-dependabot-check-licenses }}
+          comment-summary-in-pr: true
+          warn-only: ${{ inputs.ghas-dependabot-pr-warn-only }}
+          show-openssf-scorecard: true
+          warn-on-openssf-scorecard-level: 3
