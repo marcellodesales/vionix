@@ -114,8 +114,8 @@ jobs:
           # or remove this line to generate toke to all repos in org
           #repositories: ${{ github.event.repository.name }}
 
-      - name: Generate GHAS Metrics Report for the organization github.repository == ${{ github.repository_owner }}/.github
-        if: ${{ github.repository	== '${{ github.repository_owner }}/.github' }}
+      - name: Generate GHAS Metrics Report for the organization '${{ github.repository }} == ${{ github.repository_owner }}/.github'
+        if: ${{ github.event.repository.name == '.github' }}
         uses: seceng-devsecops-platform/theztefan-ghas-metrics-report@viasat/main
         continue-on-error: true
         env:
@@ -127,8 +127,8 @@ jobs:
           frequency: ${{ inputs.ghas-report-metrics-frequency }}
           output-format: ${{ inputs.ghas-report-output-format }}
 
-      - name: Generate GHAS Metrics Report for the repository ${{ github.repository }}
-        if: ${{ github.repository	!= '${{ github.repository_owner }}/.github' }}
+      - name: Generate GHAS Metrics Report for the repository '${{ github.repository }}'
+        if: ${{ github.event.repository.name != '.github' }}
         uses: seceng-devsecops-platform/theztefan-ghas-metrics-report@viasat/main
         continue-on-error: true
         env:
