@@ -42,6 +42,13 @@ on:
         type: string
         default: critical
 
+      ghas-dependabot-config-path:
+        description: "The location where dependabot.yaml is located"
+        required: false
+        default: string
+        default: .github/dependabot.yml
+        
+
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
@@ -72,6 +79,29 @@ jobs:
       - name: Check GHAS status before running metrics
         run: |
           echo "${{ toJSON(steps.ghas-enablement-status.outputs) }}"
+
+  # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
+  ghas-dependabot-check:
+    name: ✔️ ghas-dependabot-check
+    needs: [ ghas-status ]
+    if: ${{ needs.ghas-status.outputs.isGhasEnabled == 'true' }}
+    runs-on: ${{ inputs.github-actions-runner }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: seceng-devsecops-platform/marocchino-validate-dependabot@v3
+        id: validate
+        with:
+          path: ${{ inputs.ghas-dependabot-config-path }}
+          success_message: "✅ GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' looks good 👍".
+          failure_message: "🚫 GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' is not valid! Please check it".
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        if: always()
+        with:
+          header: validate-dependabot
+          message: ${{ steps.validate.outputs.markdown }}
 
   # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
   ghas-dependabot-reviews:
