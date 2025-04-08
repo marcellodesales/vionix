@@ -17,9 +17,9 @@ inputs:
     default: "true"
 
 outputs:
-  checkrun-id:
+  enabled:
     description: "The ID of the checkrun created"
-    value: ${{ steps.ghas-status.outputs.checkrun-id }}
+    value: ${{ steps.status.outputs.enabled }}
 
 runs:
   using: composite
@@ -34,21 +34,24 @@ runs:
             owner: '${{ github.repository_owner }}',
             repo: '${{ github.event.repository.name }}'
           });
-          console.log(`Response data from rest repos get ${JSON.stringify(response.data.security_and_analysis)}`)
 
+          console.debug(`Response data from rest repos get '${JSON.stringify(response.data.security_and_analysis)}'`)
           const securityEnabled = response.data.security_and_analysis?.advanced_security?.status === 'enabled';
           core.setOutput('enabled', securityEnabled);
           
           if (securityEnabled) {
             const message = 'GitHub Advanced Security is enabled!';
             core.notice(message);
+
           } else {
             const message = 'GitHub Advanced Security is NOT enabled.';
             core.warning(message);
           }
-          return securityEnabled;
+
+          # Adds an output called result, but that doesn't add good context
+          #return securityEnabled;
 
     - name: Print all the results from the check
       shell: bash
       run: |
-        echo ${{ toJSON(steps.status.outputs) }}
+        echo '${{ toJSON(steps.status.outputs) }}'
