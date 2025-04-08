@@ -40,11 +40,11 @@ runs:
           core.setOutput('enabled', securityEnabled);
           
           if (securityEnabled) {
-            const message = 'GitHub Advanced Security is enabled!';
+            const message = '✅ GitHub Advanced Security is enabled at this Github repository (${{ github.repository }})!';
             core.notice(message);
 
           } else {
-            const message = 'GitHub Advanced Security is NOT enabled.';
+            const message = '❌ GitHub Advanced Security is NOT enabled.';
             core.warning(message);
           }
 
