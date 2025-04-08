@@ -12,11 +12,6 @@ inputs:
     description: "the token for the repo"
     required: true
 
-# https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/setting-a-default-shell-and-working-directory#example-set-the-default-shell-and-working-directory
-defaults:
-  run:
-    shell: bash
-
 outputs:
   checkrun-id:
     description: "The ID of the checkrun created"
@@ -52,5 +47,6 @@ runs:
           return securityEnabled;
 
     - name: Print all the results from the check
+      shell: bash
       run: |
         echo ${{ toJSON(steps.status.outputs) }}
