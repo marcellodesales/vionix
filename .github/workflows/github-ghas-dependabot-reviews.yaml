@@ -92,14 +92,21 @@ jobs:
       - name: 'Checkout Repository'
         uses: actions/checkout@v4
 
-      - uses: seceng-devsecops-platform/marocchino-validate-dependabot@v3
+      - name: Check the file-system
+        shell: bash
+        run: |
+          tree .github
+
+      - name: Validate the dependabot file at '${{ inputs.ghas-dependabot-config-path }}'
+        uses: seceng-devsecops-platform/marocchino-validate-dependabot@v3
         id: validate
         with:
           path: ${{ inputs.ghas-dependabot-config-path }}
           success_message: "✅ GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' looks good 👍"
           failure_message: "🚫 GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' is not valid! Please check it"
 
-      - uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+      - name: Just add the message in the PR as comment
+        uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: always()
         with:
           header: validate-dependabot
