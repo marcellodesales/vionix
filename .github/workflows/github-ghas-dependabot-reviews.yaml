@@ -96,7 +96,7 @@ jobs:
           success_message: "✅ GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' looks good 👍"
           failure_message: "🚫 GHAS dependabot config at '${{ inputs.ghas-dependabot-config-path }}' is not valid! Please check it"
 
-      - uses: marocchino/sticky-pull-request-comment@v2
+      - uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
         if: always()
         with:
           header: validate-dependabot
