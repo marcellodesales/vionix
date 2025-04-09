@@ -1,0 +1,21 @@
+name: github-pr-title-jira-verification
+run-name: PR ${{ github.event.pull_request.number }} looking for jira in ${{ github.event.pull_request.title }}
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+jobs:
+  # TODO: Handle '`' backticks in PR title
+  pr-title-validate:
+    name: Validates Pull Request Title conforms to JIRA Issue ID format
+    runs-on: vionix
+    steps:
+      - run: echo "🎉 PR Title is ${{ github.event.pull_request.title }} starting validation"
+
+      - name: nodejs action
+        id: jira-check
+        uses: Mobility-Engineering/pr-check-jira@v1.1.0
+        with:
+          title-to-validate: "${{ github.event.pull_request.title }}"
+
+      - name: Publish Validation Results
+        run: echo "${{ steps.jira-check.outputs.validation }}"
