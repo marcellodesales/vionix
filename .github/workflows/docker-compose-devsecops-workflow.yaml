@@ -1043,7 +1043,7 @@ jobs:
       - name: Submit Original docker image Tag SBOM to for original Tags in Dockerfile
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag != '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
+        if: ${{ inputs.docker-submit-sbom == 'true' && github.event_name == 'pull_request' && needs.build.outputs.originalDockerImageTag != '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
         uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.9
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.build.outputs.originalDockerImageTag }}
@@ -1053,7 +1053,7 @@ jobs:
       - name: Submit Interpreted docker image Tag SBOM to github dependency graph 
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
-        if: ${{ inputs.docker-submit-sbom == 'true' && needs.build.outputs.originalDockerImageTag == '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
+        if: ${{ inputs.docker-submit-sbom == 'true' && github.event_name == 'pull_request' && needs.build.outputs.originalDockerImageTag == '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
         uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.9
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
