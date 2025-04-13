@@ -34,15 +34,15 @@ runs:
   using: composite
     
   steps:
-    - name: Download the logs from run from ${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}
+    - name: Download the logs from run from ${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}/logs
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        echo "Calling ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}"
+        echo "Calling ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}/logs"
         curl -X GET -H "Authorization: token $GITHUB_TOKEN" \
              -H "Accept: application/vnd.github.v3+json" \
-             ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }} \
+             ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}/logs \
              -o run.logs.zip
 
         ls -la run.logs.zip
