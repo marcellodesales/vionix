@@ -39,9 +39,9 @@ runs:
         curl -X GET -H "Authorization: token $GITHUB_TOKEN" \
              -H "Accept: application/vnd.github.v3+json" \
              ${GITHUB_API_URL}/repos/${{ github.repository }}/actions/runs/${{ inputs.workflow-run-id }} \
-             -o run.logs
+             -o run.logs.zip
 
-        if [ -f run.logs ]; then
+        if [ -f run.logs.zip ]; then
           echo "Downloaded the zip file successfully..."
         else
           echo "Failed to download the logs for actions/runs/${{ inputs.workflow-run-id }}"
@@ -50,8 +50,8 @@ runs:
 
     - name: Unzip the downloaded zip file unzip run.logs
       run: |
-        echo "Unziping run.logs"
-        unzip run.logs
+        echo "Unziping run.logs.zip"
+        unzip run.logs.zip
 
     - name: Find the logs by Step name '${{ inputs.filter-by-step-name }}'
       id: parse-logs
