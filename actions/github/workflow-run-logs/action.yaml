@@ -65,7 +65,7 @@ runs:
         echo "Finding the file with the same '${{ inputs.filter-by-step-name }}'"
         find . -name "*${{ inputs.filter-by-step-name }}*" -not -name "*Post*" -print0
         FILE_NAME=$(find . -name "*${{ inputs.filter-by-step-name }}*" -not -name "*Post*" -print0)
-        echo "Attempt to find: ${FILE_NAME}"
+        echo "Attempt to find: '${FILE_NAME}'"
 
         if [ "${FILE_NAME}" != '' ]; then
           find . -name "*${{ inputs.filter-by-step-name }}*" -not -name "*Post*" -print0 | xargs -0 -n 1 cat {} > log-content
