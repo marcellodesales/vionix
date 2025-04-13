@@ -68,10 +68,19 @@ runs:
         echo "Attempt to find: '${FILE_NAME}'"
 
         if [ "${FILE_NAME}" != '' ]; then
+          echo "::notice ::Loading workflow logs from file: '${FILE_NAME}'"
+
           cat "${FILE_NAME}" > log-content
+
+          echo 'content<<EOF' >> $GITHUB_OUTPUT
+          cat "${FILE_NAME}" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
           echo "Current logs content --------"
-          cat log-content
+          cat "${FILE_NAME}"
           echo "--------------"
-          CONTENT=$(cat log-content)
-          echo "content=$CONTENT" >> $GITHUB_OUTPUT
+
+        else
+          echo "::error ::Couldn't find workflow logs with name '${{ inputs.filter-by-step-name }}'"
+          echo "content=" >> $GITHUB_OUTPUT
         fi
