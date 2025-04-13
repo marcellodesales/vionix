@@ -68,7 +68,7 @@ runs:
         echo "Attempt to find: '${FILE_NAME}'"
 
         if [ "${FILE_NAME}" != '' ]; then
-          cat ${FILE_NAME} > log-content
+          cat "${FILE_NAME}" > log-content
           echo "Current logs content --------"
           cat log-content
           echo "--------------"
