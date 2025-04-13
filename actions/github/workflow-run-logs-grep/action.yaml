@@ -1,0 +1,82 @@
+name: workflow-run-logs-grep
+description: Fetches the logs from a workflow and parses the output. 
+
+author: vionix
+
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  github-org-repo:
+    description: 'the github org/repo'
+    required: true
+    type: string
+
+  filter-by-step-name:
+    description: 'filter by name'
+    required: true
+    type: string
+
+  github-token:
+    description: 'the token to load'
+    required: true
+    type: string
+
+  token-to-find:
+    description: "token to find in the file"
+    required: false
+    type: string
+
+  regex-to-extract:
+    description: 'token regex to extract from logs'
+    required: false
+    type: string
+
+outputs:
+  log-file:
+    description: "The log file with the contents of the workflow log"
+    value: ${{ steps.workflow-logs.outputs.log-file }}
+
+  log-content:
+    description: "The log file with the contents of the workflow log"
+    value: ${{ steps.workflow-logs.outputs.log-content }}
+
+  extracted-value:
+    description: "The value used for the extraction"
+    value: ${{ steps.workflow-logs.outputs.log-content }}
+
+runs:
+  using: composite
+  steps:
+    - name: Fetch additional workflow properties
+      id: workflow-metadata
+      uses: seceng-devsecops-platform/qoomon-actions--context@v4
+
+    - name: View Envs and Outputs
+      run: |
+        echo '${{ toJSON(steps.workflow-metadata.outputs) }}'
+  
+    - name: Retrieve the logs from the workflow
+      id: workflow-logs
+      uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/github/workflow-run-logs@main
+      with:
+        github-org-repo: ${{ inputs.github-org-repo }}
+        github-token: ${{ inputs.github-token }}
+        workflow-run-id: ${{ steps.workflow-metadata.outputs.run_id }}
+        workflow-run-attempt-number: ${{ steps.workflow-metadata.outputs.run_attempt }}
+        filter-by-step-name: ${{ inputs.filter-by-step-name }}
+
+    - name: Run script and print to summary
+      run: |
+        echo "# ⌨️ Show logs" >> $GITHUB_STEP_SUMMARY
+        echo "* ${{ github.server_url }}/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attempts/${{ inputs.workflow-run-attempt-number }}" >> $GITHUB_STEP_SUMMARY
+        echo '```console' >> $GITHUB_STEP_SUMMARY
+        echo "View the logs as they may get interpreted when printed!" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+    
+    - name: Parse the logs with the provided input
+      if: ${{ inputs. }}
+      run: |
+        EXTRACTED_VALUE=$(grep "${{ inputs.token-to-find }}" ${{ steps.workflow-logs.outputs.log-file }} | grep -o '${{ inputs.regex-to-extract }}' | head -n1)
+        echo "extracted-value=$EXTRACTED_VALUE" >> $GITHUB_OUTPUT
