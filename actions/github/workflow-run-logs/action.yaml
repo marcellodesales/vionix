@@ -35,7 +35,6 @@ runs:
     
   steps:
     - name: Download the logs from run from ${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}
-      if: ${{ inputs.workflow-run-attempt-id == '' }}
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
