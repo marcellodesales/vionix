@@ -32,7 +32,7 @@ runs:
     
     - name: Retrieve the logs from the workflow
       id: sonarqube-workflow
-      uses: 
+      uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/github/workflow-run-logs@main
       with:
         github-token: ${{ inputs.github-token }}
         workflow-run-id: ${{ steps.workflow-metadata.outputs.run_id }}
