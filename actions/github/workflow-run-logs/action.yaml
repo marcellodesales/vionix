@@ -53,12 +53,14 @@ runs:
         fi
 
     - name: Unzip the downloaded zip file unzip run.logs
+      shell: bash
       run: |
         echo "Unziping run.logs.zip"
         unzip run.logs.zip
 
     - name: Find the logs by Step name '${{ inputs.filter-by-step-name }}'
       id: parse-logs
+      shell: bash
       run: |
         echo "Finding the file with the same '${{ inputs.filter-by-step-name }}'"
         find . -name "*${{ inputs.filter-by-step-name }}*" -not -name "*Post*" -print0
