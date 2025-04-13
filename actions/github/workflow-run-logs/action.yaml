@@ -8,6 +8,10 @@ branding:
   color: blue
 
 inputs:
+  github-org-repo:
+    description: "The org/repo for the query"
+    required: false
+    default: ${{ github.repository }}
   workflow-run-id:
     description: "The ID of the workflow run from "
     required: true
@@ -30,7 +34,7 @@ runs:
   using: composite
     
   steps:
-    - name: Download the logs from run 
+    - name: Download the logs from run from ${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}
       if: ${{ inputs.workflow-run-attempt-id == '' }}
       shell: bash
       env:
@@ -38,7 +42,7 @@ runs:
       run: |
         curl -X GET -H "Authorization: token $GITHUB_TOKEN" \
              -H "Accept: application/vnd.github.v3+json" \
-             ${GITHUB_API_URL}/repos/${{ github.repository }}/actions/runs/${{ inputs.workflow-run-id }} \
+             ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }} \
              -o run.logs.zip
 
         if [ -f run.logs.zip ]; then
