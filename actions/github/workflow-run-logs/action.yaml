@@ -47,6 +47,7 @@ runs:
 
         ls -la run.logs.zip
         file run.logs.zip
+        cat run.logs.zip
 
         if [ -f run.logs.zip ]; then
           echo "Downloaded the zip file successfully..."
