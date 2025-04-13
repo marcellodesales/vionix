@@ -15,9 +15,9 @@ inputs:
   workflow-run-id:
     description: "The ID of the workflow run from "
     required: true
-  workflow-run-attempt-id:
-    description: "The run attempt id for the execution"
-    required: false
+  workflow-run-attempt-number:
+    description: "The run attempt number for the execution"
+    required: true
   filter-by-step-name:
     description: "The name of the step specified"
     required: false
@@ -34,15 +34,16 @@ runs:
   using: composite
     
   steps:
-    - name: Download the logs from run from ${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}
+    - name: Download the logs from run from ${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}
       if: ${{ inputs.workflow-run-attempt-id == '' }}
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
+        echo "Calling ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}"
         curl -X GET -H "Authorization: token $GITHUB_TOKEN" \
              -H "Accept: application/vnd.github.v3+json" \
-             ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }} \
+             ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }} \
              -o run.logs.zip
 
         if [ -f run.logs.zip ]; then
