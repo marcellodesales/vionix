@@ -30,6 +30,10 @@ outputs:
     description: "The contents of the log file"
     value: ${{ steps.parse-logs.outputs.content }}
 
+  content-file:
+    description: "The file with the contents of the log"
+    value: ${{ steps.parse-logs.outputs.content-file }}
+
 runs:
   using: composite
     
@@ -70,8 +74,8 @@ runs:
         if [ "${FILE_NAME}" != '' ]; then
           echo "::notice ::Loading workflow logs from file: '${FILE_NAME}'"
 
-          cat "${FILE_NAME}" > log-content
-
+          cat "${FILE_NAME}" > log-content.log
+          echo "content-file=log-content.log" >> $GITHUB_OUTPUT
           echo 'content<<EOF' >> $GITHUB_OUTPUT
           cat "${FILE_NAME}" >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
