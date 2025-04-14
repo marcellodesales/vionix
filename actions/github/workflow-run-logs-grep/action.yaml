@@ -89,14 +89,14 @@ runs:
       shell: bash
       run: |
         EXTRACTED_VALUE=$(grep "${{ inputs.token-to-find }}" ${{ steps.workflow-logs.outputs.log-file }} | head -n1)
-        echo "extracted-value=$EXTRACTED_VALUE" >> $GITHUB_ENV
+        echo "EXTRACTED_VALUE=$EXTRACTED_VALUE" >> $GITHUB_ENV
 
     - name: Parse the logs with the provided input and grep it with the provided regex
       if: ${{ inputs.token-to-find != '' && inputs.regex-to-extract != '' }}
       shell: bash
       run: |
         EXTRACTED_VALUE=$(grep "${{ inputs.token-to-find }}" ${{ steps.workflow-logs.outputs.log-file }} | grep -o '${{ inputs.regex-to-extract }}' | head -n1)
-        echo "extracted-value=$EXTRACTED_VALUE" >> $GITHUB_ENV
+        echo "EXTRACTED_VALUE=$EXTRACTED_VALUE" >> $GITHUB_ENV
 
     - name: Set the output of the call
       id: parsed-data
