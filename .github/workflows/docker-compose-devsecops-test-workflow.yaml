@@ -743,6 +743,7 @@ jobs:
           debug-in-summary: "false"
 
       - name: Print results URL from the logs
+        if: ${{ env.HAS_TOKEN == 'true' && inputs.test-report-sonarqube-host != '' && inputs.test-report-sonarqube-args != '' && success() }}
         run: |
-          echo "# 📊️ Report Submission"
-          echo "* Sonarqube Results URL: ${{ steps.workflow-logs.outputs.extracted-value }}"
+          echo "# 📊️ Report Submission" >> $GITHUB_STEP_SUMMARY
+          echo "* Sonarqube Results URL: ${{ steps.workflow-logs.outputs.extracted-value }}" >> $GITHUB_STEP_SUMMARY
