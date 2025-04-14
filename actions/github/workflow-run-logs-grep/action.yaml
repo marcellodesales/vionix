@@ -100,7 +100,7 @@ runs:
 
     - name: Set the output of the call
       id: parsed-data
-      if: ${{ inputs.token-to-find != '' && inputs.regex-to-extract != '' }}
+      if: ${{ inputs.token-to-find != '' }}
       shell: bash
       run: |
         echo "extracted-value=$EXTRACTED_VALUE" >> $GITHUB_OUTPUT
