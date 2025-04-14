@@ -47,7 +47,7 @@ runs:
         curl -L -H "Authorization: Bearer ${{ inputs.github-token }}" -o run.logs.zip ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attempts/${{ inputs.workflow-run-attempt-number }}/logs 
 
         ls -la run.logs.zip
-        file run.logs.zip
+        #file run.logs.zip
 
         if [ -f run.logs.zip ]; then
           echo "Downloaded the zip file successfully..."
