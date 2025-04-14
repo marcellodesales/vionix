@@ -33,6 +33,12 @@ inputs:
     required: false
     type: string
 
+  debug-in-summary:
+    description: 'whether or not to print in summary'
+    required: false
+    type: string
+    default: "false"
+
 outputs:
   log-file:
     description: "The log file with the contents of the workflow log"
@@ -44,7 +50,7 @@ outputs:
 
   extracted-value:
     description: "The value used for the extraction"
-    value: ${{ steps.workflow-logs.outputs.log-content }}
+    value: ${{ steps.parsed-data.outputs.extracted-value }}
 
 runs:
   using: composite
@@ -68,6 +74,7 @@ runs:
         filter-by-step-name: ${{ inputs.filter-by-step-name }}
 
     - name: Run script and print to summary
+      if: ${{ inputs.debug-in-summary == 'true' }}
       run: |
         echo "# ⌨️ Show logs" >> $GITHUB_STEP_SUMMARY
         echo "* ${{ github.server_url }}/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attempts/${{ inputs.workflow-run-attempt-number }}" >> $GITHUB_STEP_SUMMARY
@@ -75,8 +82,21 @@ runs:
         echo "View the logs as they may get interpreted when printed!" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
     
-    - name: Parse the logs with the provided input
-      if: ${{ inputs. }}
+    - name: Parse the logs with the provided input without grepping a regex
+      if: ${{ inputs.token-to-find != '' && inputs.regex-to-extract == '' }}
+      run: |
+        EXTRACTED_VALUE=$(grep "${{ inputs.token-to-find }}" ${{ steps.workflow-logs.outputs.log-file }} | head -n1)
+        echo "extracted-value=$EXTRACTED_VALUE" >> $GITHUB_ENV
+
+    - name: Parse the logs with the provided input and grep it with the provided regex
+      if: ${{ inputs.token-to-find != '' && inputs.regex-to-extract != '' }}
       run: |
         EXTRACTED_VALUE=$(grep "${{ inputs.token-to-find }}" ${{ steps.workflow-logs.outputs.log-file }} | grep -o '${{ inputs.regex-to-extract }}' | head -n1)
+        echo "extracted-value=$EXTRACTED_VALUE" >> $GITHUB_ENV
+
+    - name: Set the output of the call
+      id: parsed-data
+      if: ${{ inputs.token-to-find != '' && inputs.regex-to-extract != '' }}
+      run: |
         echo "extracted-value=$EXTRACTED_VALUE" >> $GITHUB_OUTPUT
+
