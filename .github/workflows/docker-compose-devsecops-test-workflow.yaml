@@ -687,6 +687,9 @@ jobs:
 
       # The path is originally used in the docker-compose-check.yaml provided by the platform
       - name: Normalize paths for Sonarqube - /viasat/platform/cloud -> ${{ env.GITHUB_WORKSPACE }}
+        env:
+          SONAR_HOST_URL: ${{ inputs.test-report-sonarqube-host }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           env
           FILE_NAME=$(basename ${{ inputs.docker-compose-test-report-coverage-file }})
@@ -701,7 +704,12 @@ jobs:
           echo "======>>>> Normalized report file"
           cat ${{ inputs.docker-compose-test-report-coverage-file }}
 
+          if [ "${SONAR_TOKEN}" != "" ]; then
+            echo "HAS_TOKEN=true" >> $GITHUB_ENV
+          fi
+
       - name: Install required packages for sonarqube
+        if: ${{ env.HAS_TOKEN == 'true' }}
         run: |
           sudo apt-get install -y unzip
 
@@ -709,6 +717,7 @@ jobs:
       # https://git.viasat.com/viarise/sonarqube-scan
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v4.2.1
+        if: ${{ env.HAS_TOKEN == 'true' && inputs.test-report-sonarqube-host != '' && inputs.test-report-sonarqube-args != '' }}
         env:
           SONAR_HOST_URL: ${{ inputs.test-report-sonarqube-host }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -718,3 +727,22 @@ jobs:
           # https://docs.sonarqube.org/latest/branches/overview/
           # https://docs.sonarsource.com/sonarqube/latest/analyzing-source-code/analysis-parameters/
           args: ${{ inputs.test-report-sonarqube-args }}
+
+      # Retrieve the URL from the results as follows
+      # 20:25:28.577 INFO  ANALYSIS SUCCESSFUL, you can find the results at: https://sonarqube.viarise.viasat.io/dashboard?id=seceng-devsecops-platform_vionix-demo_AZYBCqOWwRb26QyPoDUr&pullRequest=4
+      - name: Retrieve the logs from the workflow
+        id: workflow-logs
+        if: ${{ env.HAS_TOKEN == 'true' && inputs.test-report-sonarqube-host != '' && inputs.test-report-sonarqube-args != '' && success() }}
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/github/workflow-run-logs-grep@main
+        with:
+          github-org-repo: ${{ github.repository }}
+          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+          filter-by-step-name: "SonarQube Scan"
+          token-to-find: "you can find the results at:"
+          regex-to-extract: "https://[^ ]*"
+          debug-in-summary: "false"
+
+      - name: Print results URL from the logs
+        run: |
+          echo "# 📊️ Report Submission"
+          echo "* Sonarqube Results URL: ${{ steps.workflow-logs.outputs.extracted-value }}"
