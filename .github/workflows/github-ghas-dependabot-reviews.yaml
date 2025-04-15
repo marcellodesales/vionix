@@ -185,7 +185,7 @@ jobs:
 
       # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#labeling-a-pull-request
       - name: Add a label for all production dependencies
-        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).dependency-type == 'direct:production' }}
+        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).dependencyType == 'direct:production' }}
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_IMG: dockerhub.docker.artifactory.viasat.com/maniator/gh:v2.69.0
@@ -193,7 +193,7 @@ jobs:
         run: docker run --rm -e GITHUB_TOKEN ${GH_IMG} pr edit "$PR_URL" --add-label "production"
 
       - name: Add a label for all development dependencies
-        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).dependency-type == 'direct:development' }}
+        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).dependencyType == 'direct:development' }}
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -202,7 +202,7 @@ jobs:
 
       # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#automatically-approving-a-pull-request
       - name: Approve a PR if the user wants and if they are development dependencies
-        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).dependency-type == 'direct:development' }}
+        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).dependencyType == 'direct:development' }}
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -211,7 +211,7 @@ jobs:
 
       # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#enabling-automerge-on-a-pull-request
       - name: Enable auto-merge for Dependabot PRs
-        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).update-type == 'version-update:semver-patch' }}
+        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).updateType == 'version-update:semver-patch' }}
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
