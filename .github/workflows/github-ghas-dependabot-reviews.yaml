@@ -161,6 +161,15 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Check connectivity with https://github.com/actions/dependency-review-action/issues/736
+      - name: Add dependabot properties to summary
+        run: |
+          echo "📄 Dependabot Metadata" >> $GITHUB_STEP_SUMMARY
+          echo "* Data to be processed" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          echo '${{ steps.ghas-dependabot-metadata.outputs }}' | jq >> $GITHUB_STEP_SUMMARY 
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
       # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#labeling-a-pull-request
       - name: Add a label for all production dependencies
         if: steps.ghas-dependabot-metadata.outputs.dependency-type == 'direct:production'
