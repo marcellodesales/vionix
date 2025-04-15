@@ -112,6 +112,11 @@ jobs:
           header: validate-dependabot
           message: ${{ steps.validate.outputs.markdown }}
 
+      - name: Add message to summary
+        run: |
+          echo "# ✔️ Dependabot Check" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{ steps.validate.outputs.markdown }}" >> $GITHUB_STEP_SUMMARY
+
   ghas-dependencies-review:
     name: 📦 ghas-dependencies-review
     needs: [ ghas-status, ghas-dependabot-check ]
