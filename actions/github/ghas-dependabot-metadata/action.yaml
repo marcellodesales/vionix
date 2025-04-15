@@ -32,6 +32,8 @@ runs:
       uses: dependabot/fetch-metadata@v2.3.0
       with:
         github-token: "${{ inputs.github-token }}"
+        # Warning: Dependabot's commit signature is not verified, refusing to proceed.
+        skip-commit-verification: true
     
     - name: Display Dependabot metadata as job summary
       shell: bash
