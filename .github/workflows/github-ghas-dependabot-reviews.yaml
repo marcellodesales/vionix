@@ -112,22 +112,6 @@ jobs:
           header: validate-dependabot
           message: ${{ steps.validate.outputs.markdown }}
 
-  # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
-  ghas-dependabot-reviews:
-    name: 📄 ghas-dependabot-reviews
-    needs: [ ghas-status ]
-    if: ${{ needs.ghas-status.outputs.isGhasEnabled == 'true' && github.event.pull_request.user.login == 'dependabot[bot]' }}
-    runs-on: ${{ inputs.github-actions-runner }}
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Fetch GHAS dependabot metadata
-        id: ghas-enablement-status
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/github/ghas-dependabot-metadata@main
-        with:
-          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
-
   ghas-dependencies-review:
     name: 📦 ghas-dependencies-review
     needs: [ ghas-status ]
@@ -142,7 +126,6 @@ jobs:
       pull-requests: write
 
     steps:
-    
       # Check connectivity with https://github.com/actions/dependency-review-action/issues/736
       - name: Check connectivity with https://api.deps.dev, where OSS dependencies are checked
         run: curl -ik https://api.deps.dev
@@ -160,3 +143,65 @@ jobs:
           warn-only: ${{ inputs.ghas-dependabot-pr-warn-only }}
           show-openssf-scorecard: true
           warn-on-openssf-scorecard-level: 3
+
+  ghas-dependabot-auto-pr-review:
+    name: 📄 ghas-dependabot-auto-pr-review
+    needs: [ ghas-status ]
+    if: ${{ needs.ghas-status.outputs.isGhasEnabled == 'true' && github.event.pull_request.user.login == 'dependabot[bot]' }}
+    runs-on: ${{ inputs.github-actions-runner }}
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
+      - name: Fetch GHAS dependabot metadata
+        id: ghas-dependabot-metadata
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/github/ghas-dependabot-metadata@main
+        with:
+          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+
+      # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#labeling-a-pull-request
+      - name: Add a label for all production dependencies
+        if: steps.ghas-dependabot-metadata.outputs.dependency-type == 'direct:production'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr edit "$PR_URL" --add-label "production"
+
+      - name: Add a label for all development dependencies
+        if: steps.ghas-dependabot-metadata.outputs.dependency-type == 'direct:development'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr edit "$PR_URL" --add-label "development"
+
+      # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#automatically-approving-a-pull-request
+      - name: Approve a PR if the user wants and if they are development dependencies
+        if: steps.ghas-dependabot-metadata.outputs.dependency-type == 'direct:development'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr review --approve "$PR_URL"
+
+      # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#enabling-automerge-on-a-pull-request
+      - name: Enable auto-merge for Dependabot PRs
+        if: steps.ghas-dependabot-metadata.outputs.update-type == 'version-update:semver-patch'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --merge "$PR_URL"
+
+  # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
+  ghas-dependabot-reviews:
+    name: 📄 ghas-dependabot-reviews
+    needs: [ ghas-status ]
+    if: ${{ needs.ghas-status.outputs.isGhasEnabled == 'true' && github.event.pull_request.user.login == 'dependabot[bot]' }}
+    runs-on: ${{ inputs.github-actions-runner }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Fetch GHAS dependabot metadata
+        id: ghas-enablement-status
+        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/github/ghas-dependabot-metadata@main
+        with:
+          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
