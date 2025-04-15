@@ -178,6 +178,8 @@ jobs:
       - name: Write values
         run: |
           echo "Value is '${{ steps.ghas-dependabot-metadata.outputs.dependabotMetadata.updateType }}'"
+          echo "Value is '${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).updateType }}'"
+
           DEPENDENCY_TYPE=$(echo '${{ steps.ghas-dependabot-metadata.outputs.dependabotMetadata }}' | jq .updateType)
           echo "'${DEPENDENCY_TYPE}' == 'direct:production'"
 
