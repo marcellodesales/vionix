@@ -38,7 +38,7 @@ runs:
     - name: Display Dependabot metadata as job summary
       shell: bash
       run: |
-        apt-get install bc -y
+        sudo apt-get update && sudo apt-get install bc -y
         echo "# Dependabot Update Summary 📦" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## Basic Information" >> $GITHUB_STEP_SUMMARY
