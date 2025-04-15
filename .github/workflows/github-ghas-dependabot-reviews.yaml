@@ -48,6 +48,13 @@ on:
         type: string
         default: .github/dependabot.yaml
 
+      ghas-dependabot-automerge-semver-type:
+        description: "The type of semver auto-merge"
+        required: false
+        type: string
+        # semver-major, semver-minor, semver-patch
+        default: semver-patch
+
     # We need to declare the intent of secrets. The pipelines reusing this must declare them!
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
@@ -203,7 +210,7 @@ jobs:
 
       # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#automatically-approving-a-pull-request
       - name: Approve a PR if the user wants and if they are development dependencies
-        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).dependencyType == 'direct:development' }}
+        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).dependencyType == 'direct:development' || contains(inputs.ghas-dependabot-automerge-semver-type, env.UPDATE_TYPE) }}
         env:
           GH_IMG: dockerhub.docker.artifactory.viasat.com/maniator/gh:v2.69.0
         run: |
@@ -215,7 +222,7 @@ jobs:
 
       # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#enabling-automerge-on-a-pull-request
       - name: Enable auto-merge for Dependabot PRs
-        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).updateType == 'version-update:semver-patch' }}
+        if: ${{ fromJSON(steps.ghas-dependabot-metadata.outputs.dependabotMetadata).dependencyType == 'direct:development' || contains(inputs.ghas-dependabot-automerge-semver-type, env.UPDATE_TYPE) }}
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_IMG: dockerhub.docker.artifactory.viasat.com/maniator/gh:v2.69.0
