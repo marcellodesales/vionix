@@ -63,7 +63,15 @@ runs:
       shell: bash
       run: |
         echo '${{ toJSON(steps.workflow-metadata.outputs) }}'
-  
+        echo "Sleeping for "
+        sleep 5
+
+    - name: Sleep for the logs to be saved
+      shell: bash
+      run: |
+        echo "Sleeping for 5s... Logs need to be generated..."
+        sleep 5
+
     - name: Retrieve the logs from the workflow
       id: workflow-logs
       uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/github/workflow-run-logs@main
