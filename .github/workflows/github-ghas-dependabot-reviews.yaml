@@ -167,7 +167,7 @@ jobs:
           echo "📄 Dependabot Metadata" >> $GITHUB_STEP_SUMMARY
           echo "* Data to be processed" >> $GITHUB_STEP_SUMMARY
           echo '```json' >> $GITHUB_STEP_SUMMARY
-          echo '${{ toJSON(steps.ghas-dependabot-metadata.outputs) }}' | jq >> $GITHUB_STEP_SUMMARY 
+          echo '${{ toJSON(steps.ghas-dependabot-metadata.outputs) }}' | jq .dependabotMetadata | jq fromjson >> $GITHUB_STEP_SUMMARY 
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#labeling-a-pull-request
