@@ -379,6 +379,8 @@ jobs:
             echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
           fi
+          echo "!!!!!!!!!!!!!!!!!"
+          env
 
       # Execute for DEV and STG
       - name: Setup deployment properties for branch
