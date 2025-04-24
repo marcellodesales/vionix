@@ -367,7 +367,7 @@ jobs:
           echo "Target repo: ${GITOPS_TARGET_REPO} for the target branch: ${GITOPS_TARGET_REPO_BRANCH}"
 
           HAS_CLUSTER=$(echo ${GITOPS_WORKFLOW} | jq '. | has("cluster")')
-          if [ "${HAS_CLUSTER} " == "true" ]; then
+          if [ "${HAS_CLUSTER}" == "true" ]; then
             CLUSTER=$(echo ${GITOPS_WORKFLOW} | jq '.cluster')
             echo "The workflow is for kubernetes deployments with a k8s cluster '${CLUSTER}'"
 
@@ -379,8 +379,6 @@ jobs:
             echo "GITOPS_TARGET_REGION=${GITOPS_TARGET_REGION}" >> $GITHUB_ENV
             echo "GITOPS_TARGET_TYPE=${GITOPS_TARGET_TYPE}" >> $GITHUB_ENV
           fi
-          echo "!!!!!!!!!!!!!!!!!"
-          env
 
       # Execute for DEV and STG
       - name: Setup deployment properties for branch
