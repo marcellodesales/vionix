@@ -367,7 +367,7 @@ jobs:
           echo "Target repo: ${GITOPS_TARGET_REPO} for the target branch: ${GITOPS_TARGET_REPO_BRANCH}"
 
           HAS_CLUSTER=$(echo ${GITOPS_WORKFLOW} | jq '. | has("cluster")')
-          if [ "${HAS_CLUSTER} " == "true" ]; then
+          if [ "${HAS_CLUSTER}" == "true" ]; then
             CLUSTER=$(echo ${GITOPS_WORKFLOW} | jq '.cluster')
             echo "The workflow is for kubernetes deployments with a k8s cluster '${CLUSTER}'"
 
