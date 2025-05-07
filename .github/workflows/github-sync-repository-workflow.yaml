@@ -17,7 +17,7 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
-      runner-label:
+      github-runner-label:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
