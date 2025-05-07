@@ -47,7 +47,7 @@ jobs:
 
   sync:
     name: 🔃 sync
-    runs-on: ${{ inputs.runner-label }}
+    runs-on: ${{ inputs.github-runner-label }}
 
     # Add permissions to the score of the security events
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
