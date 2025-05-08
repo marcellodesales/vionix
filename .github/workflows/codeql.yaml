@@ -1,7 +1,8 @@
 ####
 #### Author: Marcello DeSales (@mdesales)
 ####
-# This is a composable github Actions Workflow that reuses CodeQL workflow
+#### This is a composable github Actions Workflow that reuses CodeQL workflow
+####
 name: vionix-github-actions-codeql
 
 on:
