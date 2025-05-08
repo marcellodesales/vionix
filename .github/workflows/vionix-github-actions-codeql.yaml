@@ -21,4 +21,4 @@ jobs:
     secrets: inherit
     uses: ./.github/workflows/github-ghas-codeql-actions-workflow.yaml
     with:
-      github-runner-label: vionix
+      github-action-runner: vionix
