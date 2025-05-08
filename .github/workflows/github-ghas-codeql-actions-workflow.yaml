@@ -1,0 +1,39 @@
+####
+#### CodeQL for Github actions 
+#### https://github.blog/security/application-security/how-to-secure-your-github-actions-workflows-with-codeql/
+####
+name: github-ghas-codeql-actions
+
+on:
+  workflow_call:
+    inputs:
+      github-action-runner:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        default: code-scanning
+
+jobs:
+  analyze:
+    name: Analyze actions in the repo
+    runs-on: ${{ inputs.github-action-runner }}
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+  
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: actions
+          # https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+          queries: security-extended,security-and-quality
+  
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:actions"
