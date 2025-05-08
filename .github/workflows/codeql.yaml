@@ -37,6 +37,6 @@ jobs:
   ghaction-codeql:
     name: 🐙 action
     secrets: inherit
-    uses: ./.github/workflows/github-ghas-codeql-actions-workflow.yaml
+    uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-ghas-codeql-actions-workflow.yaml@main
     with:
       github-action-runner: vionix
