@@ -1,0 +1,45 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+#### This is a composable github Actions Workflow that reuses CodeQL workflow
+####
+name: vionix-github-actions-codeql
+
+on:
+  # schedule:
+  #   - cron: '37 16 * * 5'
+
+  push:
+  pull_request:
+
+  # # Please specify an on.push hook to analyze and see code scanning alerts from the default branch on the Security tab.
+  # push:
+  #   branches: [ main ]
+  #   paths:
+  #     - '.github/**'
+
+  # pull_request:
+  #   types:
+  #     - opened
+  #     - edited
+  #     - reopened
+  #     - synchronize
+  #     - converted_to_draft
+
+  #   paths:
+  #     - '.github/**'
+     
+  #   branches:
+  #     - develop
+  #     - feature/**
+  #     - bugfix/**
+  #     - master
+  #     - main
+
+jobs:
+  ghaction-codeql:
+    name: 🐙 action
+    secrets: inherit
+    uses: ./.github/workflows/github-ghas-codeql-actions-workflow.yaml
+    with:
+      github-action-runner: vionix
