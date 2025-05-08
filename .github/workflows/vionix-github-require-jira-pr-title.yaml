@@ -1,8 +1,9 @@
-name: github-pr-title-jira-verification
+name: vionix-github-require-jira-pr-title
 run-name: PR ${{ github.event.pull_request.number }} looking for jira in ${{ github.event.pull_request.title }}
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
+
 jobs:
   # TODO: Handle '`' backticks in PR title
   pr-title-validate:
