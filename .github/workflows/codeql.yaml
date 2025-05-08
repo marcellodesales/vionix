@@ -16,6 +16,13 @@ on:
       - '.github/**'
 
   pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+      - converted_to_draft
+
     paths:
       - '.github/**'
      
