@@ -41,4 +41,4 @@ jobs:
     secrets: inherit
     uses: seceng-devsecops-platform/devsecops-platform-github-workflows/.github/workflows/github-ghas-codeql-actions-workflow.yaml@main
     with:
-      github-action-runner: vionix
+      github-action-runner: code-scanning
