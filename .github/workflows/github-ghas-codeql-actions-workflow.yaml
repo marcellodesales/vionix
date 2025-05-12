@@ -15,7 +15,7 @@ on:
 
 jobs:
   analyze:
-    name: Analyze actions in the repo
+    name: 🔬 analyze
     runs-on: ${{ inputs.github-action-runner }}
     permissions:
       security-events: write
