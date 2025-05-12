@@ -13,6 +13,12 @@ on:
         type: string
         default: code-scanning
 
+      codeql-queries-list:
+        description: "The list of codeql query packs to run against the code"
+        required: false
+        type: string
+        default: security-extended,security-and-quality
+
 jobs:
   analyze:
     name: 🔬 analyze
@@ -31,7 +37,7 @@ jobs:
         with:
           languages: actions
           # https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-          queries: security-extended,security-and-quality
+          queries: ${{ inputs.codeql-queries-list }}
   
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
