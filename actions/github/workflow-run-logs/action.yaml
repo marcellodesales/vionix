@@ -43,16 +43,54 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        echo "Calling ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}/logs"
-        curl -L -H "Authorization: Bearer ${{ inputs.github-token }}" -o run.logs.zip ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attempts/${{ inputs.workflow-run-attempt-number }}/logs 
+        echo "Calling ${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attemps/${{ inputs.workflow-run-attempt-number }}/logs" 
 
-        ls -la run.logs.zip
-        #file run.logs.zip
+        # Initialize variables
+        MAX_ATTEMPTS=10
+        ATTEMPT=1
+        BACKOFF_TIME=2  # Starting backoff time in seconds
+        SUCCESS=false
+        URL=${GITHUB_API_URL}/repos/${{ inputs.github-org-repo }}/actions/runs/${{ inputs.workflow-run-id }}/attempts/${{ inputs.workflow-run-attempt-number }}/logs
 
-        if [ -f run.logs.zip ]; then
-          echo "Downloaded the zip file successfully..."
+        # Remove any existing file to ensure we don't get false positives
+        rm -f run.logs.zip
+        
+        while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$SUCCESS" = false ]; do
+          echo "Attempt $ATTEMPT of $MAX_ATTEMPTS (waiting ${BACKOFF_TIME}s before retry)"
+          
+          # Download the file
+          curl -L -H "Authorization: Bearer ${{ inputs.github-token }}" -o run.logs.zip $URL
+          
+          # Check if the file exists and is not empty
+          if [ -f run.logs.zip ] && [ -s run.logs.zip ]; then
+            # Verify it's a valid zip file
+            if unzip -t run.logs.zip >/dev/null 2>&1; then
+              echo "Downloaded the zip file successfully on attempt $ATTEMPT"
+              SUCCESS=true
+            else
+              echo "Downloaded file is not a valid zip file, retrying..."
+              rm -f run.logs.zip
+            fi
+          else
+            echo "Failed to download the logs or file is empty, retrying..."
+          fi
+          
+          # If not successful and not the last attempt, wait before retrying
+          if [ "$SUCCESS" = false ] && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+            sleep $BACKOFF_TIME
+            # Exponential backoff: double the wait time for next attempt
+            BACKOFF_TIME=$((BACKOFF_TIME * 2))
+          fi
+          
+          ATTEMPT=$((ATTEMPT + 1))
+        done
+        
+        # Final check after all attempts
+        if [ "$SUCCESS" = true ]; then
+          ls -la run.logs.zip
+          echo "Download successful after ${MAX_ATTEMPTS} exponential backoff attempts!"
         else
-          echo "Failed to download the logs for actions/runs/${{ inputs.workflow-run-id }}"
+          echo "Failed to download the logs for ${URL} after $MAX_ATTEMPTS attempts"
           exit 1
         fi
 
