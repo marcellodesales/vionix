@@ -676,10 +676,10 @@ jobs:
             if [[ "$FIRST_PART" == *.* || "$FIRST_PART" == *:* ]]; then
               REGISTRY="$FIRST_PART"
               USER_REPO=$(echo "$IMAGE" | cut -d/ -f2-)
+
+              DOCKER_USERNAME=$(echo "$USER_REPO" | cut -d/ -f1)
+              echo "DOCKER_USERNAME=$DOCKER_USERNAME" >> $GITHUB_ENV
             fi
-  
-            DOCKER_USERNAME=$(echo "$USER_REPO" | cut -d/ -f1)
-            echo "DOCKER_USERNAME=$DOCKER_USERNAME" >> $GITHUB_ENV
 
           else
             echo "Using private registry"
@@ -843,7 +843,7 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
-      - name: Login to Artifactory Docker Registry
+      - name: Login to Private Docker Registry ${{ env.DEFAULT_DOCKER_REGISTRY }}
         if: ${{ env.DOCKER_USERNAME == '' }}
         uses: docker/login-action@v3.3.0
         with:
