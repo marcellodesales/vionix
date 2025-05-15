@@ -13,7 +13,7 @@ inputs:
   syft-docker-image-tag:
     description: "The json object to print"
     required: false
-    default: dockerhub.docker.artifactory.viasat.com/anchore/syft:v1.3.0
+    default: anchore/syft:v1.3.0
 
   add-comment-to-current-pr:
     description: "The json object to print"
