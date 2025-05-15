@@ -1,9 +1,7 @@
 ####
 #### Author: Marcello DeSales (@mdesales)
 ####
-# Builds and Pushes a Docker Image to Viasat's Artifactory Docker Registry
-# https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
-# Base Workflow: https://git.viasat.com/seceng-devsecops-platform/devsecops-client-runtime-blackduck/blob/master/.github/workflows/devsecops-python.yaml
+# Builds and Pushes a Docker Image to a Docker Registry
 name: docker-image-devsecops-cicd
 
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
@@ -23,7 +21,6 @@ on:
         description: "Docker-in-docker (dind) runner to use base label"
         required: false
         type: string
-        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
         default: devsecops
 
       docker-compose-file:
@@ -489,28 +486,28 @@ jobs:
           echo "provided=true" >> $GITHUB_OUTPUT
 
       # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/70900405#70900405
-      - name: Slack Notification of Starting Container DevSecOps of https://git.viasat.com/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
+      - name: Slack Notification of Starting Container DevSecOps of ${{ github.server_url }}/${{ github.repository }}@${{github.sha}}#${{steps.set_base_values.outputs.githubActionRunId}}
         id: slack # IMPORTANT: Reference this step ID value in future Slack steps.
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v3.0.0
+        uses: wearerequired/slack-messaging-action@v3.0.0
         if: ${{ steps.slack-creds.outputs.provided == 'true' && (github.ref_name == 'main' || github.ref_name == 'develop' || github.ref_type == 'tag') }}
         with:
           bot_token: ${{ secrets.SLACK_CHANNEL_AUTOMATION_TOKEN }}
           channel_id: ${{ secrets.SLACK_CHANNEL_AUTOMATION_ID }}
           payload: >-
             {
-                "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}> :moving-clock:",
+                "text": "🐳 Container Pipeline started to build, check, and publish a container image at \n <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}> :moving-clock:",
                 "attachments": [
                     {
                         "color": "#B6B6B6",
                         "fields": [
                             {
                               "title": "#️⃣ Revision",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{steps.set_base_values.outputs.gitShortSha}}|${{steps.set_base_values.outputs.gitShortSha}}>",
+                              "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{steps.set_base_values.outputs.gitShortSha}}|${{steps.set_base_values.outputs.gitShortSha}}>",
                               "short": true
                             },
                             {
                               "title": "🌿 Branch",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}|${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}>",
+                              "value": "<${{ github.server_url }}/${{ github.repository }}/tree/${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}|${{steps.set_base_values.outputs.defaultDockerImageBranchTag}}>",
                               "short": true
                             },
                             {
@@ -520,7 +517,7 @@ jobs:
                             },
                             {
                               "title": "🔧 code Job",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
+                              "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
                               "short": true
                             }
                         ],
@@ -578,7 +575,7 @@ jobs:
           echo "::warning title=Json Yaml Validation::Check input 'check-fail-on-yaml-json-lint-error=true'... In case of failures: Either fix the lint errors or set the value to false. Otherwise, exclude files. Example: 'check-json-exclude-regex=.*\.test\.json$' or 'check-json-exclude-regex=.*\.test\.yaml$'."
 
       - name: Lint the provided Dockerfile
-        uses: seceng-devsecops-platform/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: ${{ inputs.docker-compose-context }}/${{ steps.find-name.outputs.foundDockerfile }}
           no-color: false
@@ -586,7 +583,7 @@ jobs:
 
       - name: Validate JSON-YAML in the repo
         id: json-yaml-validate
-        uses: seceng-devsecops-platform/GrantBirki-json-yaml-validate-action@v3.2.1
+        uses: GrantBirki/json-yaml-validate@v3.2.1
         with:
           comment: "true"
           mode: ${{ steps.lint-mode.outputs.configLintMode }}
@@ -771,7 +768,7 @@ jobs:
         # Only run the builds when building either DEV or STG
         # github.ref_type == 'branch' &&
         if: ${{ inputs.docker-build-mode == 'parallel' }}
-        uses: seceng-devsecops-platform/docker-setup-buildx-action@v3.8.0
+        uses: docker/setup-buildx-action@v3.8.0
         with:
           endpoint: builders-context
 
@@ -787,7 +784,7 @@ jobs:
         run: |
           tree
           # https://github.com/opencontainers/image-spec/blob/main/annotations.md
-          LABEL_VALUE=https://git.viasat.com/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker-compose-context }}
+          LABEL_VALUE=${{ github.server_url }}/${GITHUB_REPOSITORY}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}/${{ inputs.docker-compose-context }}
           DECLARED_DOCKERFILE=$(docker compose config --format json | jq -r --arg SERVICE_NAME "${{ inputs.docker-compose-service }}" '.services[$SERVICE_NAME].build.dockerfile')
           echo "Adding labels to the configured Dockerfile file at '${DECLARED_DOCKERFILE}'"
           echo "LABEL org.opencontainers.image.source=${LABEL_VALUE}" >> ${DECLARED_DOCKERFILE}
@@ -816,7 +813,7 @@ jobs:
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
         # if: ${{ github.ref_type == 'branch' }}
-        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
+        uses: docker/login-action@v3.3.0
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
@@ -837,7 +834,7 @@ jobs:
         # github.ref_type == 'branch' &&
         if: ${{ inputs.docker-build-mode == 'parallel' }}
         id: docker-bake
-        uses: seceng-devsecops-platform/docker-bake-action@v5.11.0
+        uses: docker/bake-action@v5.11.0
         with:
           push: true
           # https://github.com/docker/bake-action/pull/76
@@ -887,7 +884,7 @@ jobs:
           docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
       - name: Annotate worflow summary with SBOM reports
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
+        uses: marcellodesales/vionix/actions/docker/sbom-reporter@main
         if: ${{ inputs.docker-submit-sbom == 'true' }}
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
@@ -964,7 +961,7 @@ jobs:
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
-        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
+        uses: docker/login-action@v3.3.0
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
@@ -1044,7 +1041,7 @@ jobs:
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ inputs.docker-submit-sbom == 'true' && github.event_name == 'pull_request' && needs.build.outputs.originalDockerImageTag != '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
-        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.9
+        uses: anchore/sbom-action@v0.17.9
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.build.outputs.originalDockerImageTag }}
           dependency-snapshot: true
@@ -1054,7 +1051,7 @@ jobs:
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ inputs.docker-submit-sbom == 'true' && github.event_name == 'pull_request' && needs.build.outputs.originalDockerImageTag == '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
-        uses: seceng-devsecops-platform/anchore-sbom-action@v0.17.9
+        uses: anchore/sbom-action@v0.17.9
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           dependency-snapshot: true
@@ -1160,8 +1157,8 @@ jobs:
         run: |
           ls -la
           echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
-          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
-          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
+          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} ${{ vars.DOCKERHUB_PROXY_SERVER }}line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
+          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} ${{ vars.DOCKERHUB_PROXY_SERVER }}line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
           git diff
           echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
           echo "GITOPS_DEPLOY_ENV_DIR=${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_ENV
@@ -1174,8 +1171,8 @@ jobs:
         run: |
           ls -la
           echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
-          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
-          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} dockerhub.docker.artifactory.viasat.com/line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
+          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} ${{ vars.DOCKERHUB_PROXY_SERVER }}line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
+          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} ${{ vars.DOCKERHUB_PROXY_SERVER }}line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
           git diff
           echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
           echo "GITOPS_DEPLOY_ENV_DIR=${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_ENV
@@ -1226,7 +1223,7 @@ jobs:
           rm -f commitmessage.txt
 
       - name: Commits the code to the repo
-        uses:  seceng-devsecops-platform/stefanzweifel-git-auto-commit-action@v5.1.0
+        uses: stefanzweifel/git-auto-commit-action@v5.1.0
         id: auto-commit-action
         with:
           commit_user_name: ${{needs.code.outputs.committerName}}
@@ -1283,10 +1280,10 @@ jobs:
     steps:
       # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
       # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
-      - uses: seceng-devsecops-platform/technote-space-workflow-conclusion-action@v3.0.3
+      - uses: technote-space/workflow-conclusion-action@v3.0.3
 
-      - name: Slack Notification of successful build of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v3.0.0
+      - name: Slack Notification of successful build of ${{ github.server_url }}/${{ github.repository }}@${{ github.ref }}
+        uses: wearerequired/slack-messaging-action@v3.0.0
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
         if: ${{ env.WORKFLOW_CONCLUSION == 'success' }}
@@ -1296,19 +1293,19 @@ jobs:
           message_id: ${{ needs.code.outputs.slackMessageId }} # Updates existing message from the first step.
           payload: >-
             {
-                "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+                "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>",
                 "attachments": [
                     {
                         "color": "warning",
                         "fields": [
                             {
                               "title": "#️⃣ Revision",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
+                              "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
                               "short": true
                             },
                             {
                               "title": "🌿 Branch",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
+                              "value": "<${{ github.server_url }}/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
                               "short": true
                             },
                             {
@@ -1318,7 +1315,7 @@ jobs:
                             },
                             {
                               "title": "🚀 deploy Job",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
+                              "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
                               "short": true
                             },
                             {
@@ -1332,8 +1329,8 @@ jobs:
                 ]
             }
 
-      - name: Slack Notification build failure of https://git.viasat.com/${{ github.repository }}@${{ github.ref }}
-        uses: seceng-devsecops-platform/wearerequired-slack-messaging-action@v3.0.0
+      - name: Slack Notification build failure of ${{ github.server_url }}/${{ github.repository }}@${{ github.ref }}
+        uses: wearerequired/slack-messaging-action@v3.0.0
 
         # Populated by technote-space-workflow-conclusion-action above
         # # neutral, success, skipped, cancelled, timed_out, action_required, failure
@@ -1345,19 +1342,19 @@ jobs:
           message_id: ${{ needs.code.outputs.slackMessageId }} # Updates existing message from the first step.
           payload: >-
             {
-                "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <https://git.viasat.com/${{ github.repository }}|${{ github.repository }}>",
+                "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>",
                 "attachments": [
                     {
                         "color": "failure",
                         "fields": [
                             {
                               "title": "#️⃣ Revision",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
+                              "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{needs.code.outputs.gitShortSha}}|${{needs.code.outputs.gitShortSha}}>",
                               "short": true
                             },
                             {
                               "title": "🌿 Branch",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
+                              "value": "<${{ github.server_url }}/${{ github.repository }}/tree/${{needs.code.outputs.defaultDockerImageBranchTag}}|${{needs.code.outputs.defaultDockerImageBranchTag}}>",
                               "short": true
                             },
                             {
@@ -1367,7 +1364,7 @@ jobs:
                             },
                             {
                               "title": "🚀 deploy Job",
-                              "value": "<https://git.viasat.com/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
+                              "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{github.run_id}}|${{github.run_id}}>",
                               "short": true
                             },
                             {
