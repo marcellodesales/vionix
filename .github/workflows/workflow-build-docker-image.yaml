@@ -616,12 +616,13 @@ jobs:
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
-      defaultDockerRegistry: ${{steps.set_docker_image_settings.outputs.defaultDockerRegistry}}
-      defaultDockerImageRepo: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}
-      defaultDockerService: ${{steps.set_docker_image_settings.outputs.defaultDockerService}}
-      originalDockerImageTag: ${{steps.set_docker_image_settings.outputs.originalDockerImageTag}}
-      githubRepoPaths: ${{steps.set_docker_image_settings.outputs.githubRepoPaths}}
-      dockerImageArtifactoryUrl: ${{steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl}}
+      defaultDockerRegistry: ${{ steps.set_docker_image_settings.outputs.defaultDockerRegistry }}
+      defaultDockerImageRepo: ${{ steps.set_docker_image_settings.outputs.defaultDockerImageRepo }}
+      defaultDockerService: ${{ steps.set_docker_image_settings.outputs.defaultDockerService }}
+      originalDockerImageTag: ${{ steps.set_docker_image_settings.outputs.originalDockerImageTag }}
+      githubRepoPaths: ${{ steps.set_docker_image_settings.outputs.githubRepoPaths }}
+      dockerImageArtifactoryUrl: ${{ steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl }}
+      dockerPublicUsername: ${{ steps.set_docker_image_settings.outputs.dockerPublicUsername }}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -662,12 +663,23 @@ jobs:
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
 
+          # Extract the first segment before the first slash
+          FIRST_PART=$(echo "$DEFAULT_DOCKER_IMAGE_REPO" | cut -d/ -f1)
+
           # The registry is the first part of the registry/repo/folder
-          if [[ "$IMAGE" != *"/"* || "$FIRST_PART" == "library" || "$FIRST_PART" == "docker.io" || "$IMAGE" =~ ^[a-z0-9]+$ ]]; then
+          if [[ "$DEFAULT_DOCKER_IMAGE_REPO" != *"/"* || "$FIRST_PART" == "library" || "$FIRST_PART" == "docker.io" || "$DEFAULT_DOCKER_IMAGE_REPO" =~ ^[a-z0-9]+$ ]]; then
             echo "Using Docker Hub"
             echo "DEFAULT_DOCKER_REGISTRY=docker.io" >> $GITHUB_ENV
             GITHUB_REPOSITORY_PATHS=r/${DEFAULT_DOCKER_IMAGE_REPO}
             ARTIFACTORY_URL=https://hub.docker.com/${GITHUB_REPOSITORY_PATHS}
+
+            if [[ "$FIRST_PART" == *.* || "$FIRST_PART" == *:* ]]; then
+              REGISTRY="$FIRST_PART"
+              USER_REPO=$(echo "$IMAGE" | cut -d/ -f2-)
+            fi
+  
+            DOCKER_USERNAME=$(echo "$USER_REPO" | cut -d/ -f1)
+            echo "DOCKER_USERNAME=$DOCKER_USERNAME" >> $GITHUB_ENV
 
           else
             echo "Using private registry"
@@ -704,6 +716,7 @@ jobs:
           echo "originalDockerImageTag=$ORIGINAL_DOCKER_IMAGE_TAG" >> $GITHUB_OUTPUT
           echo "githubRepoPaths=$GITHUB_REPOSITORY_PATHS" >> $GITHUB_OUTPUT
           echo "dockerImageArtifactoryUrl=$ARTIFACTORY_URL" >> $GITHUB_OUTPUT
+          echo "dockerPublicUsername=$DOCKER_USERNAME" >> $GITHUB_OUTPUT
 
       - name: Set additional envs to docker compose build execution
         if: ${{ inputs.artifactory-deploy-workflow != '' && inputs.artifactory-deploy-repo-type != '' }}
@@ -831,11 +844,19 @@ jobs:
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
-        # if: ${{ github.ref_type == 'branch' }}
+        if: ${{ env.DOCKER_USERNAME == '' }}
         uses: docker/login-action@v3.3.0
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
           username: ${{ secrets.DOCKER_REGISTRY_USER }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASS }}
+
+      - name: Login to Github or Dockerhub Docker Registries with the username
+        if: ${{ env.DOCKER_USERNAME != '' }}
+        uses: docker/login-action@v3.3.0
+        with:
+          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          username: ${{ env.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_REGISTRY_PASS }}
 
       - name: Annotate Job with current information
@@ -945,26 +966,6 @@ jobs:
       - name: Fetch only the top commit
         uses: actions/checkout@v4.2.2
 
-      - name: Annotate Job with current information for DEV and STG
-        working-directory: ${{ inputs.docker-compose-context }}
-        run: |
-          echo "# 🚀 deploy Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          env
-          # Find out the name of the docker image declared in the docker-compose image section of the default service
-          if [ -n "${{ inputs.docker-compose-file }}" ] && [ -f "${{ inputs.docker-compose-file }}" ]; then
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker compose -f ${{ inputs.docker-compose-file }} config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
-          else
-            DEFAULT_DOCKER_IMAGE_REPO=$(docker compose config | yq e . - -o json | jq -r --arg service ${{ inputs.docker-compose-service }} '.services[$service].image');
-          fi
-          echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
-          ORIGINAL_DOCKER_IMAGE_TAG=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F":" '{ print $2 }')
-          echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
-          # The registry is the first part of the registry/repo/folder
-          DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
-          echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
-
       - name: Annotate Job with current information for PRD
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
@@ -974,10 +975,19 @@ jobs:
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
+        if: ${{ needs.build.outputs.dockerPublicUsername == '' }}
         uses: docker/login-action@v3.3.0
         with:
-          registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
+          registry: ${{ needs.build.outputs.defaultDockerRegistry }}
           username: ${{ secrets.DOCKER_REGISTRY_USER }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASS }}
+
+      - name: Login to Artifactory Docker Registry
+        if: ${{ needs.build.outputs.dockerPublicUsername != '' }}
+        uses: docker/login-action@v3.3.0
+        with:
+          registry: ${{ needs.build.outputs.defaultDockerRegistry }}
+          username: ${{ needs.build.outputs.dockerPublicUsername }}
           password: ${{ secrets.DOCKER_REGISTRY_PASS }}
 
       - name: Pull built docker-image for non-tag execution
