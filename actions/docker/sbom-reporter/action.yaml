@@ -135,7 +135,7 @@ runs:
         fi
 
     - name: Add Docker SBOM PR Comment
-      uses: seceng-devsecops-platform/marocchino-sticky-pull-request-comment-action@v2
+      uses: marocchino/sticky-pull-request-comment@v2
       if: ${{ steps.sbom-check.outputs.sbom-generated == 'true' && inputs.add-comment-to-current-pr == 'true' }}
       with:
         header: sbom-report-${{ inputs.docker-image-repo-tag }}
