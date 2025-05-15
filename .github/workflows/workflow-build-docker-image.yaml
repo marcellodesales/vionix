@@ -1160,8 +1160,8 @@ jobs:
         run: |
           ls -la
           echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
-          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} ${{ vars.DOCKERHUB_PROXY_SERVER }}line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
-          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} ${{ vars.DOCKERHUB_PROXY_SERVER }}line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
+          echo "kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}"
+          kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.code.outputs.gitopsDeployVersion }}
           git diff
           echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
           echo "GITOPS_DEPLOY_ENV_DIR=${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_ENV
@@ -1174,8 +1174,8 @@ jobs:
         run: |
           ls -la
           echo "Updating version: kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
-          echo "docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} ${{ vars.DOCKERHUB_PROXY_SERVER }}line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
-          docker run --rm -v ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR}:${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} -w ${GITHUB_WORKSPACE}/${GITOPS_DEPLOY_ENV_DIR} ${{ vars.DOCKERHUB_PROXY_SERVER }}line/kubectl-kustomize kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
+          echo "kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}"
+          kustomize edit set image ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}
           git diff
           echo "REPOSITORY_LOCATION=./deploy" >> $GITHUB_ENV
           echo "GITOPS_DEPLOY_ENV_DIR=${GITOPS_DEPLOY_ENV_DIR}" >> $GITHUB_ENV
