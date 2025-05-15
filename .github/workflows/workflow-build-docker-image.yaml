@@ -662,44 +662,56 @@ jobs:
 
           echo "DEFAULT_DOCKER_IMAGE_REPO=${DEFAULT_DOCKER_IMAGE_REPO}" >> $GITHUB_ENV
           echo "ORIGINAL_DOCKER_IMAGE_TAG=${ORIGINAL_DOCKER_IMAGE_TAG}" >> $GITHUB_ENV
-
-          # Extract the first segment before the first slash
+          
+          # Get the first part before the first slash
           FIRST_PART=$(echo "$DEFAULT_DOCKER_IMAGE_REPO" | cut -d/ -f1)
 
-          # The registry is the first part of the registry/repo/folder
-          if [[ "$DEFAULT_DOCKER_IMAGE_REPO" != *"/"* || "$FIRST_PART" == "library" || "$FIRST_PART" == "docker.io" || "$DEFAULT_DOCKER_IMAGE_REPO" =~ ^[a-z0-9]+$ ]]; then
-            echo "Using Docker Hub"
-            echo "DEFAULT_DOCKER_REGISTRY=docker.io" >> $GITHUB_ENV
-            GITHUB_REPOSITORY_PATHS=r/${DEFAULT_DOCKER_IMAGE_REPO}
-            ARTIFACTORY_URL=https://hub.docker.com/${GITHUB_REPOSITORY_PATHS}
-
-            if [[ "$FIRST_PART" == *.* || "$FIRST_PART" == *:* ]]; then
-              REGISTRY="$FIRST_PART"
-              USER_REPO=$(echo "$IMAGE" | cut -d/ -f2-)
-
-              DOCKER_USERNAME=$(echo "$USER_REPO" | cut -d/ -f1)
-              echo "DOCKER_USERNAME=$DOCKER_USERNAME" >> $GITHUB_ENV
-            fi
-
-          else
-            echo "Using private registry"
-            DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
-            echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
-
-            # Just break down the paths for links in artifactory
-            REGISTRY="${DEFAULT_DOCKER_REGISTRY}/"
-            GITHUB_REPOSITORY_PATHS=${DEFAULT_DOCKER_IMAGE_REPO/$REGISTRY/}
-            GITHUB_REPOSITORY_PATHS=$(echo ${GITHUB_REPOSITORY_PATHS} | sed -e "s/-/\//g")
-            GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG}
-            echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
-  
-            # Extract the first token, repository path, and image tag from the image string
-            ARTIFACTORY_REPO_TOKEN="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | cut -d '.' -f1)"
-            ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
-  
-            # Construct the new artifactory URL
-            ARTIFACTORY_URL="${{ inputs.docker-registry-artifactory-url }}/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
+          # Default values
+          DEFAULT_DOCKER_REGISTRY="docker.io"
+          USER_REPO="$DEFAULT_DOCKER_IMAGE_REPO"
+          
+          # Detect if a custom registry is specified (domain-like first segment)
+          if [[ "$FIRST_PART" == *.* || "$FIRST_PART" == *:* ]]; then
+            DEFAULT_DOCKER_REGISTRY="$FIRST_PART"
+            USER_REPO=$(echo "$DEFAULT_DOCKER_IMAGE_REPO" | cut -d/ -f2-)
           fi
+          
+          DOCKER_USERNAME=$(echo "$USER_REPO" | cut -d/ -f1)
+          REPO_NAME=$(echo "$USER_REPO" | cut -d/ -f2)
+          
+          echo "DEFAULT_DOCKER_REGISTRY=$DEFAULT_DOCKER_REGISTRY" >> $GITHUB_ENV
+          echo "DOCKER_USERNAME=$DOCKER_USERNAME" >> $GITHUB_ENV
+          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+          
+          # Build artifact URL depending on registry
+          case "$DEFAULT_DOCKER_REGISTRY" in
+            docker.io)
+              ARTIFACT_URL="https://hub.docker.com/r/${DOCKER_USERNAME}/${REPO_NAME}"
+              ;;
+            ghcr.io)
+              ARTIFACT_URL="https://${{ github.server_url }}/orgs/${DOCKER_USERNAME}/packages/container/${REPO_NAME}"
+              ;;
+            *)
+              echo "Using private registry"
+              DEFAULT_DOCKER_REGISTRY=$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F "/" '{print $1}')
+              echo "DEFAULT_DOCKER_REGISTRY=${DEFAULT_DOCKER_REGISTRY}" >> $GITHUB_ENV
+  
+              # Just break down the paths for links in artifactory
+              REGISTRY="${DEFAULT_DOCKER_REGISTRY}/"
+              GITHUB_REPOSITORY_PATHS=${DEFAULT_DOCKER_IMAGE_REPO/$REGISTRY/}
+              GITHUB_REPOSITORY_PATHS=$(echo ${GITHUB_REPOSITORY_PATHS} | sed -e "s/-/\//g")
+              GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS/$ORIGINAL_DOCKER_IMAGE_TAG}
+              echo "GITHUB_REPOSITORY_PATHS=${GITHUB_REPOSITORY_PATHS}" >> $GITHUB_ENV
+    
+              # Extract the first token, repository path, and image tag from the image string
+              ARTIFACTORY_REPO_TOKEN="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | cut -d '.' -f1)"
+              ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
+    
+              # Construct the new artifactory URL
+              ARTIFACTORY_URL="${{ inputs.docker-registry-artifactory-url }}/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
+
+              ;;
+          esac
 
           echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
 
