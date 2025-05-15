@@ -183,7 +183,7 @@ jobs:
     # https://docs.github.com/en/enterprise-server@3.14/actions/writing-workflows/choosing-what-your-workflow-does/controlling-permissions-for-github_token#defining-access-for-the-github_token-permissions
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: none
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
@@ -926,7 +926,7 @@ jobs:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
     permissions:
       contents: read  # <--- allows to read repo
-      security-events: read
+      security-events: none
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
