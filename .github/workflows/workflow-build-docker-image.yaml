@@ -46,6 +46,12 @@ on:
         required: false
         type: string
         default: "linux/amd64"
+      
+      docker-registry-artifactory-url:
+        description: "The URL of an artifactory docker registry, when used"
+        required: false
+        type: string
+        default: "https://marcellodesales.jfrog.io"
 
       docker-build-mode:
         description: "Whether to run in parallel or sequencial with DOCKER_BUILDKIT=0"
@@ -669,7 +675,7 @@ jobs:
           ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
 
           # Construct the new artifactory URL
-          ARTIFACTORY_URL="https://artifactory.company.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
+          ARTIFACTORY_URL="${{ inputs.docker-registry-artifactory-url }}/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
           echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
 
       - id: set_docker_image_settings
@@ -1017,7 +1023,7 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "<img src=https://artifactory.company.com/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
+          echo "<img src=${{ inputs.docker-registry-artifactory-url }}/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
@@ -1029,7 +1035,7 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "<img src=https://artifactory.company.com/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
+          echo "<img src=${{ inputs.docker-registry-artifactory-url }}/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -1317,7 +1323,7 @@ jobs:
                             },
                             {
                               "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.company.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "value": "<${{ inputs.docker-registry-artifactory-url }}/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
                               "short": true
                             }
                         ],
@@ -1366,7 +1372,7 @@ jobs:
                             },
                             {
                               "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.company.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "value": "<${{ inputs.docker-registry-artifactory-url }}/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
                               "short": true
                             }
                         ],
