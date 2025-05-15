@@ -1076,7 +1076,7 @@ jobs:
       # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
       contents: write
       # To declare deployments updates
-      deployments: write
+      deployments: none
 
     # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
     environment:
@@ -1279,7 +1279,7 @@ jobs:
       # https://github.com/technote-space/workflow-conclusion-action/issues/122
       contents: read
       # https://docs.github.com/en/rest/actions/workflow-jobs?apiVersion=2022-11-28#list-jobs-for-a-workflow-run
-      actions: read
+      actions: none
 
     steps:
       # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
