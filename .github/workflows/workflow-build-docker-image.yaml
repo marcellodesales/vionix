@@ -2,7 +2,7 @@
 #### Author: Marcello DeSales (@mdesales)
 ####
 # Builds and Pushes a Docker Image to a Docker Registry
-name: docker-image-devsecops-cicd
+name: build-docker-image-workflow
 
 # Avoid multiple CI jobs to execute for multiple commits in a given branch
 # section #6: Saving Computation Time by Stopping Obsolete Workflows
