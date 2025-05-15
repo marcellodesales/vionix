@@ -132,9 +132,9 @@ on:
         # https://jfrog.com/help/r/jfrog-artifactory-documentation/virtual-go-repositories
 #         default: |
 #           {
-#             "host": "artifactory.viasat.com/artifactory",
+#             "host": "artifactory.company.com/artifactory",
 #             "type": "golang",
-#             "noSumDb": "git.viasat.com/*",
+#             "noSumDb": "git.company.com/*",
 #             "repo": {
 #               "virtual": "project-golang",
 #               "local": "project-golang-local"
@@ -145,11 +145,11 @@ on:
     # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
 
-      ARTIFACTORY_SVC_USER:
+      DOCKER_REGISTRY_USER:
         description: "The username of the service account for Artifactory Docker registry Repository"
         required: true
 
-      ARTIFACTORY_SVC_PASS:
+      DOCKER_REGISTRY_PASS:
         description: "The password associated with the username of the service account for Artifactory Docker registry Repository"
         required: true
 
@@ -161,7 +161,7 @@ on:
         description: "The token for the given Slack channel ID"
         required: false
 
-      GITOPS_GITHUB_DEPLOY_PAT:
+      GITOPS_GITHUB_TOKEN:
         description: "The token to clone and push changes to the GitOps Deploy repo"
         required: false
 
@@ -218,7 +218,7 @@ jobs:
       - name: Verify commit ID in PRs
         id: pr-status
         run: |
-          PR_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "${{ github.server_url }}/api/v3/repos/${{ github.repository }}/commits/${GITHUB_SHA}/pulls")
+          PR_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "${{ github.api_url	}}/repos/${{ github.repository }}/commits/${GITHUB_SHA}/pulls")
           echo $PR_INFO | jq
           if [ "$(echo "$PR_INFO" | jq '. | length')" -gt 0 ]; then
             PR_NUMBER=$(echo $PR_INFO | jq -r '.[0].number')
@@ -623,7 +623,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+          token: ${{ secrets.GITOPS_GITHUB_TOKEN }}
 
       - name: Fetch only the top commit
         if: ${{ inputs.build-checkout-submodules == 'false' }}
@@ -669,7 +669,7 @@ jobs:
           ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
 
           # Construct the new artifactory URL
-          ARTIFACTORY_URL="https://artifactory.viasat.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
+          ARTIFACTORY_URL="https://artifactory.company.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${{needs.code.outputs.gitopsDeployVersion}}"
           echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
 
       - id: set_docker_image_settings
@@ -697,7 +697,7 @@ jobs:
           noSumDb=$(echo $obj | jq -r '.noSumDb')
 
           if [ "$type" = "golang" ] && [ "${{ inputs.artifactory-deploy-repo-type }}" = "virtual" ]; then
-            goproxy="https://${{ secrets.ARTIFACTORY_SVC_USER }}:${{ secrets.ARTIFACTORY_SVC_PASS }}@$host/$selected_repo"
+            goproxy="https://${{ secrets.DOCKER_REGISTRY_USER }}:${{ secrets.DOCKER_REGISTRY_PASS }}@$host/$selected_repo"
             echo "Setting env var GOPROXY=$goproxy"
             echo "Setting env var GONOSUMDB=$noSumDb"
             echo "GOPROXY=$goproxy" >> $GITHUB_ENV
@@ -816,8 +816,8 @@ jobs:
         uses: docker/login-action@v3.3.0
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
-          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
-          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+          username: ${{ secrets.DOCKER_REGISTRY_USER }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASS }}
 
       - name: Annotate Job with current information
         # if: ${{ github.ref_type == 'branch' }}
@@ -849,8 +849,6 @@ jobs:
           # https://github.com/docker/buildx/blob/master/docs/reference/buildx_bake.md#set
           # https://github.com/docker/buildx/issues/872#issuecomment-1014891886
           # # ${{steps.set-docker-image-settings.outputs.defaultDockerService}} could be used in addition to ${{ inputs.docker-compose-service }}
-          # Adding gha cache for GHE 3.8+ https://docs.docker.com/build/cache/backends/gha/#using-dockerbuild-push-action: This fails with
-          #    the followinghttps://gist.git.viasat.com/mdesales/9868f314c971eead6aae5c2b85539eaa
           set: |
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.tags=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-from=type=registry,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
@@ -934,7 +932,6 @@ jobs:
       - name: Annotate Job with current information for DEV and STG
         working-directory: ${{ inputs.docker-compose-context }}
         run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "# 🚀 deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -964,8 +961,8 @@ jobs:
         uses: docker/login-action@v3.3.0
         with:
           registry: ${{ env.DEFAULT_DOCKER_REGISTRY }}
-          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
-          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+          username: ${{ secrets.DOCKER_REGISTRY_USER }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASS }}
 
       - name: Pull built docker-image for non-tag execution
         # When building in a branch, the image is likely to be already present as soon as this executes
@@ -1020,7 +1017,7 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "<img src=https://artifactory.viasat.com/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
+          echo "<img src=https://artifactory.company.com/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.build.outputs.originalDockerImageTag}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageBranchShaTag}}" >> $GITHUB_STEP_SUMMARY
@@ -1032,7 +1029,7 @@ jobs:
         run: |
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-markdown-content
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "<img src=https://artifactory.viasat.com/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
+          echo "<img src=https://artifactory.company.com/ui/jfrog.svg height=40px valign=bottom /> JFrog Artifactory Docker Registry" >> $GITHUB_STEP_SUMMARY
           echo "* ${{needs.build.outputs.defaultDockerImageRepo}}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "* Registry <a href='${{needs.build.outputs.dockerImageArtifactoryUrl}}'>${{needs.build.outputs.dockerImageArtifactoryUrl}}</a>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -1045,7 +1042,7 @@ jobs:
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.build.outputs.originalDockerImageTag }}
           dependency-snapshot: true
-          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+          github-token: ${{ secrets.GITOPS_GITHUB_TOKEN }}
 
       - name: Submit Interpreted docker image Tag SBOM to github dependency graph 
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
@@ -1055,7 +1052,7 @@ jobs:
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           dependency-snapshot: true
-          github-token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+          github-token: ${{ secrets.GITOPS_GITHUB_TOKEN }}
 
   deploy:
     name: "🏗️ deploy"
@@ -1088,7 +1085,7 @@ jobs:
           ref: ${{ needs.code.outputs.gitopsDeployTargetRepoBranch }}
           path: ./deploy
           # https://github.com/stefanzweifel/git-auto-commit-action#push-to-protected-branches
-          token: ${{ secrets.GITOPS_GITHUB_DEPLOY_PAT }}
+          token: ${{ secrets.GITOPS_GITHUB_TOKEN }}
 
       - name: Checkout github action deploy repository for all ENVs when in a branch
         if: ${{ github.ref_type == 'branch' && (needs.code.outputs.gitopsDeployTargetType == 'gh-actions' || needs.code.outputs.gitopsDeployTargetType == 'gh-actions-composable') }}
@@ -1293,7 +1290,7 @@ jobs:
           message_id: ${{ needs.code.outputs.slackMessageId }} # Updates existing message from the first step.
           payload: >-
             {
-                "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* :viasat-signal-animated-transparent: \n <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>",
+                "text": ":github_octocat: *${{ github.repository }}* :firework-2: *CI Passed* \n <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>",
                 "attachments": [
                     {
                         "color": "warning",
@@ -1320,7 +1317,7 @@ jobs:
                             },
                             {
                               "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "value": "<https://artifactory.company.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.build.outputs.originalDockerImageTag}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
                               "short": true
                             }
                         ],
@@ -1342,7 +1339,7 @@ jobs:
           message_id: ${{ needs.code.outputs.slackMessageId }} # Updates existing message from the first step.
           payload: >-
             {
-                "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* :viasat-signal-animated-transparent: \n <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>",
+                "text": ":github_octocat: *${{ github.repository }}* :tire-fire: *CI Failed* \n <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>",
                 "attachments": [
                     {
                         "color": "failure",
@@ -1369,7 +1366,7 @@ jobs:
                             },
                             {
                               "title": "🐳 Docker Image",
-                              "value": "<https://artifactory.viasat.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
+                              "value": "<https://artifactory.company.com/ui/repos/tree/General/${{needs.code.outputs.githubOrg}}/${{needs.build.outputs.githubRepoPaths}}/${{needs.code.outputs.defaultDockerImageBranchShaTag}}|${{needs.build.outputs.defaultDockerImageRepo}}-${{needs.code.outputs.defaultDockerImageBranchShaTag}}>",
                               "short": true
                             }
                         ],
