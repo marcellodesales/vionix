@@ -176,7 +176,7 @@ jobs:
 
   code:
     name: 🔧 code
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.github-actions-runner }}
     container: marcellodesales/docker-k8s-utils:alpine
 
     # Maybe to get twistlock action to run we need permission to read
@@ -184,7 +184,7 @@ jobs:
     # https://docs.github.com/en/enterprise-server@3.14/actions/writing-workflows/choosing-what-your-workflow-does/controlling-permissions-for-github_token#defining-access-for-the-github_token-permissions
     permissions:
       contents: read
-      pull-requests: none
+      pull-requests: read
 
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     outputs:
@@ -544,7 +544,7 @@ jobs:
   check:
     name: 🛡️ check
     needs: [code]
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.github-actions-runner }}
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -606,7 +606,7 @@ jobs:
   build:
     name: 📦 build
     needs: [code, check]
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.github-actions-runner }}
 
     # https://stackoverflow.com/questions/58139175/running-actions-in-another-directory/63122434#63122434
     defaults:
@@ -914,7 +914,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.github-actions-runner }}
 
     if: ${{ github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop' || github.ref_type == 'tag' }}
 
@@ -926,15 +926,12 @@ jobs:
     # Add permissions to the score of the security events
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
     permissions:
-      contents: read  # <--- allows to read repo
-      security-events: none
+      contents: read
+      security-events: read
 
     steps:
-      # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
         uses: actions/checkout@v4.2.2
-        with:
-          fetch-depth: 1
 
       - name: Annotate Job with current information for DEV and STG
         working-directory: ${{ inputs.docker-compose-context }}
@@ -1066,7 +1063,7 @@ jobs:
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
     needs: [code, build, release]
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.github-actions-runner }}
 
     # Only if the gitops workflow is provided and there's a matching deployEnv from it (mapping between the ref branch to an env chosen by the user)
     if: ${{ inputs.gitops-deploy-workflow != '' && needs.code.outputs.gitopsDeployEnv != 'null' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref_type == 'tag') && needs.code.outputs.prStatus == 'false' }}
@@ -1076,7 +1073,7 @@ jobs:
       # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
       contents: write
       # To declare deployments updates
-      deployments: none
+      deployments: write
 
     # https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
     environment:
@@ -1263,7 +1260,7 @@ jobs:
     name: 📢 notify
     # https://stackoverflow.com/questions/63148639/create-dependencies-between-jobs-in-github-actions/63148947#63148947
     # https://github.community/t/sharing-a-variable-between-jobs/16967/14
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.github-actions-runner }}
 
     # https://stackoverflow.com/questions/58858429/how-to-run-a-github-actions-step-even-if-the-previous-step-fails-while-still-f/58859404#58859404
     if: ${{ always() && needs.code.outputs.slackCredsProvided == 'true' && (github.ref_name == 'main' || github.ref_name == 'develop' || github.ref_type == 'tag') }}
@@ -1279,7 +1276,7 @@ jobs:
       # https://github.com/technote-space/workflow-conclusion-action/issues/122
       contents: read
       # https://docs.github.com/en/rest/actions/workflow-jobs?apiVersion=2022-11-28#list-jobs-for-a-workflow-run
-      actions: none
+      actions: read
 
     steps:
       # run this action to get the workflow conclusion, if any of the previous jobs failed, it will fail the whole workflow
