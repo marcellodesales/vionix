@@ -890,7 +890,7 @@ jobs:
           docker push ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
 
       - name: Annotate worflow summary with SBOM reports
-        uses: marcellodesales/vionix/actions/docker/sbom-reporter@main
+        uses: marcellodesales/vionix/actions/docker/sbom-reporter@oss/main-image-container
         if: ${{ inputs.docker-submit-sbom == 'true' }}
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
