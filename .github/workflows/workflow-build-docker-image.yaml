@@ -686,10 +686,10 @@ jobs:
           # Build artifact URL depending on registry
           case "$DEFAULT_DOCKER_REGISTRY" in
             docker.io)
-              ARTIFACT_URL="https://hub.docker.com/r/${DOCKER_USERNAME}/${REPO_NAME}"
+              ARTIFACTORY_URL="https://hub.docker.com/r/${DOCKER_USERNAME}/${REPO_NAME}/tags?name=${{ needs.code.outputs.gitopsDeployVersion }}"
               ;;
             ghcr.io)
-              ARTIFACT_URL="https://${{ github.server_url }}/orgs/${DOCKER_USERNAME}/packages/container/${REPO_NAME}"
+              ARTIFACTORY_URL="https://${{ github.server_url }}/orgs/${DOCKER_USERNAME}/packages/container/${REPO_NAME}"
               ;;
             *)
               echo "Using private registry"
