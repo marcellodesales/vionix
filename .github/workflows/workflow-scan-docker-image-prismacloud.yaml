@@ -2,10 +2,7 @@
 #### Author: Marcello DeSales (@mdesales)
 ####
 # Executes security verification of dockerized projects
-# https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
-# Base Workflow: https://git.viasat.com/seceng-devsecops-platform/devsecops-client-runtime-blackduck/blob/master/.github/workflows/devsecops-python.yaml
-
-name: docker-image-devsecops-check
+name: workflow-scan-docker-image-prismacloud
 
 on:
   # Manual workflow execution
@@ -14,6 +11,11 @@ on:
   # https://github.com/orgs/community/discussions/25595#discussioncomment-3248417
   workflow_call:
     inputs:
+      github-action-runner:
+        description: "Docker-in-docker (dind) runner to use base label"
+        required: false
+        type: string
+        default: devsecops
 
       docker-compose-context:
         description: "The location where the docker compose is available"
@@ -32,51 +34,41 @@ on:
         required: true
         type: string
 
-      github-action-runner:
-        description: "Docker-in-docker (dind) runner to use base label"
+      prisma-cloud-domain:
+        description: "Prisma Cloud hostname to send the scans of the docker image to"
         required: false
         type: string
-        # Base image for the label is at https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-runtime-github_actions_runner
-        default: devsecops
+        default: prisma-cloud.company.com
 
-      seceng-devsecops-prisma-domain:
-        description: "SecEng Prisma Cloud hostname to send the scans of the docker image to"
-        required: false
-        type: string
-        default: twistlock.infosec.viasat.io
-
-      seceng-devsecops-prisma-wait-for-build:
+      prisma-cloud-wait-for-build:
         description: "Time in seconds to wait for the build as an approximate value"
         required: false
         type: number
         default: 300
 
-      seceng-devsecops-prisma-project:
+      prisma-cloud-project:
         description: "Prisma Project to scan the docker image"
         required: true
         type: string
 
-    # We need to declare the intent of secrets. The pipelines reusing this must declare them!
-    # https://github.com/orgs/community/discussions/26749#discussioncomment-3253230
     secrets:
 
-      ARTIFACTORY_SVC_USER:
-        description: "The username of the service account for Artifactory Docker registry Repository"
+      DOCKER_REGISTRY_USER:
+        description: "The username of the service account for the Docker registry Repository"
         required: true
 
-      ARTIFACTORY_SVC_PASS:
-        description: "The password associated with the username of the service account for Artifactory Docker registry Repository"
+      DOCKER_REGISTRY_PASS:
+        description: "The password associated with the username of the service account for the Docker registry Repository"
         required: true
 
-      SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME:
-        description: "The username of the CI user from SecEng Prisma Cloud / Twistlock"
+      PRISMA_CLOUD_USERNAME:
+        description: "The username of the CI user from Prisma Cloud / Twistlock"
         required: true
 
-      SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD:
-        description: "The password associated with the CI user from SecEng Prisma Cloud / Twistlock"
+      PRISMA_CLOUD_PASSWORD:
+        description: "The password associated with the CI user from Prisma Cloud / Twistlock"
         required: true
 
-# https://faun.pub/building-a-ci-cd-pipeline-with-github-actions-and-docker-part-1-a9d8709c31fb
 jobs:
   code:
     name: 🔧 code
@@ -173,13 +165,11 @@ jobs:
           echo "gitopsDeployVersion=$NEXT_PUBLIC_APP_VERSION" >> $GITHUB_OUTPUT
 
       - name: Generate tokens for building the image
-      # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
-      # Only run the builds when building either DEV or STG
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          TOKEN=$(echo -n "${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}:${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}" | openssl base64)
-          echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN=${TOKEN}" >> $GITHUB_ENV
-          echo "SECENG_DEVSECOPS_CLIENT_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
+          TOKEN=$(echo -n "${{secrets.PRISMA_CLOUD_USERNAME}}:${{secrets.PRISMA_CLOUD_PASSWORD}}" | openssl base64)
+          echo "PRISMA_TWISTLOCK_TOKEN=${TOKEN}" >> $GITHUB_ENV
+          echo "PRISMA_TWISTLOCK_TOKEN_TYPE=Basic" >> $GITHUB_ENV
 
       - name: Find out the image repo name and version
         working-directory: ${{ inputs.docker-compose-context }}
@@ -212,13 +202,10 @@ jobs:
           ARTIFACTORY_REPO_PATH="$(echo ${DEFAULT_DOCKER_IMAGE_REPO} | awk -F: '{print substr($1, index($1,"/")+1)}')"
 
           # Construct the new artifactory URL
-          ARTIFACTORY_URL="https://artifactory.viasat.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${NEXT_PUBLIC_APP_VERSION}"
+          ARTIFACTORY_URL="https://artifactory.company.com/ui/repos/tree/General/${ARTIFACTORY_REPO_TOKEN}/${ARTIFACTORY_REPO_PATH}/${NEXT_PUBLIC_APP_VERSION}"
           echo "ARTIFACTORY_URL=$ARTIFACTORY_URL" >> $GITHUB_ENV
 
       - id: set_docker_image_settings
-        # The below outputs a JSON array of check tasks for each subproject
-        #  variable https://www.cynkra.com/blog/2020-12-23-dynamic-gha/
-        # https://github.community/t/sharing-a-variable-between-jobs/16967/14
         run: |
           env
           if [ -z "${{ inputs.docker-compose-service }}" ] || [ -z "${DEFAULT_DOCKER_IMAGE_REPO}" ] || [ -z "${DEFAULT_DOCKER_REGISTRY}" ]; then
@@ -236,16 +223,9 @@ jobs:
     name: 🐳 pull
     needs: [code]
     runs-on: ${{ inputs.github-action-runner }}
-
-    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
-    # Only run the builds when building either DEV or STG
     if: ${{ github.ref_type == 'branch' }}
-
     strategy:
-      # requirement potential onboardings with failures should not break others
-      # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#handling-failures
       fail-fast: false
-
     steps:
       - name: Annotate Job with current information
         run: |
@@ -256,19 +236,18 @@ jobs:
           echo "* Image: ${{ needs.code.outputs.defaultDockerImageRepo }}" >> $GITHUB_STEP_SUMMARY
           echo "* Tag: ${{ needs.code.outputs.defaultDockerImageBranchShaTag }}" >> $GITHUB_STEP_SUMMARY
 
-      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
-        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
+        uses: docker/login-action@v3.3.0
         with:
           registry: ${{ needs.code.outputs.defaultDockerRegistry }}
-          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
-          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+          username: ${{ secrets.DOCKER_REGISTRY_USER }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASS }}
 
       - name: Wait for built docker image ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
         run: |
           IMAGE=${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
           attempt=0
-          total=$(( ${{ inputs.seceng-devsecops-prisma-wait-for-build }} / 10 ))
+          total=$(( ${{ inputs.prisma-cloud-wait-for-build }} / 10 ))
           while ! docker pull $IMAGE; do
             if [ $attempt -gt 0 ]; then
               echo "Image not found, retrying in 10 seconds after $attempt/${total} attempts..."
@@ -286,15 +265,9 @@ jobs:
     name: 🏳️‍🌈⃤   prisma
     needs: [code, pull]
     runs-on: ${{ inputs.github-action-runner }}
-
-    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
-    # Only run the builds when building either DEV or STG
-    if: ${{ github.ref_type == 'branch' && inputs.seceng-devsecops-prisma-project != '' }}
-
+    if: ${{ github.ref_type == 'branch' && inputs.prisma-cloud-project != '' }}
     permissions:
-      pull-requests: write # <--- allows to update PRs
-
-    # https://github.community/t/sharing-a-variable-between-jobs/16967/14
+      pull-requests: write
     outputs:
       passedComplianceScan: ${{steps.scan-results-collection.outputs.passedComplianceScan}}
       passedVulnerabilitiesScan: ${{steps.scan-results-collection.outputs.passedVulnerabilitiesScan}}
@@ -305,8 +278,6 @@ jobs:
       scanErrorStatusCode: ${{steps.scan-results-collection.outputs.scan-error-status-code}}
 
     strategy:
-      # requirement potential onboardings with failures should not break others
-      # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#handling-failures
       fail-fast: false
 
     steps:
@@ -314,102 +285,90 @@ jobs:
         run: |
           echo "# 🏳️‍🌈⃤   prisma Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "* prisma-cloud-url: https://${{ inputs.seceng-devsecops-prisma-domain }}" >> $GITHUB_STEP_SUMMARY
-          echo "* prisma-cloud-project: ${{ inputs.seceng-devsecops-prisma-project }}" >> $GITHUB_STEP_SUMMARY
-          echo "* prisma-cloud-username: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}" >> $GITHUB_STEP_SUMMARY
-          echo "* prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}" >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-url: https://${{ inputs.prisma-cloud-domain }}" >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-project: ${{ inputs.prisma-cloud-project }}" >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-username: ${{secrets.PRISMA_CLOUD_USERNAME}}" >> $GITHUB_STEP_SUMMARY
+          echo "* prisma-cloud-password: ${{secrets.PRISMA_CLOUD_PASSWORD}}" >> $GITHUB_STEP_SUMMARY
           echo "* prisma-cloud-job-name: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "* prisma-cloud-job-url: ${{ needs.code.outputs.githubActionJobUrl }}" >> $GITHUB_STEP_SUMMARY
           echo "* docker-image-tag-to-scan: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}" >> $GITHUB_STEP_SUMMARY
 
-      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to Artifactory Docker Registry
-        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
+        uses: docker/login-action@v3.3.0
         with:
           registry: ${{ needs.code.outputs.defaultDockerRegistry }}
-          username: ${{ secrets.ARTIFACTORY_SVC_USER }}
-          password: ${{ secrets.ARTIFACTORY_SVC_PASS }}
+          username: ${{ secrets.DOCKER_REGISTRY_USER }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASS }}
 
       - name: Pull docker image ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
         run: docker pull ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
 
-      # Run the Twistlock action https://git.viasat.com/seceng-devsecops-platform/devsecops-platform-action-prisma
       - name: Scan Docker Image with Prisma twistcli
-        uses: seceng-devsecops-platform/devsecops-client-runtime-twistcli@main
-        # To be referring to for results https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#example-using-a-public-action
-        id: prisma_cloud_scan
+        uses: marcellodesales/vionix/actions/docker/scanner/twistcli@main
+        id: prisma-cloud-scan
         continue-on-error: true
         with:
-          prisma-cloud-url: https://${{ inputs.seceng-devsecops-prisma-domain }}
-          prisma-cloud-project: ${{ inputs.seceng-devsecops-prisma-project }}
-          #### TODO: Use vault secrets management
-          prisma-cloud-username: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_USERNAME}}
-          prisma-cloud-password: ${{secrets.SECENG_DEVSECOPS_CLIENT_PRISMA_PASSWORD}}
+          prisma-cloud-url: https://${{ inputs.prisma-cloud-domain }}
+          prisma-cloud-project: ${{ inputs.prisma-cloud-project }}
+          prisma-cloud-username: ${{ secrets.PRISMA_CLOUD_USERNAME }}
+          prisma-cloud-password: ${{ secrets.PRISMA_CLOUD_PASSWORD }}
           prisma-cloud-job-name: ${{ github.repository }}
           prisma-cloud-job-url: ${{ needs.code.outputs.githubActionJobUrl }}
           docker-image-tag-to-scan: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
 
-      # https://stackoverflow.com/questions/59175332/using-output-from-a-previous-job-in-a-new-one-in-a-github-action/61236803#61236803
       - name: Set outputs for Scan results
         id: scan-results-collection
         run: |
-          echo 'scan-outputs=${{ toJSON(steps.prisma_cloud_scan.outputs) }}'
-          echo "Scan results URL: ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}"
-          echo "Passed Compliance? ${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}"
-          echo "Passed Vulnerabilities? ${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}"
-          echo "Error Message? ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}"
-          echo "Error Status Code? ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}"
-          echo "Report file: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}"
+          echo 'scan-outputs=${{ toJSON(steps.prisma-cloud-scan.outputs) }}'
+          echo "Scan results URL: ${{ steps.prisma-cloud-scan.outputs.scan-results-url }}"
+          echo "Passed Compliance? ${{ steps.prisma-cloud-scan.outputs.passed-compliance-scan }}"
+          echo "Passed Vulnerabilities? ${{ steps.prisma-cloud-scan.outputs.passed-vulnerability-scan }}"
+          echo "Error Message? ${{ steps.prisma-cloud-scan.outputs.scan-error-message }}"
+          echo "Error Status Code? ${{ steps.prisma-cloud-scan.outputs.scan-error-status-code }}"
+          echo "Report file: ${{ steps.prisma-cloud-scan.outputs.scan-results-filename }}"
 
-          echo "scanResultsUrl=${{ steps.prisma_cloud_scan.outputs.scan-results-url }}" >> $GITHUB_OUTPUT
-          echo "scanResultsId=${{ steps.prisma_cloud_scan.outputs.scan-results-id }}" >> $GITHUB_OUTPUT
-          echo "scanResultsFilename=${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}" >> $GITHUB_OUTPUT
-          echo "passedComplianceScan=${{ steps.prisma_cloud_scan.outputs.passed-compliance-scan }}" >> $GITHUB_OUTPUT
-          echo "passedVulnerabilitiesScan=${{ steps.prisma_cloud_scan.outputs.passed-vulnerability-scan }}" >> $GITHUB_OUTPUT
+          echo "scanResultsUrl=${{ steps.prisma-cloud-scan.outputs.scan-results-url }}" >> $GITHUB_OUTPUT
+          echo "scanResultsId=${{ steps.prisma-cloud-scan.outputs.scan-results-id }}" >> $GITHUB_OUTPUT
+          echo "scanResultsFilename=${{ steps.prisma-cloud-scan.outputs.scan-results-filename }}" >> $GITHUB_OUTPUT
+          echo "passedComplianceScan=${{ steps.prisma-cloud-scan.outputs.passed-compliance-scan }}" >> $GITHUB_OUTPUT
+          echo "passedVulnerabilitiesScan=${{ steps.prisma-cloud-scan.outputs.passed-vulnerability-scan }}" >> $GITHUB_OUTPUT
 
-          echo "scanErrorMessage=${{ steps.prisma_cloud_scan.outputs.scan-error-message }}" >> $GITHUB_OUTPUT
-          echo "scanErrorStatusCode=${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}" >> $GITHUB_OUTPUT
+          echo "scanErrorMessage=${{ steps.prisma-cloud-scan.outputs.scan-error-message }}" >> $GITHUB_OUTPUT
+          echo "scanErrorStatusCode=${{ steps.prisma-cloud-scan.outputs.scan-error-status-code }}" >> $GITHUB_OUTPUT
 
       - name: Scan result outputs
         run: |
           echo 'scan-outputs=${{ toJSON(steps.scan-results-collection.outputs) }}'
 
       - name: Annotate workflow Summary with current information
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/prisma-cloud-scan-reporter@main
+        uses: marcellodesales/vionix/actions/docker/prisma-cloud-scan-reporter@main
         id: prisma-cloud-scan-report
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
           docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
           docker-image-registry-url: ${{ needs.code.outputs.dockerImageArtifactoryUrl }}
-          prisma-cloud-domain: https://${{ inputs.seceng-devsecops-prisma-domain }}
-          prisma-cloud-project: ${{ inputs.seceng-devsecops-prisma-project }}
-          prisma-cloud-report-file-path: ${{ steps.prisma_cloud_scan.outputs.scan-results-filename }}
-          prisma-cloud-scan-results-url: ${{ steps.prisma_cloud_scan.outputs.scan-results-url }}
-          prisma-cloud-scan-exit-status-code: ${{ steps.prisma_cloud_scan.outputs.scan-error-status-code }}
-          prisma-cloud-scan-errors: ${{ steps.prisma_cloud_scan.outputs.scan-error-message }}
+          prisma-cloud-domain: https://${{ inputs.prisma-cloud-domain }}
+          prisma-cloud-project: ${{ inputs.prisma-cloud-project }}
+          prisma-cloud-report-file-path: ${{ steps.prisma-cloud-scan.outputs.scan-results-filename }}
+          prisma-cloud-scan-results-url: ${{ steps.prisma-cloud-scan.outputs.scan-results-url }}
+          prisma-cloud-scan-exit-status-code: ${{ steps.prisma-cloud-scan.outputs.scan-error-status-code }}
+          prisma-cloud-scan-errors: ${{ steps.prisma-cloud-scan.outputs.scan-error-message }}
 
       - name: Fail if errors
-        if: steps.prisma_cloud_scan.outputs.scan-error-message != ''
+        if: steps.prisma-cloud-scan.outputs.scan-error-message != ''
         run: |
           echo "::error title=${{ inputs.prisma-cloud-scan-exit-status-code }} Error while Scanning with Prisma Cloud::${{ inputs.prisma-cloud-scan-errors }}"
-          echo "::error title=Please contact @scan-tools in #help-seceng slack channel"
+          echo "::error title=Please contact us at the slack channel #help-team"
           exit 1
 
   sbom:
     name: 🛡️ sbom
     needs: [code, pull]
     runs-on: ${{ inputs.github-action-runner }}
-
-    # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
-    # Only run the builds when building either DEV or STG
     if: ${{ github.ref_type == 'branch' }}
-
     permissions:
-      pull-requests: write # <--- allows to update PRs
-
+      pull-requests: write
     strategy:
-      # requirement potential onboardings with failures should not break others
-      # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#handling-failures
       fail-fast: false
 
     steps:
@@ -420,8 +379,8 @@ jobs:
           echo "* docker-image-repo-tag: ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}" >> $GITHUB_STEP_SUMMARY
           echo "* add-comment-to-current-pr: true" >> $GITHUB_STEP_SUMMARY
 
-      - name: Login to Artifactory Docker Registry
-        uses: seceng-devsecops-platform/docker-login-action@v3.3.0
+      - name: Login to the Docker Registry
+        uses: docker/login-action@v3.3.0
         with:
           registry: ${{ needs.code.outputs.defaultDockerRegistry }}
           username: ${{ secrets.ARTIFACTORY_SVC_USER }}
@@ -431,7 +390,7 @@ jobs:
         run: docker pull ${{ needs.code.outputs.defaultDockerImageRepo }}:${{ needs.code.outputs.defaultDockerImageBranchShaTag }}
 
       - name: Annotate Job with current information with SBOM
-        uses: seceng-devsecops-platform/devsecops-platform-github-workflows/actions/docker/sbom-reporter@main
+        uses: marcellodesales/vionix/actions/docker/sbom-reporter@main
         id: docker-sbom-report
         with:
           git-revision: ${{ needs.code.outputs.gitShortSha }}
