@@ -142,7 +142,7 @@ jobs:
           output-format: ${{ inputs.ghas-report-output-format }}
 
       - name: Upload GHAS metrics report as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ghas-metrics-report
           path: ${{ github.workspace }}/ghas-report.*
