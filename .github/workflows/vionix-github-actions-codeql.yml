@@ -11,7 +11,7 @@ on:
 
   # Please specify an on.push hook to analyze and see code scanning alerts from the default branch on the Security tab.
   push:
-    branches: [ main ]
+    branches: [ main, oss/main ]
     paths:
       - '.github/**'
       - 'actions/**'
@@ -23,6 +23,7 @@ on:
       - reopened
       - synchronize
       - converted_to_draft
+      - oss/main
 
     paths:
       - '.github/**'
