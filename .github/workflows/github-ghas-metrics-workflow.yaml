@@ -77,7 +77,7 @@ jobs:
     steps:
       # Work to consolidate secrets to vault tracked at https://jira.viasat.com/browse/DEVSECOPS-163
       - name: Pulling secrets from vault
-        uses: hashicorp/vault-action@v3.3.0
+        uses: hashicorp/vault-action@v3.4.0
         with:
             method: jwt
             path: git-jwt
