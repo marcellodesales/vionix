@@ -41,4 +41,4 @@ jobs:
     secrets: inherit
     uses: marcellodesales/vionix/.github/workflows/github-ghas-codeql-actions-workflow.yaml@main
     with:
-      github-action-runner: code-scanning
+      github-action-runner: ubuntu-latest
