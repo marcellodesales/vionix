@@ -667,14 +667,14 @@ jobs:
       # Load the docker image built in previous job, which was uploaded to artifacts
       # https://github.com/docker/build-push-action/issues/225#issuecomment-727639184
       - name: Download report file from previous step
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: coverage-results.xml
           path: ${{ steps.current-job-info.outputs.testDir }}
 
       - name: Download native coverage report, if any
         if: inputs.docker-compose-native-report-file != ''
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: native-coverage-results
           path: build/reports
