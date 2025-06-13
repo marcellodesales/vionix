@@ -774,7 +774,7 @@ jobs:
         # Only run the builds when building either DEV or STG
         # github.ref_type == 'branch' &&
         if: ${{ inputs.docker-build-mode == 'parallel' }}
-        uses: docker/setup-buildx-action@v3.8.0
+        uses: docker/setup-buildx-action@v3.10.0
         with:
           endpoint: builders-context
 
