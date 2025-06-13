@@ -216,29 +216,10 @@ jobs:
       githubDeployFile: ${{steps.set_base_values.outputs.githubDeployFile}}
       slackCredsProvided: ${{ steps.slack-creds.outputs.provided }}
       slackMessageId: ${{steps.slack.outputs.message_id}}
-      prStatus: ${{ steps.pr-status.outputs.HAS_PR }}
 
     steps:
       - name: Envs
         run: env
-
-      - name: Verify commit ID in PRs
-        id: pr-status
-        run: |
-          PR_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "${{ github.api_url	}}/repos/${{ github.repository }}/commits/${GITHUB_SHA}/pulls")
-          echo $PR_INFO | jq
-          if [ "$(echo "$PR_INFO" | jq '. | length')" -gt 0 ]; then
-            PR_NUMBER=$(echo $PR_INFO | jq -r '.[0].number')
-            PR_STATE=$(echo $PR_INFO | jq -r '.[0].state')
-            if [ "${PR_STATE}" != "closed" ]; then
-              echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
-              echo "HAS_PR=true" >> $GITHUB_OUTPUT
-            else
-              echo "HAS_PR=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "HAS_PR=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Fetch all history and have .git locally for inspection
         uses: actions/checkout@v4.2.2
@@ -455,20 +436,15 @@ jobs:
           echo "```" >> $GITHUB_STEP_SUMMARY
 
           echo "## :building_construction: GitOps Plan" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.pr-status.outputs.HAS_PR }}" == "false" ]; then
-            echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
-            echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
-            echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
-            echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
-            echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
-            echo "* :key: Key: ${GITOPS_TARGET_KEY}" >> $GITHUB_STEP_SUMMARY
-            echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
-            echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
-            echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
-
-          else
-            echo "* No gitops since the commit ${GITHUB_SHA} is in a PR" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "* :octocat: Deploy repo: ${GITOPS_TARGET_REPO}" >> $GITHUB_STEP_SUMMARY
+          echo "* :herb: Deploy repo branch: ${GITOPS_TARGET_REPO_BRANCH}" >> $GITHUB_STEP_SUMMARY
+          echo "* :cloud: Provider: ${GITOPS_TARGET_PROVIDER}" >> $GITHUB_STEP_SUMMARY
+          echo "* :world_map: Region: ${GITOPS_TARGET_REGION}" >> $GITHUB_STEP_SUMMARY
+          echo "* :compass: Segment: ${GITOPS_TARGET_SEGMENT}" >> $GITHUB_STEP_SUMMARY
+          echo "* :key: Key: ${GITOPS_TARGET_KEY}" >> $GITHUB_STEP_SUMMARY
+          echo "* :ice_cube: Type: ${GITOPS_TARGET_TYPE}" >> $GITHUB_STEP_SUMMARY
+          echo "* :canoe: Env: ${GITOPS_TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
+          echo "* :link: Env Url: ${GITOPS_TARGET_URL}" >> $GITHUB_STEP_SUMMARY
 
           echo "## :rocket: Deployment Plan" >> $GITHUB_STEP_SUMMARY
 
