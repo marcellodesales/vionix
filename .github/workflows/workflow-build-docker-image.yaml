@@ -589,7 +589,7 @@ jobs:
 
       - name: Validate JSON-YAML in the repo
         id: json-yaml-validate
-        uses: GrantBirki/json-yaml-validate@v3.2.1
+        uses: GrantBirki/json-yaml-validate@v3.3.2
         with:
           comment: "true"
           mode: ${{ steps.lint-mode.outputs.configLintMode }}
