@@ -1226,7 +1226,7 @@ jobs:
           rm -f commitmessage.txt
 
       - name: Commits the code to the repo
-        uses: stefanzweifel/git-auto-commit-action@v5.1.0
+        uses: stefanzweifel/git-auto-commit-action@v6.0.1
         id: auto-commit-action
         with:
           commit_user_name: ${{needs.code.outputs.committerName}}
