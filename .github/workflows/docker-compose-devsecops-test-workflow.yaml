@@ -716,7 +716,7 @@ jobs:
       # Requires the setting of the environment variables
       # https://git.viasat.com/viarise/sonarqube-scan
       - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v4.2.1
+        uses: sonarsource/sonarqube-scan-action@v5.2.0
         if: ${{ env.HAS_TOKEN == 'true' && inputs.test-report-sonarqube-host != '' && inputs.test-report-sonarqube-args != '' }}
         env:
           SONAR_HOST_URL: ${{ inputs.test-report-sonarqube-host }}
