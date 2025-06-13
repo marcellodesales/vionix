@@ -951,6 +951,7 @@ jobs:
     permissions:
       contents: read
       security-events: read
+      pull-requests: write
 
     steps:
       - name: Fetch only the top commit
@@ -1058,7 +1059,7 @@ jobs:
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.build.outputs.originalDockerImageTag }}
           dependency-snapshot: true
-          github-token: ${{ secrets.GITOPS_GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Submit Interpreted docker image Tag SBOM to github dependency graph 
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
