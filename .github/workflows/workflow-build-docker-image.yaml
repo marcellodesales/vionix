@@ -911,6 +911,18 @@ jobs:
       #     DIGEST: ${{ steps.digest.outputs.imageDigest }}
       #   run: echo "${TAGS}" | xargs -I {} echo cosign sign --yes "{}@${DIGEST}"
 
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
       - name: Attest
         uses: actions/attest-build-provenance@v3.0.0
         id: attest
