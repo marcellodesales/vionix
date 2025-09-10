@@ -930,7 +930,7 @@ jobs:
           # Just the docker image repo/name is required, no sha, as it's in the digest full data
           subject-name: ${{ steps.set_docker_image_settings.outputs.defaultDockerImageRepo }}
           subject-digest: ${{ steps.digest.outputs.imageDigest }}
-          push-to-registry: true
+          push-to-registry: false
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push additional tags for this build ${{ inputs.docker-build-mode }}
