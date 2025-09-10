@@ -936,7 +936,7 @@ jobs:
 
       - name: Publish summary to workflow
         run: |
-          echo "# <img src=https://www.huskalia.com/child/assets/img/iconos-home/calidad.svg height=50 width=50 /> Build Attestation" >> attest.md
+          echo "# <img src=https://www.huskalia.com/child/assets/img/iconos-home/calidad.svg height=35 width=35 /> Build Attestation" >> attest.md
           echo "> [!TIP]" >> attest.md
           echo "> * This build has been attested with Github Sigstore!" >> attest.md
           echo "* Subject Name: ${{ steps.set_docker_image_settings.outputs.defaultDockerImageRepo }}"
