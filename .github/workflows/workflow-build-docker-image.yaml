@@ -886,7 +886,7 @@ jobs:
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-from=type=registry,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.cache-to=type=registry,mode=max,ref=${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:gha-cache
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.platform=${{ inputs.docker-build-platforms }}
-            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.attest=type=provenance=max
+            ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.attest=type=provenance
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.attest=type=sbom
 
       - name: Show output from bake for debugging
