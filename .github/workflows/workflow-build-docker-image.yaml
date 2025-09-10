@@ -1059,13 +1059,13 @@ jobs:
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{ needs.build.outputs.originalDockerImageTag }}
           dependency-snapshot: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITOPS_GITHUB_TOKEN }}
 
       - name: Submit Interpreted docker image Tag SBOM to github dependency graph 
         # https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution#overview
         # Only run the builds when building either DEV or STG
         if: ${{ inputs.docker-submit-sbom == 'true' && github.event_name == 'pull_request' && needs.build.outputs.originalDockerImageTag == '' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'develop') }}
-        uses: anchore/sbom-action@v0.17.9
+        uses: anchore/sbom-action@v0.20.5
         with:
           image: ${{needs.build.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
           dependency-snapshot: true
