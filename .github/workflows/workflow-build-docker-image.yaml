@@ -600,6 +600,9 @@ jobs:
       dockerImageArtifactoryUrl: ${{ steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl }}
       dockerPublicUsername: ${{ steps.set_docker_image_settings.outputs.dockerPublicUsername }}
 
+    permissions:
+      attestations: write
+
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
@@ -885,6 +888,28 @@ jobs:
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.platform=${{ inputs.docker-build-platforms }}
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.attest=type=provenance=max
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.attest=type=sbom
+
+      - name: Show output from bake for debugging
+        run: |
+          echo "Show current output"
+          echo '${{ steps.docker-bake.outputs.metadata }}'
+          echo '${{ fromJSON(steps.bake.outputs.metadata).default['containerimage.digest'] }}'
+
+      # https://github.com/docker/bake-action/issues/99#issuecomment-3242085066
+      # - name: Sign the published Docker image
+      #   if: ${{ github.event_name == 'push' }}
+      #   env:
+      #     TAGS: ${{ steps.meta.outputs.tags }}
+      #     DIGEST: ${{ fromJSON(steps.bake.outputs.metadata).default['containerimage.digest'] }}
+      #   run: echo "${TAGS}" | xargs -I {} echo cosign sign --yes "{}@${DIGEST}"
+
+      - name: Attest
+        uses: actions/attest-build-provenance@v3
+        id: attest
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
 
       - name: Push additional tags for this build ${{ inputs.docker-build-mode }}
         # github.ref_type == 'branch' &&
