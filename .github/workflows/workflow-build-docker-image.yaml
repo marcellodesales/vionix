@@ -923,15 +923,29 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
-      - name: Attest
+      - name: Attest the docker image build with github actions
         uses: actions/attest-build-provenance@v3.0.0
-        id: attest
+        id: attestation
         with:
           # Just the docker image repo/name is required, no sha, as it's in the digest full data
           subject-name: ${{ steps.set_docker_image_settings.outputs.defaultDockerImageRepo }}
           subject-digest: ${{ steps.digest.outputs.imageDigest }}
           push-to-registry: false
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish summary to workflow
+        run: |
+          echo "# <img src=https://www.huskalia.com/child/assets/img/iconos-home/calidad.svg height=15 width=15 /> Build Attestation" >> attest.md
+          echo "> [!TIP]" >> attest.md
+          echo "> * This build has been attested with Github Sigstore!" >> attest.md
+          echo "* Subject Name: ${{ steps.set_docker_image_settings.outputs.defaultDockerImageRepo }}"
+          echo "* Subject Digest: ${{ steps.digest.outputs.imageDigest }}"
+          echo "* Github Attestation URL: ${{ steps.attestation.outputs.attestation-url }}" >> attest.md
+          echo "* Docker Image Digest Details" >> attest.md
+          echo '```json' >> attest.md
+          echo '${{ steps.docker-bake.outputs.metadata }}' >> attest.md
+          echo '```' >> attest.md
+          cat attest.md >> $GITHUB_STEP_SUMMARY
 
       - name: Push additional tags for this build ${{ inputs.docker-build-mode }}
         # github.ref_type == 'branch' &&
