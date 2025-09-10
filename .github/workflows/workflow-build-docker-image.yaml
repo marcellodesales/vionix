@@ -893,14 +893,14 @@ jobs:
         run: |
           echo "Show current output"
           echo '${{ steps.docker-bake.outputs.metadata }}'
-          echo '${{ fromJSON(steps.bake.outputs.metadata).default['containerimage.digest'] }}'
+          echo '${{ fromJSON(steps.docker-bake.outputs.metadata).default['containerimage.digest'] }}'
 
       # https://github.com/docker/bake-action/issues/99#issuecomment-3242085066
       # - name: Sign the published Docker image
       #   if: ${{ github.event_name == 'push' }}
       #   env:
       #     TAGS: ${{ steps.meta.outputs.tags }}
-      #     DIGEST: ${{ fromJSON(steps.bake.outputs.metadata).default['containerimage.digest'] }}
+      #     DIGEST: ${{ fromJSON(steps.docker-bake.outputs.metadata).default['containerimage.digest'] }}
       #   run: echo "${TAGS}" | xargs -I {} echo cosign sign --yes "{}@${DIGEST}"
 
       - name: Attest
@@ -908,7 +908,7 @@ jobs:
         id: attest
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.push.outputs.digest }}
+          subject-digest: ${{ fromJSON(steps.docker-bake.outputs.metadata).default['containerimage.digest'] }}
           push-to-registry: true
 
       - name: Push additional tags for this build ${{ inputs.docker-build-mode }}
