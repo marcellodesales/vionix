@@ -893,17 +893,20 @@ jobs:
             ${{steps.set_docker_image_settings.outputs.defaultDockerService}}.attest=type=sbom
 
       - name: Show output from bake for debugging
+        id: digest
         run: |
           echo "Show current output"
           echo 'Metadata: ${{ steps.docker-bake.outputs.metadata }}'
-          echo 'Digest: ${{ fromJSON(steps.docker-bake.outputs.metadata)['${{steps.set_docker_image_settings.outputs.defaultDockerService}}']['containerimage.digest'] }}'
+          echo '${{ steps.docker-bake.outputs.metadata }}' > metadata.json
+          DIGEST=$(cat metadata.json | jq -r '.["${{steps.set_docker_image_settings.outputs.defaultDockerService}}"]["containerimage.digest"]')
+          echo "imageDigest=$DIGEST" >> $GITHUB_OUTPUT
 
       # https://github.com/docker/bake-action/issues/99#issuecomment-3242085066
       # - name: Sign the published Docker image
       #   if: ${{ github.event_name == 'push' }}
       #   env:
       #     TAGS: ${{ steps.meta.outputs.tags }}
-      #     DIGEST: ${{ fromJSON(steps.docker-bake.outputs.metadata).default['containerimage.digest'] }}
+      #     DIGEST: ${{ steps.digest.outputs.imageDigest }}
       #   run: echo "${TAGS}" | xargs -I {} echo cosign sign --yes "{}@${DIGEST}"
 
       - name: Attest
@@ -911,7 +914,7 @@ jobs:
         id: attest
         with:
           subject-name: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
-          subject-digest: ${{ fromJSON(steps.docker-bake.outputs.metadata)['${{steps.set_docker_image_settings.outputs.defaultDockerService}}']['containerimage.digest'] }}
+          subject-digest: ${{ steps.digest.outputs.imageDigest }}
           push-to-registry: true
           github-token: ${{ secrets.GITOPS_GITHUB_TOKEN }}
 
