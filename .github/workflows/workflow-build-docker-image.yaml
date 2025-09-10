@@ -603,8 +603,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      attestations: write
       pull-requests: read
+      # https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/increase-security-rating#building-with-artifact-attestations
+      attestations: write
+      packages: write
 
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
@@ -910,7 +912,7 @@ jobs:
       #   run: echo "${TAGS}" | xargs -I {} echo cosign sign --yes "{}@${DIGEST}"
 
       - name: Attest
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v3.0.0
         id: attest
         with:
           subject-name: ${{steps.set_docker_image_settings.outputs.defaultDockerImageRepo}}:${{needs.code.outputs.defaultDockerImageVersion}}
