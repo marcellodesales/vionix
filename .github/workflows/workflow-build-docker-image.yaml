@@ -600,9 +600,6 @@ jobs:
       dockerImageArtifactoryUrl: ${{ steps.set_docker_image_settings.outputs.dockerImageArtifactoryUrl }}
       dockerPublicUsername: ${{ steps.set_docker_image_settings.outputs.dockerPublicUsername }}
 
-    permissions:
-      attestations: write
-
     steps:
       # Checkout always fetches the whole repo. Depending on the size, this will be super long
       - name: Fetch only the top commit
